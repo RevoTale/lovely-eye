@@ -1,0 +1,23 @@
+{
+    "name": "Lovely Eye analytics",
+    "image": "mcr.microsoft.com/devcontainers/go:2-1.25-bookworm",
+    "features": {
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    },
+    "forwardPorts": [],
+    "remoteUser": "root",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "golang.go",
+                "ms-azuretools.vscode-docker",
+                "ms-vscode.remote-repositories",
+                "GitHub.remotehub",
+                "GraphQL.vscode-graphql",
+                "GraphQL.vscode-graphql-syntax",
+                "-ms-vscode.azure-repos",
+                "-dbaeumer.vscode-eslint"
+            ]
+        }
+    }
+}
