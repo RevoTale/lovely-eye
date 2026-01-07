@@ -1,0 +1,127 @@
+type User {
+  id: ID!
+  username: String!
+  role: String!
+  createdAt: Time!
+  sites: [Site!]
+}
+
+type Site {
+  id: ID!
+  domain: String!
+  name: String!
+  """Used in tracking script"""
+  publicKey: String!
+  createdAt: Time!
+}
+
+type AuthPayload {
+  user: User!
+  accessToken: String!
+  refreshToken: String!
+}
+
+type TokenPayload {
+  accessToken: String!
+  refreshToken: String!
+}
+
+type DashboardStats {
+  visitors: Int!
+  pageViews: Int!
+  sessions: Int!
+  bounceRate: Float!
+  """Average session duration in seconds"""
+  avgDuration: Float!
+  topPages: [PageStats!]!
+  topReferrers: [ReferrerStats!]!
+  browsers: [BrowserStats!]!
+  devices: [DeviceStats!]!
+  countries: [CountryStats!]!
+  dailyStats: [DailyStats!]!
+}
+
+type PageStats {
+  path: String!
+  views: Int!
+  visitors: Int!
+}
+
+type ReferrerStats {
+  referrer: String!
+  visitors: Int!
+}
+
+type BrowserStats {
+  browser: String!
+  visitors: Int!
+}
+
+type DeviceStats {
+  device: String!
+  visitors: Int!
+}
+
+type CountryStats {
+  country: String!
+  visitors: Int!
+}
+
+type DailyStats {
+  date: Time!
+  visitors: Int!
+  pageViews: Int!
+  sessions: Int!
+}
+
+type RealtimeStats {
+  """Visitors active in last 5 minutes"""
+  visitors: Int!
+}
+
+input RegisterInput {
+  username: String!
+  password: String!
+}
+
+input LoginInput {
+  username: String!
+  password: String!
+}
+
+input CreateSiteInput {
+  domain: String!
+  name: String!
+}
+
+input UpdateSiteInput {
+  name: String!
+}
+
+input DateRangeInput {
+  from: Time
+  to: Time
+}
+
+scalar Time
+
+type Query {
+  me: User
+  sites: [Site!]!
+  site(id: ID!): Site
+  dashboard(siteId: ID!, dateRange: DateRangeInput): DashboardStats!
+  realtime(siteId: ID!): RealtimeStats!
+}
+
+type Mutation {
+  """First user becomes admin"""
+  register(input: RegisterInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  refreshToken(refreshToken: String!): TokenPayload!
+  createSite(input: CreateSiteInput!): Site!
+  updateSite(id: ID!, input: UpdateSiteInput!): Site!
+  """Deletes site and all analytics data"""
+  deleteSite(id: ID!): Boolean!
+  """Invalidates old tracking scripts"""
+  regenerateSiteKey(id: ID!): Site!
+}
