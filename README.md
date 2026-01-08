@@ -50,4 +50,6 @@ Server starts at http://localhost:8080. The first registered user becomes admin.
 
 ## License
 
-[AGPL-3.0](./LICENSE)
+Copyright 2025 RevoTale
+
+Licensed under [AGPL-3.0](./LICENSE).
