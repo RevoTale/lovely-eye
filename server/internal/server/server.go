@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/lovely-eye/server/internal/auth"
@@ -101,8 +103,24 @@ func New(cfg *config.Config) (*Server, error) {
 
 	// Health check (always at root for load balancers)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		// Check database connection
+		if err := db.PingContext(r.Context()); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(`{"status":"unhealthy","error":"database connection failed"}`))
+			return
+		}
+
+		// Check dashboard files exist
+		if _, err := os.Stat(filepath.Join(dashboard.StaticDir, "index.html")); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte(`{"status":"unhealthy","error":"dashboard files not found"}`))
+			return
+		}
+
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		w.Write([]byte(`{"status":"healthy"}`))
 	})
 
 	// Setup dashboard handler with runtime config
