@@ -1,0 +1,48 @@
+# @genqlient
+query Dashboard(
+  $siteId: ID!,
+  # @genqlient(pointer: true)
+  $dateRange: DateRangeInput,
+) {
+  dashboard(siteId: $siteId, dateRange: $dateRange) {
+    visitors
+    pageViews
+    sessions
+    bounceRate
+    avgDuration
+    topPages {
+      path
+      views
+      visitors
+    }
+    topReferrers {
+      referrer
+      visitors
+    }
+    browsers {
+      browser
+      visitors
+    }
+    devices {
+      device
+      visitors
+    }
+    countries {
+      country
+      visitors
+    }
+    dailyStats {
+      date
+      visitors
+      pageViews
+      sessions
+    }
+  }
+}
+
+# @genqlient
+query Realtime($siteId: ID!) {
+  realtime(siteId: $siteId) {
+    visitors
+  }
+}

@@ -1,0 +1,421 @@
+package e2e
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"github.com/Khan/genqlient/graphql"
+	"github.com/lovely-eye/server/e2e/generated"
+	"github.com/lovely-eye/server/internal/config"
+	"github.com/lovely-eye/server/internal/server"
+	"github.com/stretchr/testify/require"
+)
+
+func testConfig() *config.Config {
+	return &config.Config{
+		Server: config.ServerConfig{
+			Host: "127.0.0.1",
+			Port: "0",
+		},
+		Database: config.DatabaseConfig{
+			Driver: "sqlite",
+			DSN:    "file::memory:?cache=shared",
+		},
+		Auth: config.AuthConfig{
+			JWTSecret:         "test-secret-key-for-e2e-testing-32chars",
+			AccessTokenExpiry: 15 * time.Minute,
+			RefreshExpiry:     7 * 24 * time.Hour,
+			AllowRegistration: true,
+			SecureCookies:     false,
+			CookieDomain:      "",
+		},
+	}
+}
+
+type testServer struct {
+	*server.Server
+	httpServer *httptest.Server
+}
+
+func newTestServer(t *testing.T) *testServer {
+	t.Helper()
+
+	srv, err := server.New(testConfig())
+	require.NoError(t, err, "failed to create server")
+
+	httpServer := httptest.NewServer(srv.Handler)
+
+	t.Cleanup(func() {
+		httpServer.Close()
+		srv.Close()
+	})
+
+	return &testServer{
+		Server:     srv,
+		httpServer: httpServer,
+	}
+}
+
+func (ts *testServer) graphqlClient() graphql.Client {
+	return graphql.NewClient(ts.httpServer.URL+"/graphql", ts.httpServer.Client())
+}
+
+func (ts *testServer) bearerClient(accessToken string) graphql.Client {
+	httpClient := &http.Client{
+		Transport: &bearerTransport{
+			base:        ts.httpServer.Client().Transport,
+			accessToken: accessToken,
+		},
+	}
+	return graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
+}
+
+func (ts *testServer) cookieClient(accessToken, csrfToken string) graphql.Client {
+	httpClient := &http.Client{
+		Transport: &cookieTransport{
+			base:        ts.httpServer.Client().Transport,
+			accessToken: accessToken,
+			csrfToken:   csrfToken,
+		},
+	}
+	return graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
+}
+
+type bearerTransport struct {
+	base        http.RoundTripper
+	accessToken string
+}
+
+func (t *bearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("Authorization", "Bearer "+t.accessToken)
+	return t.base.RoundTrip(req)
+}
+
+type cookieTransport struct {
+	base        http.RoundTripper
+	accessToken string
+	csrfToken   string
+}
+
+func (t *cookieTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.AddCookie(&http.Cookie{Name: "le_access", Value: t.accessToken})
+	req.AddCookie(&http.Cookie{Name: "le_csrf", Value: t.csrfToken})
+	req.Header.Set("X-CSRF-Token", t.csrfToken)
+	return t.base.RoundTrip(req)
+}
+
+func TestRegister(t *testing.T) {
+	ts := newTestServer(t)
+	ctx := context.Background()
+
+	t.Run("first user becomes admin", func(t *testing.T) {
+		resp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+			Username: "admin",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "admin", resp.Register.User.Username)
+		require.Equal(t, "admin", resp.Register.User.Role)
+		require.NotEmpty(t, resp.Register.AccessToken)
+	})
+
+	t.Run("second user is regular user", func(t *testing.T) {
+		resp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+			Username: "user1",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "user", resp.Register.User.Role)
+	})
+
+	t.Run("duplicate username fails", func(t *testing.T) {
+		_, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+			Username: "admin",
+			Password: "different",
+		})
+		require.Error(t, err)
+	})
+}
+
+func TestLogin(t *testing.T) {
+	ts := newTestServer(t)
+	ctx := context.Background()
+
+	_, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+		Username: "testuser",
+		Password: "testpass",
+	})
+	require.NoError(t, err)
+
+	t.Run("valid credentials", func(t *testing.T) {
+		resp, err := generated.Login(ctx, ts.graphqlClient(), generated.LoginInput{
+			Username: "testuser",
+			Password: "testpass",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "testuser", resp.Login.User.Username)
+		require.NotEmpty(t, resp.Login.AccessToken)
+	})
+
+	t.Run("invalid password", func(t *testing.T) {
+		_, err := generated.Login(ctx, ts.graphqlClient(), generated.LoginInput{
+			Username: "testuser",
+			Password: "wrongpass",
+		})
+		require.Error(t, err)
+	})
+
+	t.Run("nonexistent user", func(t *testing.T) {
+		_, err := generated.Login(ctx, ts.graphqlClient(), generated.LoginInput{
+			Username: "nouser",
+			Password: "testpass",
+		})
+		require.Error(t, err)
+	})
+}
+
+func TestStatsCollection(t *testing.T) {
+	ts := newTestServer(t)
+	ctx := context.Background()
+
+	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+		Username: "admin",
+		Password: "password",
+	})
+	require.NoError(t, err)
+
+	client := ts.bearerClient(regResp.Register.AccessToken)
+
+	siteResp, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+		Domain: "example.com",
+		Name:   "Example Site",
+	})
+	require.NoError(t, err)
+
+	siteKey := siteResp.CreateSite.PublicKey
+
+	t.Run("collect page view", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":     siteKey,
+			"path":         "/home",
+			"title":        "Home Page",
+			"referrer":     "https://google.com",
+			"screen_width": 1920,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/collect",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	})
+
+	t.Run("collect custom event", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "button_click",
+			"path":       "/home",
+			"properties": `{"button": "signup"}`,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	})
+
+	t.Run("missing site_key fails", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"path": "/home",
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/collect",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+}
+
+func TestDashboardAuthorization(t *testing.T) {
+	ts := newTestServer(t)
+	ctx := context.Background()
+
+	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+		Username: "admin",
+		Password: "password",
+	})
+	require.NoError(t, err)
+
+	authedClient := ts.bearerClient(regResp.Register.AccessToken)
+
+	siteResp, err := generated.CreateSite(ctx, authedClient, generated.CreateSiteInput{
+		Domain: "example.com",
+		Name:   "Example Site",
+	})
+	require.NoError(t, err)
+
+	siteID := siteResp.CreateSite.Id
+
+	t.Run("authenticated user can view dashboard", func(t *testing.T) {
+		resp, err := generated.Dashboard(ctx, authedClient, siteID, nil)
+		require.NoError(t, err)
+		require.Equal(t, 0, resp.Dashboard.Visitors)
+	})
+
+	t.Run("unauthenticated user cannot view dashboard", func(t *testing.T) {
+		_, err := generated.Dashboard(ctx, ts.graphqlClient(), siteID, nil)
+		require.Error(t, err)
+	})
+
+	t.Run("authenticated user can view realtime", func(t *testing.T) {
+		resp, err := generated.Realtime(ctx, authedClient, siteID)
+		require.NoError(t, err)
+		require.Equal(t, 0, resp.Realtime.Visitors)
+	})
+
+	t.Run("me query returns user when authenticated", func(t *testing.T) {
+		resp, err := generated.Me(ctx, authedClient)
+		require.NoError(t, err)
+		require.NotNil(t, resp.Me)
+		require.NotNil(t, resp.Me.Username)
+		require.Equal(t, "admin", *resp.Me.Username)
+	})
+
+	t.Run("me query returns nil when unauthenticated", func(t *testing.T) {
+		resp, err := generated.Me(ctx, ts.graphqlClient())
+		require.NoError(t, err)
+		require.Nil(t, resp.Me)
+	})
+}
+
+func TestSiteManagement(t *testing.T) {
+	ts := newTestServer(t)
+	ctx := context.Background()
+
+	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+		Username: "admin",
+		Password: "password",
+	})
+	require.NoError(t, err)
+
+	client := ts.bearerClient(regResp.Register.AccessToken)
+
+	t.Run("create site", func(t *testing.T) {
+		resp, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+			Domain: "mysite.com",
+			Name:   "My Site",
+		})
+		require.NoError(t, err)
+		require.Equal(t, "mysite.com", resp.CreateSite.Domain)
+		require.NotEmpty(t, resp.CreateSite.PublicKey)
+	})
+
+	t.Run("list sites", func(t *testing.T) {
+		resp, err := generated.Sites(ctx, client)
+		require.NoError(t, err)
+		require.Len(t, resp.Sites, 1)
+	})
+
+	t.Run("unauthenticated cannot create site", func(t *testing.T) {
+		_, err := generated.CreateSite(ctx, ts.graphqlClient(), generated.CreateSiteInput{
+			Domain: "other.com",
+			Name:   "Other",
+		})
+		require.Error(t, err)
+	})
+}
+
+func TestCSRFProtection(t *testing.T) {
+	ts := newTestServer(t)
+	ctx := context.Background()
+
+	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+		Username: "admin",
+		Password: "password",
+	})
+	require.NoError(t, err)
+
+	accessToken := regResp.Register.AccessToken
+	csrfToken := "test-csrf-token-12345"
+
+	t.Run("cookie auth with valid CSRF succeeds", func(t *testing.T) {
+		client := ts.cookieClient(accessToken, csrfToken)
+		_, err := generated.Sites(ctx, client)
+		require.NoError(t, err)
+	})
+
+	t.Run("cookie auth without CSRF header fails", func(t *testing.T) {
+		httpClient := &http.Client{
+			Transport: &cookieOnlyTransport{
+				base:        ts.httpServer.Client().Transport,
+				accessToken: accessToken,
+			},
+		}
+		client := graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
+
+		_, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+			Domain: "csrf-test.com",
+			Name:   "Test",
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "403")
+	})
+
+	t.Run("cookie auth with mismatched CSRF fails", func(t *testing.T) {
+		httpClient := &http.Client{
+			Transport: &mismatchedCSRFTransport{
+				base:        ts.httpServer.Client().Transport,
+				accessToken: accessToken,
+			},
+		}
+		client := graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
+
+		_, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+			Domain: "csrf-test2.com",
+			Name:   "Test",
+		})
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "403")
+	})
+}
+
+type cookieOnlyTransport struct {
+	base        http.RoundTripper
+	accessToken string
+}
+
+func (t *cookieOnlyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.AddCookie(&http.Cookie{Name: "le_access", Value: t.accessToken})
+	return t.base.RoundTrip(req)
+}
+
+type mismatchedCSRFTransport struct {
+	base        http.RoundTripper
+	accessToken string
+}
+
+func (t *mismatchedCSRFTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.AddCookie(&http.Cookie{Name: "le_access", Value: t.accessToken})
+	req.AddCookie(&http.Cookie{Name: "le_csrf", Value: "cookie-token"})
+	req.Header.Set("X-CSRF-Token", "different-header-token")
+	return t.base.RoundTrip(req)
+}

@@ -1,0 +1,13 @@
+schema:
+  - ../schema.graphqls
+
+operations:
+  - operations/*.graphql
+
+generated: generated/client.go
+
+package: generated
+
+bindings:
+  Time:
+    type: time.Time
