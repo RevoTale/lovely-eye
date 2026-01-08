@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"github.com/lovely-eye/server/internal/auth"
 	"github.com/lovely-eye/server/internal/services"
 )
 
@@ -9,13 +10,13 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	AuthService      *services.AuthService
+	AuthService      auth.Service
 	SiteService      *services.SiteService
 	AnalyticsService *services.AnalyticsService
 }
 
 func NewResolver(
-	authService *services.AuthService,
+	authService auth.Service,
 	siteService *services.SiteService,
 	analyticsService *services.AnalyticsService,
 ) *Resolver {

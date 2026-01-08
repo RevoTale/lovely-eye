@@ -3,10 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
-	"time"
 
-	"github.com/lovely-eye/server/internal/middleware"
 	"github.com/lovely-eye/server/internal/services"
 )
 
@@ -122,132 +119,12 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Dashboard returns analytics stats for a site (protected endpoint)
-func (h *AnalyticsHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserFromContext(r.Context())
-	if claims == nil {
-		respondError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	siteID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid site ID")
-		return
-	}
-
-	// Verify user owns this site
-	_, err = h.siteService.GetByID(r.Context(), siteID, claims.UserID)
-	if err != nil {
-		switch err {
-		case services.ErrSiteNotFound:
-			respondError(w, http.StatusNotFound, "Site not found")
-		case services.ErrNotAuthorized:
-			respondError(w, http.StatusForbidden, "Not authorized")
-		default:
-			respondError(w, http.StatusInternalServerError, "Failed to get site")
-		}
-		return
-	}
-
-	// Parse date range from query params
-	from, to := parseDateRange(r)
-
-	stats, err := h.analyticsService.GetDashboardStats(r.Context(), siteID, from, to)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to get stats")
-		return
-	}
-
-	respondJSON(w, http.StatusOK, stats)
+func respondJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
 }
 
-// Realtime returns current active visitors
-func (h *AnalyticsHandler) Realtime(w http.ResponseWriter, r *http.Request) {
-	claims := middleware.GetUserFromContext(r.Context())
-	if claims == nil {
-		respondError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	siteID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid site ID")
-		return
-	}
-
-	// Verify user owns this site
-	_, err = h.siteService.GetByID(r.Context(), siteID, claims.UserID)
-	if err != nil {
-		switch err {
-		case services.ErrSiteNotFound:
-			respondError(w, http.StatusNotFound, "Site not found")
-		case services.ErrNotAuthorized:
-			respondError(w, http.StatusForbidden, "Not authorized")
-		default:
-			respondError(w, http.StatusInternalServerError, "Failed to get site")
-		}
-		return
-	}
-
-	visitors, err := h.analyticsService.GetRealtimeVisitors(r.Context(), siteID)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, "Failed to get realtime stats")
-		return
-	}
-
-	respondJSON(w, http.StatusOK, map[string]int{"visitors": visitors})
-}
-
-func parseDateRange(r *http.Request) (time.Time, time.Time) {
-	now := time.Now()
-	defaultFrom := now.AddDate(0, 0, -30)
-	defaultTo := now
-
-	fromStr := r.URL.Query().Get("from")
-	toStr := r.URL.Query().Get("to")
-	period := r.URL.Query().Get("period")
-
-	// Handle preset periods
-	switch period {
-	case "today":
-		return startOfDay(now), now
-	case "yesterday":
-		yesterday := now.AddDate(0, 0, -1)
-		return startOfDay(yesterday), endOfDay(yesterday)
-	case "7d":
-		return now.AddDate(0, 0, -7), now
-	case "30d":
-		return now.AddDate(0, 0, -30), now
-	case "90d":
-		return now.AddDate(0, 0, -90), now
-	case "12m":
-		return now.AddDate(-1, 0, 0), now
-	}
-
-	// Parse custom date range
-	from := defaultFrom
-	to := defaultTo
-
-	if fromStr != "" {
-		if parsed, err := time.Parse("2006-01-02", fromStr); err == nil {
-			from = parsed
-		}
-	}
-
-	if toStr != "" {
-		if parsed, err := time.Parse("2006-01-02", toStr); err == nil {
-			to = endOfDay(parsed)
-		}
-	}
-
-	return from, to
-}
-
-func startOfDay(t time.Time) time.Time {
-	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
-}
-
-func endOfDay(t time.Time) time.Time {
-	return time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
+func respondError(w http.ResponseWriter, status int, message string) {
+	respondJSON(w, status, map[string]string{"error": message})
 }

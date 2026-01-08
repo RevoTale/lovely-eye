@@ -29,9 +29,11 @@ type DatabaseConfig struct {
 
 type AuthConfig struct {
 	JWTSecret            string
-	TokenExpiry          time.Duration
+	AccessTokenExpiry    time.Duration
 	RefreshExpiry        time.Duration
 	AllowRegistration    bool
+	SecureCookies        bool   // true for HTTPS (production)
+	CookieDomain         string // cookie domain (optional)
 	InitialAdminUsername string // username for initial admin (optional)
 	InitialAdminPassword string // password for initial admin (optional)
 }
@@ -50,9 +52,11 @@ func Load() *Config {
 		},
 		Auth: AuthConfig{
 			JWTSecret:            getJWTSecret(),
-			TokenExpiry:          time.Duration(getEnvInt("JWT_EXPIRY_HOURS", 24)) * time.Hour,
+			AccessTokenExpiry:    time.Duration(getEnvInt("JWT_ACCESS_EXPIRY_MINUTES", 15)) * time.Minute,
 			RefreshExpiry:        time.Duration(getEnvInt("JWT_REFRESH_DAYS", 7)) * 24 * time.Hour,
 			AllowRegistration:    getEnvBool("ALLOW_REGISTRATION", false),
+			SecureCookies:        getEnvBool("SECURE_COOKIES", false),
+			CookieDomain:         getEnv("COOKIE_DOMAIN", ""),
 			InitialAdminUsername: getEnv("INITIAL_ADMIN_USERNAME", ""),
 			InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
 		},

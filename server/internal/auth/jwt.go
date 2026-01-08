@@ -5,89 +5,91 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/lovely-eye/server/internal/config"
-	"github.com/lovely-eye/server/internal/models"
 )
 
 var (
-	ErrInvalidToken     = errors.New("invalid token")
-	ErrExpiredToken     = errors.New("token has expired")
-	ErrWrongTokenType   = errors.New("wrong token type")
+	ErrInvalidToken   = errors.New("invalid token")
+	ErrExpiredToken   = errors.New("token has expired")
+	ErrWrongTokenType = errors.New("wrong token type")
 )
 
-type TokenType string
+type tokenType string
 
 const (
-	AccessToken  TokenType = "access"
-	RefreshToken TokenType = "refresh"
+	accessTokenType  tokenType = "access"
+	refreshTokenType tokenType = "refresh"
 )
 
-type Claims struct {
-	UserID    int64     `json:"user_id"`
-	Username  string    `json:"username"`
-	Role      string    `json:"role"`
-	TokenType TokenType `json:"token_type"`
+// jwtClaims is the internal JWT claims structure.
+type jwtClaims struct {
+	UserID    int64     `json:"uid"`
+	Username  string    `json:"usr"`
+	Role      string    `json:"rol"`
+	TokenType tokenType `json:"typ"`
 	jwt.RegisteredClaims
 }
 
-type JWTService struct {
+// jwtProvider handles JWT token generation and validation.
+type jwtProvider struct {
 	secret        []byte
-	tokenExpiry   time.Duration
+	accessExpiry  time.Duration
 	refreshExpiry time.Duration
+	issuer        string
 }
 
-func NewJWTService(cfg *config.AuthConfig) *JWTService {
-	return &JWTService{
-		secret:        []byte(cfg.JWTSecret),
-		tokenExpiry:   cfg.TokenExpiry,
-		refreshExpiry: cfg.RefreshExpiry,
+func newJWTProvider(secret string, accessExpiry, refreshExpiry time.Duration) *jwtProvider {
+	return &jwtProvider{
+		secret:        []byte(secret),
+		accessExpiry:  accessExpiry,
+		refreshExpiry: refreshExpiry,
+		issuer:        "lovely-eye",
 	}
 }
 
-func (s *JWTService) GenerateToken(user *models.User) (string, error) {
-	claims := &Claims{
+func (p *jwtProvider) generateAccessToken(user *User) (string, error) {
+	claims := &jwtClaims{
 		UserID:    user.ID,
 		Username:  user.Username,
 		Role:      user.Role,
-		TokenType: AccessToken,
+		TokenType: accessTokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.tokenExpiry)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(p.accessExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "lovely-eye",
+			Issuer:    p.issuer,
 			Subject:   user.Username,
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(s.secret)
+	return token.SignedString(p.secret)
 }
 
-func (s *JWTService) GenerateRefreshToken(user *models.User) (string, error) {
-	claims := &Claims{
+func (p *jwtProvider) generateRefreshToken(user *User) (string, error) {
+	claims := &jwtClaims{
 		UserID:    user.ID,
 		Username:  user.Username,
 		Role:      user.Role,
-		TokenType: RefreshToken,
+		TokenType: refreshTokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.refreshExpiry)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(p.refreshExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			NotBefore: jwt.NewNumericDate(time.Now()),
-			Issuer:    "lovely-eye",
+			Issuer:    p.issuer,
 			Subject:   user.Username,
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(s.secret)
+	return token.SignedString(p.secret)
 }
 
-func (s *JWTService) ValidateToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+func (p *jwtProvider) validateToken(tokenString string) (*jwtClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwtClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, ErrInvalidToken
 		}
-		return s.secret, nil
+		return p.secret, nil
 	})
 
 	if err != nil {
@@ -97,7 +99,7 @@ func (s *JWTService) ValidateToken(tokenString string) (*Claims, error) {
 		return nil, ErrInvalidToken
 	}
 
-	claims, ok := token.Claims.(*Claims)
+	claims, ok := token.Claims.(*jwtClaims)
 	if !ok || !token.Valid {
 		return nil, ErrInvalidToken
 	}
@@ -105,24 +107,32 @@ func (s *JWTService) ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
-	claims, err := s.ValidateToken(tokenString)
+func (p *jwtProvider) validateAccessToken(tokenString string) (*Claims, error) {
+	jwtClaims, err := p.validateToken(tokenString)
 	if err != nil {
 		return nil, err
 	}
-	if claims.TokenType != AccessToken {
+	if jwtClaims.TokenType != accessTokenType {
 		return nil, ErrWrongTokenType
 	}
-	return claims, nil
+	return &Claims{
+		UserID:   jwtClaims.UserID,
+		Username: jwtClaims.Username,
+		Role:     jwtClaims.Role,
+	}, nil
 }
 
-func (s *JWTService) ValidateRefreshToken(tokenString string) (*Claims, error) {
-	claims, err := s.ValidateToken(tokenString)
+func (p *jwtProvider) validateRefreshToken(tokenString string) (*Claims, error) {
+	jwtClaims, err := p.validateToken(tokenString)
 	if err != nil {
 		return nil, err
 	}
-	if claims.TokenType != RefreshToken {
+	if jwtClaims.TokenType != refreshTokenType {
 		return nil, ErrWrongTokenType
 	}
-	return claims, nil
+	return &Claims{
+		UserID:   jwtClaims.UserID,
+		Username: jwtClaims.Username,
+		Role:     jwtClaims.Role,
+	}, nil
 }

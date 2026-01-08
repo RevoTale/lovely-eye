@@ -5,11 +5,11 @@ go 1.25
 require (
 	github.com/99designs/gqlgen v0.17.85
 	github.com/golang-jwt/jwt/v5 v5.3.0
-	github.com/uptrace/bun v1.2.16
-	github.com/uptrace/bun/dialect/pgdialect v1.2.16
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.16
-	github.com/uptrace/bun/driver/pgdriver v1.2.16
-	github.com/uptrace/bun/extra/bundebug v1.2.16
+	github.com/uptrace/bun v1.2.12
+	github.com/uptrace/bun/dialect/pgdialect v1.2.12
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.12
+	github.com/uptrace/bun/driver/pgdriver v1.2.12
+	github.com/uptrace/bun/extra/bundebug v1.2.12
 	github.com/vektah/gqlparser/v2 v2.5.31
 	golang.org/x/crypto v0.46.0
 	modernc.org/sqlite v1.34.5
@@ -39,7 +39,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
 	golang.org/x/mod v0.31.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/tools v0.40.0 // indirect
 	mellium.im/sasl v0.3.2 // indirect

@@ -47,9 +47,17 @@ func main() {
 	siteRepo := repository.NewSiteRepository(db)
 	analyticsRepo := repository.NewAnalyticsRepository(db)
 
-	// Initialize services
-	jwtService := auth.NewJWTService(&cfg.Auth)
-	authService := services.NewAuthService(userRepo, jwtService, cfg.Auth.AllowRegistration)
+	// Initialize auth service
+	authService := auth.NewService(userRepo, auth.Config{
+		JWTSecret:         cfg.Auth.JWTSecret,
+		AccessTokenExpiry: cfg.Auth.AccessTokenExpiry,
+		RefreshExpiry:     cfg.Auth.RefreshExpiry,
+		AllowRegistration: cfg.Auth.AllowRegistration,
+		SecureCookies:     cfg.Auth.SecureCookies,
+		CookieDomain:      cfg.Auth.CookieDomain,
+	})
+
+	// Initialize other services
 	siteService := services.NewSiteService(siteRepo)
 	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo)
 
@@ -61,8 +69,8 @@ func main() {
 	// Initialize handlers for tracking (REST API)
 	analyticsHandler := handlers.NewAnalyticsHandler(analyticsService, siteService)
 
-	// Initialize middleware
-	authMiddleware := middleware.NewAuthMiddleware(authService)
+	// Initialize auth middleware
+	authMiddleware := auth.NewMiddleware(authService)
 
 	// Setup GraphQL resolver (handles all dashboard/auth/site operations)
 	resolver := graph.NewResolver(authService, siteService, analyticsService)
@@ -74,8 +82,8 @@ func main() {
 	mux.HandleFunc("POST /api/collect", analyticsHandler.Collect)
 	mux.HandleFunc("POST /api/event", analyticsHandler.Event)
 
-	// GraphQL endpoint
-	mux.HandleFunc("POST /graphql", graph.Handler(resolver))
+	// GraphQL endpoint (CSRF protected for cookie-based auth)
+	mux.Handle("POST /graphql", authMiddleware.RequireCSRF(http.HandlerFunc(graph.Handler(resolver))))
 	mux.HandleFunc("GET /graphql", graphqlPlaygroundHandler)
 
 	// Serve tracking script

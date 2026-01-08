@@ -117,6 +117,8 @@ type Mutation {
   """First user becomes admin"""
   register(input: RegisterInput!): AuthPayload!
   login(input: LoginInput!): AuthPayload!
+  """Clears auth cookies"""
+  logout: Boolean!
   refreshToken(refreshToken: String!): TokenPayload!
   createSite(input: CreateSiteInput!): Site!
   updateSite(id: ID!, input: UpdateSiteInput!): Site!

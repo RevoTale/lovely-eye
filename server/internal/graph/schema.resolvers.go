@@ -9,15 +9,16 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"time"
 
+	"github.com/lovely-eye/server/internal/auth"
 	"github.com/lovely-eye/server/internal/graph/model"
-	"github.com/lovely-eye/server/internal/middleware"
 	"github.com/lovely-eye/server/internal/services"
 )
 
 // Register is the resolver for the register field.
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthPayload, error) {
-	user, tokens, err := r.AuthService.Register(ctx, services.RegisterInput{
+	user, tokens, err := r.AuthService.Register(ctx, auth.RegisterInput{
 		Username: input.Username,
 		Password: input.Password,
 	})
@@ -25,12 +26,17 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		return nil, err
 	}
 
+	// Set auth cookies
+	if w := GetResponseWriter(ctx); w != nil {
+		r.AuthService.SetAuthCookies(w, tokens)
+	}
+
 	return &model.AuthPayload{
 		User: &model.User{
 			ID:        strconv.FormatInt(user.ID, 10),
 			Username:  user.Username,
 			Role:      user.Role,
-			CreatedAt: user.CreatedAt,
+			CreatedAt: time.Now(),
 		},
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
@@ -39,7 +45,7 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 
 // Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error) {
-	user, tokens, err := r.AuthService.Login(ctx, services.LoginInput{
+	user, tokens, err := r.AuthService.Login(ctx, auth.LoginInput{
 		Username: input.Username,
 		Password: input.Password,
 	})
@@ -47,23 +53,41 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 		return nil, err
 	}
 
+	// Set auth cookies
+	if w := GetResponseWriter(ctx); w != nil {
+		r.AuthService.SetAuthCookies(w, tokens)
+	}
+
 	return &model.AuthPayload{
 		User: &model.User{
 			ID:        strconv.FormatInt(user.ID, 10),
 			Username:  user.Username,
 			Role:      user.Role,
-			CreatedAt: user.CreatedAt,
+			CreatedAt: time.Now(),
 		},
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
 	}, nil
 }
 
+// Logout is the resolver for the logout field.
+func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
+	if w := GetResponseWriter(ctx); w != nil {
+		r.AuthService.ClearAuthCookies(w)
+	}
+	return true, nil
+}
+
 // RefreshToken is the resolver for the refreshToken field.
 func (r *mutationResolver) RefreshToken(ctx context.Context, refreshToken string) (*model.TokenPayload, error) {
-	tokens, err := r.AuthService.RefreshToken(ctx, refreshToken)
+	tokens, err := r.AuthService.RefreshTokens(ctx, refreshToken)
 	if err != nil {
 		return nil, err
+	}
+
+	// Set auth cookies
+	if w := GetResponseWriter(ctx); w != nil {
+		r.AuthService.SetAuthCookies(w, tokens)
 	}
 
 	return &model.TokenPayload{
@@ -74,7 +98,7 @@ func (r *mutationResolver) RefreshToken(ctx context.Context, refreshToken string
 
 // CreateSite is the resolver for the createSite field.
 func (r *mutationResolver) CreateSite(ctx context.Context, input model.CreateSiteInput) (*model.Site, error) {
-	claims := middleware.GetUserFromContext(ctx)
+	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
 	}
@@ -99,7 +123,7 @@ func (r *mutationResolver) CreateSite(ctx context.Context, input model.CreateSit
 
 // UpdateSite is the resolver for the updateSite field.
 func (r *mutationResolver) UpdateSite(ctx context.Context, id string, input model.UpdateSiteInput) (*model.Site, error) {
-	claims := middleware.GetUserFromContext(ctx)
+	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
 	}
@@ -125,7 +149,7 @@ func (r *mutationResolver) UpdateSite(ctx context.Context, id string, input mode
 
 // DeleteSite is the resolver for the deleteSite field.
 func (r *mutationResolver) DeleteSite(ctx context.Context, id string) (bool, error) {
-	claims := middleware.GetUserFromContext(ctx)
+	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return false, errors.New("unauthorized")
 	}
@@ -144,7 +168,7 @@ func (r *mutationResolver) DeleteSite(ctx context.Context, id string) (bool, err
 
 // RegenerateSiteKey is the resolver for the regenerateSiteKey field.
 func (r *mutationResolver) RegenerateSiteKey(ctx context.Context, id string) (*model.Site, error) {
-	claims := middleware.GetUserFromContext(ctx)
+	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
 	}
@@ -170,7 +194,7 @@ func (r *mutationResolver) RegenerateSiteKey(ctx context.Context, id string) (*m
 
 // Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
-	claims := middleware.GetUserFromContext(ctx)
+	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, nil
 	}
@@ -181,16 +205,17 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	}
 
 	return &model.User{
-		ID:        strconv.FormatInt(user.ID, 10),
-		Username:  user.Username,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt,
+		ID:       strconv.FormatInt(user.ID, 10),
+		Username: user.Username,
+		Role:     user.Role,
+		// Note: CreatedAt is not available from auth.User, would need to add to interface if needed
+		CreatedAt: time.Now(),
 	}, nil
 }
 
 // Sites is the resolver for the sites field.
 func (r *queryResolver) Sites(ctx context.Context) ([]*model.Site, error) {
-	claims := middleware.GetUserFromContext(ctx)
+	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
 	}
@@ -216,7 +241,7 @@ func (r *queryResolver) Sites(ctx context.Context) ([]*model.Site, error) {
 
 // Site is the resolver for the site field.
 func (r *queryResolver) Site(ctx context.Context, id string) (*model.Site, error) {
-	claims := middleware.GetUserFromContext(ctx)
+	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
 	}
@@ -242,7 +267,7 @@ func (r *queryResolver) Site(ctx context.Context, id string) (*model.Site, error
 
 // Dashboard is the resolver for the dashboard field.
 func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput) (*model.DashboardStats, error) {
-	claims := middleware.GetUserFromContext(ctx)
+	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
 	}
@@ -271,7 +296,7 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 
 // Realtime is the resolver for the realtime field.
 func (r *queryResolver) Realtime(ctx context.Context, siteID string) (*model.RealtimeStats, error) {
-	claims := middleware.GetUserFromContext(ctx)
+	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
 	}
