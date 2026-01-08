@@ -7,6 +7,7 @@ import (
 
 	"github.com/lovely-eye/server/internal/auth"
 	"github.com/lovely-eye/server/internal/config"
+	"github.com/lovely-eye/server/internal/dashboard"
 	"github.com/lovely-eye/server/internal/database"
 	"github.com/lovely-eye/server/internal/graph"
 	"github.com/lovely-eye/server/internal/handlers"
@@ -77,26 +78,51 @@ func New(cfg *config.Config) (*Server, error) {
 	// Setup HTTP router
 	mux := http.NewServeMux()
 
+	// Get base path for all routes
+	basePath := cfg.Server.BasePath
+	if basePath == "/" {
+		basePath = ""
+	}
+
 	// REST API: Only tracking endpoints (public, no auth required)
-	mux.HandleFunc("POST /api/collect", analyticsHandler.Collect)
-	mux.HandleFunc("POST /api/event", analyticsHandler.Event)
+	mux.HandleFunc("POST "+basePath+"/api/collect", analyticsHandler.Collect)
+	mux.HandleFunc("POST "+basePath+"/api/event", analyticsHandler.Event)
 
 	// GraphQL endpoint (CSRF protected for cookie-based auth)
-	mux.Handle("POST /graphql", authMiddleware.RequireCSRF(http.HandlerFunc(graph.Handler(resolver))))
-	mux.HandleFunc("GET /graphql", graphqlPlaygroundHandler)
+	mux.Handle("POST "+basePath+"/graphql", authMiddleware.RequireCSRF(http.HandlerFunc(graph.Handler(resolver))))
+	mux.HandleFunc("GET "+basePath+"/graphql", graphqlPlaygroundHandler)
 
 	// Serve tracking script
-	mux.HandleFunc("GET /tracker.js", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET "+basePath+"/tracker.js", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/javascript")
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.ServeFile(w, r, "static/tracker.js")
 	})
 
-	// Health check
+	// Health check (always at root for load balancers)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
+
+	// Setup dashboard handler with runtime config
+	dashboardCfg := dashboard.Config{
+		BasePath:   cfg.Server.BasePath,
+		APIUrl:     cfg.Server.BasePath + "/api",
+		GraphQLUrl: cfg.Server.BasePath + "/graphql",
+	}
+	dashboardHandler := dashboard.Handler(dashboardCfg)
+
+	// Serve dashboard at configured base path
+	if basePath == "" {
+		// Dashboard at root - catch-all handler
+		mux.Handle("/", dashboardHandler)
+	} else {
+		// Dashboard at subpath - strip prefix and serve
+		mux.Handle(basePath+"/", http.StripPrefix(basePath, dashboardHandler))
+		// Also handle the exact base path
+		mux.Handle(basePath, http.RedirectHandler(basePath+"/", http.StatusMovedPermanently))
+	}
 
 	// Apply global middleware
 	handler := middleware.Logging(

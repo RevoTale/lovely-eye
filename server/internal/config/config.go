@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,8 +17,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host string
-	Port string
+	Host     string
+	Port     string
+	BasePath string // Base path for all routes (e.g., "/app" or "/")
 }
 
 type DatabaseConfig struct {
@@ -39,10 +41,16 @@ type AuthConfig struct {
 }
 
 func Load() *Config {
+	basePath := getEnv("BASE_PATH", "/")
+	// Normalize base path
+	if basePath != "/" {
+		basePath = "/" + strings.Trim(basePath, "/")
+	}
 	return &Config{
 		Server: ServerConfig{
-			Host: getEnv("SERVER_HOST", "0.0.0.0"),
-			Port: getEnv("SERVER_PORT", "8080"),
+			Host:     getEnv("SERVER_HOST", "0.0.0.0"),
+			Port:     getEnv("SERVER_PORT", "8080"),
+			BasePath: basePath,
 		},
 		Database: DatabaseConfig{
 			Driver:   getEnv("DB_DRIVER", "sqlite"),

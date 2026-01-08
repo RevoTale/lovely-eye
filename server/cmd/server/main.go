@@ -33,9 +33,11 @@ func main() {
 	// Start server in goroutine
 	go func() {
 		addr := srv.HTTPServer.Addr
+		basePath := cfg.Server.BasePath
 		log.Printf("Server starting on %s", addr)
-		log.Printf("REST API available at http://%s/api", addr)
-		log.Printf("GraphQL endpoint at http://%s/graphql", addr)
+		log.Printf("Dashboard available at http://%s%s", addr, basePath)
+		log.Printf("REST API available at http://%s%s/api", addr, basePath)
+		log.Printf("GraphQL endpoint at http://%s%s/graphql", addr, basePath)
 		if err := srv.HTTPServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Server failed: %v", err)
 		}
