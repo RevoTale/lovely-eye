@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
-	"github.com/lovely-eye/server/e2e/generated"
+	operations "github.com/lovely-eye/server/e2e/generated" 
 	"github.com/lovely-eye/server/internal/config"
 	"github.com/lovely-eye/server/internal/server"
 	"github.com/stretchr/testify/require"
@@ -114,7 +114,7 @@ func TestRegister(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("first user becomes admin", func(t *testing.T) {
-		resp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+		resp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 			Username: "admin",
 			Password: "password123",
 		})
@@ -125,7 +125,7 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("second user is regular user", func(t *testing.T) {
-		resp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+		resp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 			Username: "user1",
 			Password: "password123",
 		})
@@ -134,7 +134,7 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("duplicate username fails", func(t *testing.T) {
-		_, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+		_, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 			Username: "admin",
 			Password: "different",
 		})
@@ -146,14 +146,14 @@ func TestLogin(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	_, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+	_, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "testuser",
 		Password: "testpass",
 	})
 	require.NoError(t, err)
 
 	t.Run("valid credentials", func(t *testing.T) {
-		resp, err := generated.Login(ctx, ts.graphqlClient(), generated.LoginInput{
+		resp, err := operations.Login(ctx, ts.graphqlClient(), operations.LoginInput{
 			Username: "testuser",
 			Password: "testpass",
 		})
@@ -163,7 +163,7 @@ func TestLogin(t *testing.T) {
 	})
 
 	t.Run("invalid password", func(t *testing.T) {
-		_, err := generated.Login(ctx, ts.graphqlClient(), generated.LoginInput{
+		_, err := operations.Login(ctx, ts.graphqlClient(), operations.LoginInput{
 			Username: "testuser",
 			Password: "wrongpass",
 		})
@@ -171,7 +171,7 @@ func TestLogin(t *testing.T) {
 	})
 
 	t.Run("nonexistent user", func(t *testing.T) {
-		_, err := generated.Login(ctx, ts.graphqlClient(), generated.LoginInput{
+		_, err := operations.Login(ctx, ts.graphqlClient(), operations.LoginInput{
 			Username: "nouser",
 			Password: "testpass",
 		})
@@ -183,7 +183,7 @@ func TestStatsCollection(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
@@ -191,7 +191,7 @@ func TestStatsCollection(t *testing.T) {
 
 	client := ts.bearerClient(regResp.Register.AccessToken)
 
-	siteResp, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+	siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
 		Domain: "example.com",
 		Name:   "Example Site",
 	})
@@ -259,7 +259,7 @@ func TestDashboardAuthorization(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
@@ -267,7 +267,7 @@ func TestDashboardAuthorization(t *testing.T) {
 
 	authedClient := ts.bearerClient(regResp.Register.AccessToken)
 
-	siteResp, err := generated.CreateSite(ctx, authedClient, generated.CreateSiteInput{
+	siteResp, err := operations.CreateSite(ctx, authedClient, operations.CreateSiteInput{
 		Domain: "example.com",
 		Name:   "Example Site",
 	})
@@ -276,24 +276,24 @@ func TestDashboardAuthorization(t *testing.T) {
 	siteID := siteResp.CreateSite.Id
 
 	t.Run("authenticated user can view dashboard", func(t *testing.T) {
-		resp, err := generated.Dashboard(ctx, authedClient, siteID, nil)
+		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, resp.Dashboard.Visitors)
 	})
 
 	t.Run("unauthenticated user cannot view dashboard", func(t *testing.T) {
-		_, err := generated.Dashboard(ctx, ts.graphqlClient(), siteID, nil)
+		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil)
 		require.Error(t, err)
 	})
 
 	t.Run("authenticated user can view realtime", func(t *testing.T) {
-		resp, err := generated.Realtime(ctx, authedClient, siteID)
+		resp, err := operations.Realtime(ctx, authedClient, siteID)
 		require.NoError(t, err)
 		require.Equal(t, 0, resp.Realtime.Visitors)
 	})
 
 	t.Run("me query returns user when authenticated", func(t *testing.T) {
-		resp, err := generated.Me(ctx, authedClient)
+		resp, err := operations.Me(ctx, authedClient)
 		require.NoError(t, err)
 		require.NotNil(t, resp.Me)
 		require.NotNil(t, resp.Me.Username)
@@ -301,7 +301,7 @@ func TestDashboardAuthorization(t *testing.T) {
 	})
 
 	t.Run("me query returns nil when unauthenticated", func(t *testing.T) {
-		resp, err := generated.Me(ctx, ts.graphqlClient())
+		resp, err := operations.Me(ctx, ts.graphqlClient())
 		require.NoError(t, err)
 		require.Nil(t, resp.Me)
 	})
@@ -311,7 +311,7 @@ func TestSiteManagement(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
@@ -320,7 +320,7 @@ func TestSiteManagement(t *testing.T) {
 	client := ts.bearerClient(regResp.Register.AccessToken)
 
 	t.Run("create site", func(t *testing.T) {
-		resp, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+		resp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
 			Domain: "mysite.com",
 			Name:   "My Site",
 		})
@@ -330,13 +330,13 @@ func TestSiteManagement(t *testing.T) {
 	})
 
 	t.Run("list sites", func(t *testing.T) {
-		resp, err := generated.Sites(ctx, client)
+		resp, err := operations.Sites(ctx, client)
 		require.NoError(t, err)
 		require.Len(t, resp.Sites, 1)
 	})
 
 	t.Run("unauthenticated cannot create site", func(t *testing.T) {
-		_, err := generated.CreateSite(ctx, ts.graphqlClient(), generated.CreateSiteInput{
+		_, err := operations.CreateSite(ctx, ts.graphqlClient(), operations.CreateSiteInput{
 			Domain: "other.com",
 			Name:   "Other",
 		})
@@ -348,7 +348,7 @@ func TestCSRFProtection(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
@@ -359,7 +359,7 @@ func TestCSRFProtection(t *testing.T) {
 
 	t.Run("cookie auth with valid CSRF succeeds", func(t *testing.T) {
 		client := ts.cookieClient(accessToken, csrfToken)
-		_, err := generated.Sites(ctx, client)
+		_, err := operations.Sites(ctx, client)
 		require.NoError(t, err)
 	})
 
@@ -372,7 +372,7 @@ func TestCSRFProtection(t *testing.T) {
 		}
 		client := graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
 
-		_, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+		_, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
 			Domain: "csrf-test.com",
 			Name:   "Test",
 		})
@@ -389,7 +389,7 @@ func TestCSRFProtection(t *testing.T) {
 		}
 		client := graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
 
-		_, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+		_, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
 			Domain: "csrf-test2.com",
 			Name:   "Test",
 		})
@@ -424,7 +424,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
@@ -432,7 +432,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	client := ts.bearerClient(regResp.Register.AccessToken)
 
-	siteResp, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+	siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
 		Domain: "events-test.com",
 		Name:   "Events Test Site",
 	})
@@ -616,7 +616,7 @@ func TestEventPropertiesStored(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
@@ -624,7 +624,7 @@ func TestEventPropertiesStored(t *testing.T) {
 
 	client := ts.bearerClient(regResp.Register.AccessToken)
 
-	siteResp, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+	siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
 		Domain: "events-storage-test.com",
 		Name:   "Events Storage Test",
 	})
@@ -654,12 +654,12 @@ func TestEventPropertiesStored(t *testing.T) {
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 
 		// Retrieve events via GraphQL API
-		eventsResp, err := generated.Events(ctx, client, siteID, nil, nil, nil)
+		eventsResp, err := operations.Events(ctx, client, siteID, nil, nil, nil)
 		require.NoError(t, err)
 		require.NotEmpty(t, eventsResp.Events.Events, "should have at least one event")
 
 		// Find our event
-		var foundEvent *generated.EventsEventsEventsResultEventsEvent
+		var foundEvent *operations.EventsEventsEventsResultEventsEvent
 		for _, e := range eventsResp.Events.Events {
 			if e.Name == "button_click" && e.Path == "/landing" {
 				foundEvent = &e
@@ -712,7 +712,7 @@ func TestEventPropertiesStored(t *testing.T) {
 		}
 
 		// Retrieve events via GraphQL API
-		eventsResp, err := generated.Events(ctx, client, siteID, nil, nil, nil)
+		eventsResp, err := operations.Events(ctx, client, siteID, nil, nil, nil)
 		require.NoError(t, err)
 
 		// Verify each event exists
@@ -730,14 +730,14 @@ func TestEventPropertiesStored(t *testing.T) {
 
 	t.Run("events pagination works", func(t *testing.T) {
 		limit := 2
-		eventsResp, err := generated.Events(ctx, client, siteID, nil, &limit, nil)
+		eventsResp, err := operations.Events(ctx, client, siteID, nil, &limit, nil)
 		require.NoError(t, err)
 		require.LessOrEqual(t, len(eventsResp.Events.Events), 2, "should return at most 2 events")
 		require.GreaterOrEqual(t, eventsResp.Events.Total, 4, "total should include all events")
 	})
 
 	t.Run("unauthenticated user cannot access events", func(t *testing.T) {
-		_, err := generated.Events(ctx, ts.graphqlClient(), siteID, nil, nil, nil)
+		_, err := operations.Events(ctx, ts.graphqlClient(), siteID, nil, nil, nil)
 		require.Error(t, err)
 	})
 }
