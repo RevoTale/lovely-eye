@@ -1,38 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <!-- Outer mechanical frame -->
+  <!-- Outer mechanical frame - Portal 2 style -->
   <circle cx="32" cy="32" r="30" fill="#18181b" stroke="#3f3f46" stroke-width="2"/>
   <!-- Inner mechanical ring with notches -->
   <circle cx="32" cy="32" r="24" fill="#09090b" stroke="#52525b" stroke-width="1"/>
-  <!-- Mechanical segments -->
+  <!-- Mechanical segments - aperture style -->
   <path d="M32 8 L34 14 L30 14 Z" fill="#52525b"/>
   <path d="M32 56 L34 50 L30 50 Z" fill="#52525b"/>
   <path d="M8 32 L14 34 L14 30 Z" fill="#52525b"/>
   <path d="M56 32 L50 34 L50 30 Z" fill="#52525b"/>
-  <!-- Fiery outer glow -->
-  <circle cx="32" cy="32" r="16" fill="url(#fireGlow)" opacity="0.6"/>
-  <!-- Sauron iris -->
-  <ellipse cx="32" cy="32" rx="14" ry="16" fill="url(#sauronIris)"/>
-  <!-- Vertical slit pupil -->
-  <ellipse cx="32" cy="32" rx="3" ry="14" fill="#18181b"/>
-  <ellipse cx="32" cy="32" rx="1.5" ry="12" fill="#09090b"/>
-  <!-- Inner fire core -->
-  <ellipse cx="32" cy="32" rx="2" ry="8" fill="url(#fireCore)" opacity="0.8"/>
-  <!-- Highlights -->
+  <!-- Diagonal mechanical notches -->
+  <path d="M49 15 L45 19 L47 21 Z" fill="#52525b"/>
+  <path d="M15 49 L19 45 L17 47 Z" fill="#52525b"/>
+  <path d="M49 49 L45 45 L47 43 Z" fill="#52525b"/>
+  <path d="M15 15 L19 19 L17 17 Z" fill="#52525b"/>
+  <!-- Lovely pink/rose outer glow -->
+  <circle cx="32" cy="32" r="17" fill="url(#lovelyGlow)" opacity="0.5"/>
+  <!-- Eye iris with warm lovely tones -->
+  <ellipse cx="32" cy="32" rx="14" ry="16" fill="url(#lovelyIris)"/>
+  <!-- Heart-shaped pupil - the "Lovely" touch -->
+  <path d="M32 20 
+           C28 20, 24 24, 24 28 
+           C24 34, 32 42, 32 42 
+           C32 42, 40 34, 40 28 
+           C40 24, 36 20, 32 20 Z" 
+        fill="#18181b" opacity="0.9"/>
+  <path d="M32 23 
+           C29.5 23, 27 25.5, 27 28 
+           C27 32, 32 38, 32 38 
+           C32 38, 37 32, 37 28 
+           C37 25.5, 34.5 23, 32 23 Z" 
+        fill="#09090b"/>
+  <!-- Inner fire/love core -->
+  <path d="M32 26 
+           C30.5 26, 29 27.5, 29 29 
+           C29 31, 32 34, 32 34 
+           C32 34, 35 31, 35 29 
+           C35 27.5, 33.5 26, 32 26 Z" 
+        fill="url(#heartCore)" opacity="0.8"/>
+  <!-- Highlights for depth -->
   <ellipse cx="28" cy="24" rx="2" ry="3" fill="#fef3c7" opacity="0.4"/>
+  <ellipse cx="29" cy="29" rx="1" ry="1.5" fill="#fef3c7" opacity="0.3"/>
   <defs>
-    <radialGradient id="sauronIris" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#fbbf24"/>
-      <stop offset="40%" stop-color="#f97316"/>
-      <stop offset="70%" stop-color="#ea580c"/>
-      <stop offset="100%" stop-color="#7c2d12"/>
+    <!-- Lovely iris - warm rose/amber gradient -->
+    <radialGradient id="lovelyIris" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fcd34d"/>
+      <stop offset="30%" stop-color="#fb923c"/>
+      <stop offset="50%" stop-color="#f472b6"/>
+      <stop offset="75%" stop-color="#be185d"/>
+      <stop offset="100%" stop-color="#881337"/>
     </radialGradient>
-    <radialGradient id="fireGlow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#f97316"/>
-      <stop offset="100%" stop-color="#7c2d12" stop-opacity="0"/>
+    <!-- Lovely glow - pink/amber mix -->
+    <radialGradient id="lovelyGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="50%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#881337" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="fireCore" x1="50%" y1="0%" x2="50%" y2="100%">
+    <!-- Heart core glow -->
+    <linearGradient id="heartCore" x1="50%" y1="0%" x2="50%" y2="100%">
       <stop offset="0%" stop-color="#fef3c7"/>
-      <stop offset="50%" stop-color="#fbbf24"/>
+      <stop offset="50%" stop-color="#fda4af"/>
       <stop offset="100%" stop-color="#fef3c7"/>
     </linearGradient>
   </defs>
