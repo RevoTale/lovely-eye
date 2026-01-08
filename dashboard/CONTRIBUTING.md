@@ -1,0 +1,26 @@
+# Lovely Eye Dashboard - Project Rules
+
+## Stack
+
+- Bun for package management
+- Vite for static export (no SSR)
+- TanStack Router for type-safe routing
+- Apollo Client for GraphQL
+- shadcn/ui + Tailwind CSS for UI
+
+## Build
+
+- Output goes to `dist/`, served by Go server
+- Runtime config via `public/config.js` (not bundled)
+- Go server modifies `config.js` at startup for environment-specific values
+
+## Code Generation
+
+- Run `bun run codegen` after modifying GraphQL operations in `src/graphql/`
+
+## Commands
+
+```bash
+bun run build    # Type check + production build
+bun run codegen  # Generate GraphQL types
+```
