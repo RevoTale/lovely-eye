@@ -192,6 +192,26 @@ func (s *AnalyticsService) GetRealtimeVisitors(ctx context.Context, siteID int64
 	return s.analyticsRepo.GetVisitorCount(ctx, siteID, from, to)
 }
 
+// GetEvents retrieves events for a site within a time range
+func (s *AnalyticsService) GetEvents(ctx context.Context, siteID int64, from, to time.Time, limit, offset int) ([]*models.Event, error) {
+	return s.analyticsRepo.GetEvents(ctx, siteID, from, to, limit, offset)
+}
+
+// GetEventsWithTotal retrieves events with total count for pagination
+func (s *AnalyticsService) GetEventsWithTotal(ctx context.Context, siteID int64, from, to time.Time, limit, offset int) ([]*models.Event, int, error) {
+	events, err := s.analyticsRepo.GetEvents(ctx, siteID, from, to, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	total, err := s.analyticsRepo.GetEventCount(ctx, siteID, from, to)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return events, total, nil
+}
+
 // Helper functions for parsing user agent
 func generateVisitorID(ip, userAgent, salt string) string {
 	data := ip + userAgent + salt

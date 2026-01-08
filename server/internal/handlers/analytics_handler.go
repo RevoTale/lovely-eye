@@ -94,6 +94,15 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate properties is a valid map[string]string if provided
+	if req.Properties != "" {
+		var props map[string]string
+		if err := json.Unmarshal([]byte(req.Properties), &props); err != nil {
+			respondError(w, http.StatusBadRequest, "properties must be a JSON object with string values")
+			return
+		}
+	}
+
 	ip := r.Header.Get("X-Forwarded-For")
 	if ip == "" {
 		ip = r.Header.Get("X-Real-IP")

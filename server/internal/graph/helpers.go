@@ -1,9 +1,12 @@
 package graph
 
 import (
+	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/lovely-eye/server/internal/graph/model"
+	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/services"
 )
 
@@ -80,6 +83,47 @@ func convertToGraphQLStats(stats *services.DashboardStats) *model.DashboardStats
 			Visitors:  d.Visitors,
 			PageViews: d.PageViews,
 			Sessions:  d.Sessions,
+		})
+	}
+
+	return result
+}
+
+func convertToGraphQLEvents(events []*models.Event, total int) *model.EventsResult {
+	result := &model.EventsResult{
+		Events: make([]*model.Event, 0, len(events)),
+		Total:  total,
+	}
+
+	for _, e := range events {
+		event := &model.Event{
+			ID:         strconv.FormatInt(e.ID, 10),
+			Name:       e.Name,
+			Path:       e.Path,
+			Properties: parseEventProperties(e.Properties),
+			CreatedAt:  e.CreatedAt,
+		}
+		result.Events = append(result.Events, event)
+	}
+
+	return result
+}
+
+func parseEventProperties(propsJSON string) []*model.EventProperty {
+	if propsJSON == "" {
+		return []*model.EventProperty{}
+	}
+
+	var props map[string]string
+	if err := json.Unmarshal([]byte(propsJSON), &props); err != nil {
+		return []*model.EventProperty{}
+	}
+
+	result := make([]*model.EventProperty, 0, len(props))
+	for k, v := range props {
+		result = append(result, &model.EventProperty{
+			Key:   k,
+			Value: v,
 		})
 	}
 

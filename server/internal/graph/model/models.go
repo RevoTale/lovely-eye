@@ -103,3 +103,21 @@ type DateRangeInput struct {
 	From *time.Time `json:"from,omitempty"`
 	To   *time.Time `json:"to,omitempty"`
 }
+
+type Event struct {
+	ID         string           `json:"id"`
+	Name       string           `json:"name"`
+	Path       string           `json:"path"`
+	Properties []*EventProperty `json:"properties"`
+	CreatedAt  time.Time        `json:"createdAt"`
+}
+
+type EventProperty struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+type EventsResult struct {
+	Events []*Event `json:"events"`
+	Total  int      `json:"total"`
+}

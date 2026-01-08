@@ -92,6 +92,16 @@ func (r *AnalyticsRepository) GetEvents(ctx context.Context, siteID int64, from,
 	return events, err
 }
 
+func (r *AnalyticsRepository) GetEventCount(ctx context.Context, siteID int64, from, to time.Time) (int, error) {
+	count, err := r.db.NewSelect().
+		Model((*models.Event)(nil)).
+		Where("site_id = ?", siteID).
+		Where("created_at >= ?", from).
+		Where("created_at <= ?", to).
+		Count(ctx)
+	return count, err
+}
+
 // Aggregation methods
 func (r *AnalyticsRepository) GetVisitorCount(ctx context.Context, siteID int64, from, to time.Time) (int, error) {
 	var count int

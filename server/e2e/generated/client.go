@@ -226,6 +226,68 @@ type DeleteSiteResponse struct {
 // GetDeleteSite returns DeleteSiteResponse.DeleteSite, and is useful for accessing the field via an interface.
 func (v *DeleteSiteResponse) GetDeleteSite() bool { return v.DeleteSite }
 
+// EventsEventsEventsResult includes the requested fields of the GraphQL type EventsResult.
+type EventsEventsEventsResult struct {
+	Events []EventsEventsEventsResultEventsEvent `json:"events"`
+	Total  int                                   `json:"total"`
+}
+
+// GetEvents returns EventsEventsEventsResult.Events, and is useful for accessing the field via an interface.
+func (v *EventsEventsEventsResult) GetEvents() []EventsEventsEventsResultEventsEvent { return v.Events }
+
+// GetTotal returns EventsEventsEventsResult.Total, and is useful for accessing the field via an interface.
+func (v *EventsEventsEventsResult) GetTotal() int { return v.Total }
+
+// EventsEventsEventsResultEventsEvent includes the requested fields of the GraphQL type Event.
+type EventsEventsEventsResultEventsEvent struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+	Path string `json:"path"`
+	// Key-value properties associated with the event
+	Properties []EventsEventsEventsResultEventsEventPropertiesEventProperty `json:"properties"`
+	CreatedAt  time.Time                                                    `json:"createdAt"`
+}
+
+// GetId returns EventsEventsEventsResultEventsEvent.Id, and is useful for accessing the field via an interface.
+func (v *EventsEventsEventsResultEventsEvent) GetId() string { return v.Id }
+
+// GetName returns EventsEventsEventsResultEventsEvent.Name, and is useful for accessing the field via an interface.
+func (v *EventsEventsEventsResultEventsEvent) GetName() string { return v.Name }
+
+// GetPath returns EventsEventsEventsResultEventsEvent.Path, and is useful for accessing the field via an interface.
+func (v *EventsEventsEventsResultEventsEvent) GetPath() string { return v.Path }
+
+// GetProperties returns EventsEventsEventsResultEventsEvent.Properties, and is useful for accessing the field via an interface.
+func (v *EventsEventsEventsResultEventsEvent) GetProperties() []EventsEventsEventsResultEventsEventPropertiesEventProperty {
+	return v.Properties
+}
+
+// GetCreatedAt returns EventsEventsEventsResultEventsEvent.CreatedAt, and is useful for accessing the field via an interface.
+func (v *EventsEventsEventsResultEventsEvent) GetCreatedAt() time.Time { return v.CreatedAt }
+
+// EventsEventsEventsResultEventsEventPropertiesEventProperty includes the requested fields of the GraphQL type EventProperty.
+type EventsEventsEventsResultEventsEventPropertiesEventProperty struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// GetKey returns EventsEventsEventsResultEventsEventPropertiesEventProperty.Key, and is useful for accessing the field via an interface.
+func (v *EventsEventsEventsResultEventsEventPropertiesEventProperty) GetKey() string { return v.Key }
+
+// GetValue returns EventsEventsEventsResultEventsEventPropertiesEventProperty.Value, and is useful for accessing the field via an interface.
+func (v *EventsEventsEventsResultEventsEventPropertiesEventProperty) GetValue() string {
+	return v.Value
+}
+
+// EventsResponse is returned by Events on success.
+type EventsResponse struct {
+	// Get events for a site with pagination
+	Events EventsEventsEventsResult `json:"events"`
+}
+
+// GetEvents returns EventsResponse.Events, and is useful for accessing the field via an interface.
+func (v *EventsResponse) GetEvents() EventsEventsEventsResult { return v.Events }
+
 type LoginInput struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -465,6 +527,26 @@ type __DeleteSiteInput struct {
 // GetId returns __DeleteSiteInput.Id, and is useful for accessing the field via an interface.
 func (v *__DeleteSiteInput) GetId() string { return v.Id }
 
+// __EventsInput is used internally by genqlient
+type __EventsInput struct {
+	SiteId    string          `json:"siteId"`
+	DateRange *DateRangeInput `json:"dateRange"`
+	Limit     *int            `json:"limit"`
+	Offset    *int            `json:"offset"`
+}
+
+// GetSiteId returns __EventsInput.SiteId, and is useful for accessing the field via an interface.
+func (v *__EventsInput) GetSiteId() string { return v.SiteId }
+
+// GetDateRange returns __EventsInput.DateRange, and is useful for accessing the field via an interface.
+func (v *__EventsInput) GetDateRange() *DateRangeInput { return v.DateRange }
+
+// GetLimit returns __EventsInput.Limit, and is useful for accessing the field via an interface.
+func (v *__EventsInput) GetLimit() *int { return v.Limit }
+
+// GetOffset returns __EventsInput.Offset, and is useful for accessing the field via an interface.
+func (v *__EventsInput) GetOffset() *int { return v.Offset }
+
 // __LoginInput is used internally by genqlient
 type __LoginInput struct {
 	Input LoginInput `json:"input"`
@@ -622,6 +704,56 @@ func DeleteSite(
 	}
 
 	data_ = &DeleteSiteResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by Events.
+const Events_Operation = `
+query Events ($siteId: ID!, $dateRange: DateRangeInput, $limit: Int, $offset: Int) {
+	events(siteId: $siteId, dateRange: $dateRange, limit: $limit, offset: $offset) {
+		events {
+			id
+			name
+			path
+			properties {
+				key
+				value
+			}
+			createdAt
+		}
+		total
+	}
+}
+`
+
+func Events(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	siteId string,
+	dateRange *DateRangeInput,
+	limit *int,
+	offset *int,
+) (data_ *EventsResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "Events",
+		Query:  Events_Operation,
+		Variables: &__EventsInput{
+			SiteId:    siteId,
+			DateRange: dateRange,
+			Limit:     limit,
+			Offset:    offset,
+		},
+	}
+
+	data_ = &EventsResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(

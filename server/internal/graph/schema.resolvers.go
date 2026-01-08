@@ -322,6 +322,45 @@ func (r *queryResolver) Realtime(ctx context.Context, siteID string) (*model.Rea
 	}, nil
 }
 
+// Events is the resolver for the events field.
+func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) (*model.EventsResult, error) {
+	claims := auth.GetUserFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized")
+	}
+
+	id, err := strconv.ParseInt(siteID, 10, 64)
+	if err != nil {
+		return nil, errors.New("invalid site ID")
+	}
+
+	// Verify ownership
+	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse date range
+	from, to := parseDateRangeInput(dateRange)
+
+	// Default pagination
+	lim := 50
+	off := 0
+	if limit != nil {
+		lim = *limit
+	}
+	if offset != nil {
+		off = *offset
+	}
+
+	events, total, err := r.AnalyticsService.GetEventsWithTotal(ctx, id, from, to, lim, off)
+	if err != nil {
+		return nil, err
+	}
+
+	return convertToGraphQLEvents(events, total), nil
+}
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 

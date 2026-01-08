@@ -419,3 +419,325 @@ func (t *mismatchedCSRFTransport) RoundTrip(req *http.Request) (*http.Response, 
 	req.Header.Set("X-CSRF-Token", "different-header-token")
 	return t.base.RoundTrip(req)
 }
+
+func TestEventPropertiesValidation(t *testing.T) {
+	ts := newTestServer(t)
+	ctx := context.Background()
+
+	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+		Username: "admin",
+		Password: "password",
+	})
+	require.NoError(t, err)
+
+	client := ts.bearerClient(regResp.Register.AccessToken)
+
+	siteResp, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+		Domain: "events-test.com",
+		Name:   "Events Test Site",
+	})
+	require.NoError(t, err)
+
+	siteKey := siteResp.CreateSite.PublicKey
+
+	t.Run("valid string:string properties accepted", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "purchase",
+			"path":       "/checkout",
+			"properties": `{"product_id": "123", "price": "29.99", "currency": "USD"}`,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	})
+
+	t.Run("empty properties accepted", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "page_scroll",
+			"path":       "/home",
+			"properties": "",
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusNoContent, resp.StatusCode)
+	})
+
+	t.Run("invalid JSON properties rejected", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "click",
+			"path":       "/page",
+			"properties": `{invalid json}`,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("malformed JSON properties rejected", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "click",
+			"path":       "/page",
+			"properties": `{"key": "value"`,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("JSON array rejected (must be object)", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "click",
+			"path":       "/page",
+			"properties": `["item1", "item2"]`,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("JSON string rejected (must be object)", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "click",
+			"path":       "/page",
+			"properties": `"just a string"`,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("JSON number rejected (must be object)", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "click",
+			"path":       "/page",
+			"properties": `123`,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("non-string values rejected (must be string:string)", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "click",
+			"path":       "/page",
+			"properties": `{"key": 123}`,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+
+	t.Run("nested objects rejected (must be string:string)", func(t *testing.T) {
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "click",
+			"path":       "/page",
+			"properties": `{"key": {"nested": "value"}}`,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	})
+}
+
+func TestEventPropertiesStored(t *testing.T) {
+	ts := newTestServer(t)
+	ctx := context.Background()
+
+	regResp, err := generated.Register(ctx, ts.graphqlClient(), generated.RegisterInput{
+		Username: "admin",
+		Password: "password",
+	})
+	require.NoError(t, err)
+
+	client := ts.bearerClient(regResp.Register.AccessToken)
+
+	siteResp, err := generated.CreateSite(ctx, client, generated.CreateSiteInput{
+		Domain: "events-storage-test.com",
+		Name:   "Events Storage Test",
+	})
+	require.NoError(t, err)
+
+	siteKey := siteResp.CreateSite.PublicKey
+	siteID := siteResp.CreateSite.Id
+
+	t.Run("event properties are persisted and retrieved via GraphQL", func(t *testing.T) {
+		// Send event with string:string properties
+		properties := `{"button": "signup", "variant": "blue", "position": "1"}`
+		payload := map[string]interface{}{
+			"site_key":   siteKey,
+			"name":       "button_click",
+			"path":       "/landing",
+			"properties": properties,
+		}
+		body, _ := json.Marshal(payload)
+
+		resp, err := ts.httpServer.Client().Post(
+			ts.httpServer.URL+"/api/event",
+			"application/json",
+			bytes.NewReader(body),
+		)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusNoContent, resp.StatusCode)
+
+		// Retrieve events via GraphQL API
+		eventsResp, err := generated.Events(ctx, client, siteID, nil, nil, nil)
+		require.NoError(t, err)
+		require.NotEmpty(t, eventsResp.Events.Events, "should have at least one event")
+
+		// Find our event
+		var foundEvent *generated.EventsEventsEventsResultEventsEvent
+		for _, e := range eventsResp.Events.Events {
+			if e.Name == "button_click" && e.Path == "/landing" {
+				foundEvent = &e
+				break
+			}
+		}
+
+		require.NotNil(t, foundEvent, "should find the button_click event")
+		require.Len(t, foundEvent.Properties, 3, "should have 3 properties")
+
+		// Verify properties are returned correctly
+		propsMap := make(map[string]string)
+		for _, p := range foundEvent.Properties {
+			propsMap[p.Key] = p.Value
+		}
+		require.Equal(t, "signup", propsMap["button"])
+		require.Equal(t, "blue", propsMap["variant"])
+		require.Equal(t, "1", propsMap["position"])
+	})
+
+	t.Run("multiple events with different properties", func(t *testing.T) {
+		// Send multiple events with string:string properties
+		events := []struct {
+			name       string
+			path       string
+			properties string
+		}{
+			{"form_submit", "/contact", `{"form_id": "contact-us", "fields": "5"}`},
+			{"video_play", "/media", `{"video_id": "intro", "duration": "120"}`},
+			{"download", "/resources", `{"file": "whitepaper.pdf", "size_mb": "2.5"}`},
+		}
+
+		for _, ev := range events {
+			payload := map[string]interface{}{
+				"site_key":   siteKey,
+				"name":       ev.name,
+				"path":       ev.path,
+				"properties": ev.properties,
+			}
+			body, _ := json.Marshal(payload)
+
+			resp, err := ts.httpServer.Client().Post(
+				ts.httpServer.URL+"/api/event",
+				"application/json",
+				bytes.NewReader(body),
+			)
+			require.NoError(t, err)
+			resp.Body.Close()
+			require.Equal(t, http.StatusNoContent, resp.StatusCode)
+		}
+
+		// Retrieve events via GraphQL API
+		eventsResp, err := generated.Events(ctx, client, siteID, nil, nil, nil)
+		require.NoError(t, err)
+
+		// Verify each event exists
+		for _, expected := range events {
+			found := false
+			for _, stored := range eventsResp.Events.Events {
+				if stored.Name == expected.name && stored.Path == expected.path {
+					found = true
+					break
+				}
+			}
+			require.True(t, found, "event %s should be found", expected.name)
+		}
+	})
+
+	t.Run("events pagination works", func(t *testing.T) {
+		limit := 2
+		eventsResp, err := generated.Events(ctx, client, siteID, nil, &limit, nil)
+		require.NoError(t, err)
+		require.LessOrEqual(t, len(eventsResp.Events.Events), 2, "should return at most 2 events")
+		require.GreaterOrEqual(t, eventsResp.Events.Total, 4, "total should include all events")
+	})
+
+	t.Run("unauthenticated user cannot access events", func(t *testing.T) {
+		_, err := generated.Events(ctx, ts.graphqlClient(), siteID, nil, nil, nil)
+		require.Error(t, err)
+	})
+}

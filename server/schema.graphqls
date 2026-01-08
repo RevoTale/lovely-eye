@@ -79,6 +79,25 @@ type RealtimeStats {
   visitors: Int!
 }
 
+type Event {
+  id: ID!
+  name: String!
+  path: String!
+  """Key-value properties associated with the event"""
+  properties: [EventProperty!]!
+  createdAt: Time!
+}
+
+type EventProperty {
+  key: String!
+  value: String!
+}
+
+type EventsResult {
+  events: [Event!]!
+  total: Int!
+}
+
 input RegisterInput {
   username: String!
   password: String!
@@ -111,6 +130,8 @@ type Query {
   site(id: ID!): Site
   dashboard(siteId: ID!, dateRange: DateRangeInput): DashboardStats!
   realtime(siteId: ID!): RealtimeStats!
+  """Get events for a site with pagination"""
+  events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!
 }
 
 type Mutation {
