@@ -2,7 +2,8 @@
     "name": "Lovely Eye analytics",
     "image": "mcr.microsoft.com/devcontainers/go:2-1.25-bookworm",
     "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+        "ghcr.io/rails/devcontainer/features/bun:1.0.2": {}
     },
     "forwardPorts": [],
     "remoteUser": "root",
