@@ -50,4 +50,4 @@ Server starts at http://localhost:8080. The first registered user becomes admin.
 
 ## License
 
-AGPL-3.0
+[AGPL-3.0](./LICENSE)
