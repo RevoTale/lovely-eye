@@ -54,7 +54,7 @@ func Load() *Config {
 		},
 		Database: DatabaseConfig{
 			Driver:   getEnv("DB_DRIVER", "sqlite"),
-			DSN:      getEnv("DB_DSN", "file:lovely_eye.db?cache=shared&mode=rwc"),
+			DSN:      getEnv("DB_DSN", "file:data/lovely_eye.db?cache=shared&mode=rwc"),
 			MaxConns: getEnvInt("DB_MAX_CONNS", 10),
 			MinConns: getEnvInt("DB_MIN_CONNS", 1),
 		},

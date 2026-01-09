@@ -35,6 +35,8 @@ COPY --from=builder /app/server .
 COPY --from=builder /app/static ./static
 COPY --from=builder /app/migrations ./migrations
 COPY --from=dashboard-builder /app/dist ./dashboard
+# Create data directory for SQLite and set ownership to non-root user
+RUN mkdir -p /app/data && chown 10001:10001 /app/data
 # Run as non-root (UID 10001)
 USER 10001:10001
 
