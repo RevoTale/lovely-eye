@@ -20,13 +20,7 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       // config.js is runtime-injected, not bundled
-      external: ['./config.js'],
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', '@tanstack/react-router'],
-          apollo: ['@apollo/client', 'graphql'],
-        },
-      },
+      //external: ['./config.js']
     },
   },
 });
