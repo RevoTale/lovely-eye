@@ -4,18 +4,19 @@ interface RuntimeConfig {
   GRAPHQL_URL: string;
 }
 
-const defaultConfig: RuntimeConfig = {
-  BASE_PATH: '/',
-  API_URL: '/api',
-  GRAPHQL_URL: '/graphql',
-};
 
 function getConfig(): RuntimeConfig {
-  const env = window.__ENV__ ?? {};
+  const env = window.__ENV__
+  if (!env) {
+    throw new Error('Runtime environment configuration is missing.');
+  }
+  if (!env.BASE_PATH || !env.API_URL || !env.GRAPHQL_URL) {
+    throw new Error('Incomplete runtime environment configuration.');
+  }
   return {
-    BASE_PATH: env.BASE_PATH ?? defaultConfig.BASE_PATH,
-    API_URL: env.API_URL ?? defaultConfig.API_URL,
-    GRAPHQL_URL: env.GRAPHQL_URL ?? defaultConfig.GRAPHQL_URL,
+    BASE_PATH: env.BASE_PATH,
+    API_URL: env.API_URL,
+    GRAPHQL_URL: env.GRAPHQL_URL,
   };
 }
 
