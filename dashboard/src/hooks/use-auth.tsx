@@ -27,8 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
   const [logoutMutation] = useMutation(LOGOUT_MUTATION);
 
   useEffect(() => {
-    if (meData?.me) {
-      setUser(meData.me as User);
+    if (meData !== undefined) {
+      setUser(meData?.me ? (meData.me as User) : null);
     }
   }, [meData]);
 
