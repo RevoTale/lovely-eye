@@ -19,7 +19,7 @@ jobs:
         id: release
         with:
           release-type: node
-  validate-serber:
+  validate-server:
     defaults:
       run:
         working-directory: ./server
