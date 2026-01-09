@@ -106,8 +106,8 @@ func New(cfg *config.Config) (*Server, error) {
 	// Setup dashboard handler with runtime config
 	dashboardCfg := dashboard.Config{
 		BasePath:   cfg.Server.BasePath,
-		APIUrl:     cfg.Server.BasePath + "/api",
-		GraphQLUrl: cfg.Server.BasePath + "/graphql",
+		APIUrl:     basePath + "/api",
+		GraphQLUrl: basePath + "/graphql",
 	}
 	dashboardHandler := dashboard.Handler(dashboardCfg)
 
@@ -156,7 +156,9 @@ func (s *Server) Close() error {
 
 func graphqlPlaygroundHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	w.Write([]byte(`<!DOCTYPE html>
+	// Use the current request path as the GraphQL endpoint
+	graphqlPath := r.URL.Path
+	html := `<!DOCTYPE html>
 <html>
 <head>
   <title>Lovely Eye GraphQL Playground</title>
@@ -168,11 +170,12 @@ func graphqlPlaygroundHandler(w http.ResponseWriter, r *http.Request) {
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script crossorigin src="https://cdn.jsdelivr.net/npm/graphiql@3/graphiql.min.js"></script>
   <script>
-    const fetcher = GraphiQL.createFetcher({ url: '/graphql' });
+    const fetcher = GraphiQL.createFetcher({ url: '` + graphqlPath + `' });
     ReactDOM.createRoot(document.getElementById('graphiql')).render(
       React.createElement(GraphiQL, { fetcher: fetcher })
     );
   </script>
 </body>
-</html>`))
+</html>`
+	w.Write([]byte(html))
 }
