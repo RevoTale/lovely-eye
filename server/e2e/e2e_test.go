@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
-	operations "github.com/lovely-eye/server/e2e/generated" 
+	operations "github.com/lovely-eye/server/e2e/generated"
 	"github.com/lovely-eye/server/internal/config"
 	"github.com/lovely-eye/server/internal/server"
 	"github.com/stretchr/testify/require"
@@ -739,5 +740,22 @@ func TestEventPropertiesStored(t *testing.T) {
 	t.Run("unauthenticated user cannot access events", func(t *testing.T) {
 		_, err := operations.Events(ctx, ts.graphqlClient(), siteID, nil, nil, nil)
 		require.Error(t, err)
+	})
+}
+
+func TestHealthEndpoint(t *testing.T) {
+	ts := newTestServer(t)
+
+	t.Run("health endpoint returns healthy status", func(t *testing.T) {
+		resp, err := ts.httpServer.Client().Get(ts.httpServer.URL + "/health")
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+		require.Contains(t, resp.Header.Get("Content-Type"), "application/json")
+
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		require.Contains(t, string(body), `"status":"healthy"`, "health endpoint should return healthy status")
 	})
 }

@@ -76,8 +76,9 @@ jobs:
       - name: Build and start services
         run: docker compose -f docker/docker-compose.ci.yml up -d --build --wait
       - name: Verify health endpoint
-        run: |
-          curl -sf http://localhost:8080/health
+        run: curl -sf http://localhost:8080/health
+      - name: Verify dashboard is served
+        run: curl -sf http://localhost:8080/ | grep -q "Privacy-friendly web analytics dashboard"
       - name: Cleanup
         if: always()
         run: docker compose -f docker/docker-compose.ci.yml down -v
