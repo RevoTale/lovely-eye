@@ -199,6 +199,13 @@ func (s *jwtService) CreateInitialAdmin(ctx context.Context, username, password 
 }
 
 func (s *jwtService) SetAuthCookies(w http.ResponseWriter, tokens *Tokens) {
+	// Use Lax for development (allows cookies across localhost ports)
+	// Use Strict for production (same origin only)
+	sameSite := http.SameSiteLaxMode
+	if s.secureCookies {
+		sameSite = http.SameSiteStrictMode
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     accessTokenCookie,
 		Value:    tokens.AccessToken,
@@ -207,7 +214,7 @@ func (s *jwtService) SetAuthCookies(w http.ResponseWriter, tokens *Tokens) {
 		MaxAge:   int(s.accessExpiry.Seconds()),
 		HttpOnly: true,
 		Secure:   s.secureCookies,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: sameSite,
 	})
 
 	http.SetCookie(w, &http.Cookie{
@@ -218,7 +225,7 @@ func (s *jwtService) SetAuthCookies(w http.ResponseWriter, tokens *Tokens) {
 		MaxAge:   int(s.refreshExpiry.Seconds()),
 		HttpOnly: true,
 		Secure:   s.secureCookies,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: sameSite,
 	})
 
 	http.SetCookie(w, &http.Cookie{
@@ -229,11 +236,16 @@ func (s *jwtService) SetAuthCookies(w http.ResponseWriter, tokens *Tokens) {
 		MaxAge:   int(s.refreshExpiry.Seconds()),
 		HttpOnly: false,
 		Secure:   s.secureCookies,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: sameSite,
 	})
 }
 
 func (s *jwtService) ClearAuthCookies(w http.ResponseWriter) {
+	sameSite := http.SameSiteLaxMode
+	if s.secureCookies {
+		sameSite = http.SameSiteStrictMode
+	}
+
 	for _, name := range []string{accessTokenCookie, refreshTokenCookie, csrfTokenCookie} {
 		http.SetCookie(w, &http.Cookie{
 			Name:     name,
@@ -243,7 +255,7 @@ func (s *jwtService) ClearAuthCookies(w http.ResponseWriter) {
 			MaxAge:   -1,
 			HttpOnly: name != csrfTokenCookie,
 			Secure:   s.secureCookies,
-			SameSite: http.SameSiteStrictMode,
+			SameSite: sameSite,
 		})
 	}
 }

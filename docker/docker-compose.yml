@@ -5,6 +5,7 @@ services:
       - "${PORT:-8080}:8080"
     environment:
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - SECURE_COOKIES=${SECURE_COOKIES:-true}
     volumes:
       - lovely-eye-data:/app/data
     networks:

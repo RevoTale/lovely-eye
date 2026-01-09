@@ -63,7 +63,7 @@ func Load() *Config {
 			AccessTokenExpiry:    time.Duration(getEnvInt("JWT_ACCESS_EXPIRY_MINUTES", 15)) * time.Minute,
 			RefreshExpiry:        time.Duration(getEnvInt("JWT_REFRESH_DAYS", 7)) * 24 * time.Hour,
 			AllowRegistration:    getEnvBool("ALLOW_REGISTRATION", false),
-			SecureCookies:        getEnvBool("SECURE_COOKIES", false),
+			SecureCookies:        getEnvBool("SECURE_COOKIES", true),
 			CookieDomain:         getEnv("COOKIE_DOMAIN", ""),
 			InitialAdminUsername: getEnv("INITIAL_ADMIN_USERNAME", ""),
 			InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
