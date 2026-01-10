@@ -26,7 +26,8 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		return nil, err
 	}
 
-	// Set auth cookies
+	// Set auth cookies - tokens are in HttpOnly cookies, not response body
+	// See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
 	if w := GetResponseWriter(ctx); w != nil {
 		r.AuthService.SetAuthCookies(w, tokens)
 	}
@@ -38,8 +39,6 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 			Role:      user.Role,
 			CreatedAt: time.Now(),
 		},
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
 	}, nil
 }
 
@@ -53,7 +52,8 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 		return nil, err
 	}
 
-	// Set auth cookies
+	// Set auth cookies - tokens are in HttpOnly cookies, not response body
+	// See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
 	if w := GetResponseWriter(ctx); w != nil {
 		r.AuthService.SetAuthCookies(w, tokens)
 	}
@@ -65,8 +65,6 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 			Role:      user.Role,
 			CreatedAt: time.Now(),
 		},
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
 	}, nil
 }
 

@@ -76,12 +76,11 @@ func (ts *testServer) bearerClient(accessToken string) graphql.Client {
 	return graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
 }
 
-func (ts *testServer) cookieClient(accessToken, csrfToken string) graphql.Client {
+func (ts *testServer) cookieClient(accessToken string) graphql.Client {
 	httpClient := &http.Client{
 		Transport: &cookieTransport{
 			base:        ts.httpServer.Client().Transport,
 			accessToken: accessToken,
-			csrfToken:   csrfToken,
 		},
 	}
 	return graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
@@ -100,13 +99,10 @@ func (t *bearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 type cookieTransport struct {
 	base        http.RoundTripper
 	accessToken string
-	csrfToken   string
 }
 
 func (t *cookieTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.AddCookie(&http.Cookie{Name: "le_access", Value: t.accessToken})
-	req.AddCookie(&http.Cookie{Name: "le_csrf", Value: t.csrfToken})
-	req.Header.Set("X-CSRF-Token", t.csrfToken)
 	return t.base.RoundTrip(req)
 }
 
@@ -122,7 +118,7 @@ func TestRegister(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "admin", resp.Register.User.Username)
 		require.Equal(t, "admin", resp.Register.User.Role)
-		require.NotEmpty(t, resp.Register.AccessToken)
+		// Tokens are now in HttpOnly cookies, not in response body
 	})
 
 	t.Run("second user is regular user", func(t *testing.T) {
@@ -343,82 +339,6 @@ func TestSiteManagement(t *testing.T) {
 		})
 		require.Error(t, err)
 	})
-}
-
-func TestCSRFProtection(t *testing.T) {
-	ts := newTestServer(t)
-	ctx := context.Background()
-
-	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
-		Username: "admin",
-		Password: "password",
-	})
-	require.NoError(t, err)
-
-	accessToken := regResp.Register.AccessToken
-	csrfToken := "test-csrf-token-12345"
-
-	t.Run("cookie auth with valid CSRF succeeds", func(t *testing.T) {
-		client := ts.cookieClient(accessToken, csrfToken)
-		_, err := operations.Sites(ctx, client)
-		require.NoError(t, err)
-	})
-
-	t.Run("cookie auth without CSRF header fails", func(t *testing.T) {
-		httpClient := &http.Client{
-			Transport: &cookieOnlyTransport{
-				base:        ts.httpServer.Client().Transport,
-				accessToken: accessToken,
-			},
-		}
-		client := graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
-
-		_, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
-			Domain: "csrf-test.com",
-			Name:   "Test",
-		})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "403")
-	})
-
-	t.Run("cookie auth with mismatched CSRF fails", func(t *testing.T) {
-		httpClient := &http.Client{
-			Transport: &mismatchedCSRFTransport{
-				base:        ts.httpServer.Client().Transport,
-				accessToken: accessToken,
-			},
-		}
-		client := graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
-
-		_, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
-			Domain: "csrf-test2.com",
-			Name:   "Test",
-		})
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "403")
-	})
-}
-
-type cookieOnlyTransport struct {
-	base        http.RoundTripper
-	accessToken string
-}
-
-func (t *cookieOnlyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.AddCookie(&http.Cookie{Name: "le_access", Value: t.accessToken})
-	return t.base.RoundTrip(req)
-}
-
-type mismatchedCSRFTransport struct {
-	base        http.RoundTripper
-	accessToken string
-}
-
-func (t *mismatchedCSRFTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.AddCookie(&http.Cookie{Name: "le_access", Value: t.accessToken})
-	req.AddCookie(&http.Cookie{Name: "le_csrf", Value: "cookie-token"})
-	req.Header.Set("X-CSRF-Token", "different-header-token")
-	return t.base.RoundTrip(req)
 }
 
 func TestEventPropertiesValidation(t *testing.T) {

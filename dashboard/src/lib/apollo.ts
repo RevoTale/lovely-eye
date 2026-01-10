@@ -2,42 +2,20 @@ import {
   ApolloClient,
   InMemoryCache,
   createHttpLink,
-  ApolloLink,
   type NormalizedCacheObject,
 } from '@apollo/client';
 import { getGraphQLUrl } from '@/config';
 
-// Helper to get cookie value
-function getCookie(name: string): string | null {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) {
-    return parts.pop()?.split(';').shift() || null;
-  }
-  return null;
-}
-
-// Middleware to add CSRF token to requests
-const csrfMiddleware = new ApolloLink((operation, forward) => {
-  const csrfToken = getCookie('le_csrf');
-  if (csrfToken) {
-    operation.setContext(({ headers = {} }) => ({
-      headers: {
-        ...headers,
-        'X-CSRF-Token': csrfToken,
-      },
-    }));
-  }
-  return forward(operation);
-});
-
+// Create HTTP link with credentials to send cookies
+// Auth uses HttpOnly + Secure cookies with SameSite=Strict/Lax
+// No CSRF tokens needed - modern browser security handles it
 const httpLink = createHttpLink({
   uri: getGraphQLUrl(),
   credentials: 'include', // Include cookies for auth
 });
 
 export const apolloClient = new ApolloClient<NormalizedCacheObject>({
-  link: ApolloLink.from([csrfMiddleware, httpLink]),
+  link: httpLink,
   cache: new InMemoryCache(),
   defaultOptions: {
     watchQuery: {

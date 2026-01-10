@@ -6,8 +6,6 @@ mutation Register($input: RegisterInput!) {
       username
       role
     }
-    accessToken
-    refreshToken
   }
 }
 
@@ -19,8 +17,6 @@ mutation Login($input: LoginInput!) {
       username
       role
     }
-    accessToken
-    refreshToken
   }
 }
 

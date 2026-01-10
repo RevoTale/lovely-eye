@@ -64,42 +64,6 @@ func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 	})
 }
 
-// RequireCSRF validates the CSRF token for state-changing requests with cookie-based auth.
-// CSRF protection is only needed when cookies are used for authentication because:
-// - CSRF attacks exploit browser's automatic cookie inclusion
-// - API clients using Authorization header are not vulnerable to CSRF
-// - Unauthenticated requests don't need CSRF protection
-func (m *Middleware) RequireCSRF(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip for safe methods
-		if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Skip for API clients using Authorization header
-		if r.Header.Get("Authorization") != "" {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Skip if no auth cookies present (CSRF only protects cookie-based auth)
-		accessToken, _ := m.service.getTokensFromRequest(r)
-		if accessToken == "" {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		// Validate CSRF for cookie-based auth
-		if !m.service.validateCSRF(r) {
-			http.Error(w, "Invalid CSRF token", http.StatusForbidden)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
 // GetUserFromContext extracts user claims from request context.
 func GetUserFromContext(ctx context.Context) *Claims {
 	claims, ok := ctx.Value(UserContextKey).(*Claims)

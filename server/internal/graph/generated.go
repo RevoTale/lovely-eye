@@ -48,9 +48,7 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	AuthPayload struct {
-		AccessToken  func(childComplexity int) int
-		RefreshToken func(childComplexity int) int
-		User         func(childComplexity int) int
+		User func(childComplexity int) int
 	}
 
 	BrowserStats struct {
@@ -202,18 +200,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 	_ = ec
 	switch typeName + "." + field {
 
-	case "AuthPayload.accessToken":
-		if e.complexity.AuthPayload.AccessToken == nil {
-			break
-		}
-
-		return e.complexity.AuthPayload.AccessToken(childComplexity), true
-	case "AuthPayload.refreshToken":
-		if e.complexity.AuthPayload.RefreshToken == nil {
-			break
-		}
-
-		return e.complexity.AuthPayload.RefreshToken(childComplexity), true
 	case "AuthPayload.user":
 		if e.complexity.AuthPayload.User == nil {
 			break
@@ -793,8 +779,8 @@ type Site {
 
 type AuthPayload {
   user: User!
-  accessToken: String!
-  refreshToken: String!
+  # Tokens are set as HttpOnly cookies, not returned in response
+  # See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
 }
 
 type TokenPayload {
@@ -1177,64 +1163,6 @@ func (ec *executionContext) fieldContext_AuthPayload_user(_ context.Context, fie
 				return ec.fieldContext_User_sites(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AuthPayload_accessToken(ctx context.Context, field graphql.CollectedField, obj *model.AuthPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_AuthPayload_accessToken,
-		func(ctx context.Context) (any, error) {
-			return obj.AccessToken, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_AuthPayload_accessToken(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AuthPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _AuthPayload_refreshToken(ctx context.Context, field graphql.CollectedField, obj *model.AuthPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_AuthPayload_refreshToken,
-		func(ctx context.Context) (any, error) {
-			return obj.RefreshToken, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_AuthPayload_refreshToken(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "AuthPayload",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2197,10 +2125,6 @@ func (ec *executionContext) fieldContext_Mutation_register(ctx context.Context, 
 			switch field.Name {
 			case "user":
 				return ec.fieldContext_AuthPayload_user(ctx, field)
-			case "accessToken":
-				return ec.fieldContext_AuthPayload_accessToken(ctx, field)
-			case "refreshToken":
-				return ec.fieldContext_AuthPayload_refreshToken(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
 		},
@@ -2246,10 +2170,6 @@ func (ec *executionContext) fieldContext_Mutation_login(ctx context.Context, fie
 			switch field.Name {
 			case "user":
 				return ec.fieldContext_AuthPayload_user(ctx, field)
-			case "accessToken":
-				return ec.fieldContext_AuthPayload_accessToken(ctx, field)
-			case "refreshToken":
-				return ec.fieldContext_AuthPayload_refreshToken(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type AuthPayload", field.Name)
 		},
@@ -5108,16 +5028,6 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 			out.Values[i] = graphql.MarshalString("AuthPayload")
 		case "user":
 			out.Values[i] = ec._AuthPayload_user(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "accessToken":
-			out.Values[i] = ec._AuthPayload_accessToken(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "refreshToken":
-			out.Values[i] = ec._AuthPayload_refreshToken(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}

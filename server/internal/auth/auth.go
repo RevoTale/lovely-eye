@@ -48,7 +48,6 @@ type LoginInput struct {
 type Tokens struct {
 	AccessToken  string
 	RefreshToken string
-	CSRFToken    string
 }
 
 // User represents an authenticated user.

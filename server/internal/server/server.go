@@ -88,8 +88,11 @@ func New(cfg *config.Config) (*Server, error) {
 	mux.HandleFunc("POST "+basePath+"/api/collect", analyticsHandler.Collect)
 	mux.HandleFunc("POST "+basePath+"/api/event", analyticsHandler.Event)
 
-	// GraphQL endpoint (CSRF protected for cookie-based auth)
-	mux.Handle("POST "+basePath+"/graphql", authMiddleware.RequireCSRF(http.HandlerFunc(graph.Handler(resolver))))
+	// GraphQL endpoint
+	// Auth uses JWT in HttpOnly + Secure cookies with SameSite=Strict/Lax
+	// No CSRF protection needed - see https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
+	graphqlHandler := http.HandlerFunc(graph.Handler(resolver))
+	mux.Handle("POST "+basePath+"/graphql", graphqlHandler)
 	mux.HandleFunc("GET "+basePath+"/graphql", graphqlPlaygroundHandler)
 
 	// Serve tracking script

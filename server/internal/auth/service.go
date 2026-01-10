@@ -2,9 +2,6 @@ package auth
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/subtle"
-	"encoding/base64"
 	"errors"
 	"net/http"
 	"time"
@@ -20,12 +17,10 @@ var (
 	ErrRegistrationDisabled = errors.New("registration is disabled")
 )
 
-// Cookie and header names
+// Cookie names
 const (
 	accessTokenCookie  = "le_access"
 	refreshTokenCookie = "le_refresh"
-	csrfTokenCookie    = "le_csrf"
-	csrfHeaderName     = "X-CSRF-Token"
 )
 
 // Config contains authentication configuration.
@@ -199,8 +194,8 @@ func (s *jwtService) CreateInitialAdmin(ctx context.Context, username, password 
 }
 
 func (s *jwtService) SetAuthCookies(w http.ResponseWriter, tokens *Tokens) {
-	// Use Lax for development (allows cookies across localhost ports)
-	// Use Strict for production (same origin only)
+	// Modern auth: JWT in HttpOnly + Secure cookies with SameSite=Strict/Lax
+	// No CSRF tokens needed - see https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
 	sameSite := http.SameSiteLaxMode
 	if s.secureCookies {
 		sameSite = http.SameSiteStrictMode
@@ -227,17 +222,6 @@ func (s *jwtService) SetAuthCookies(w http.ResponseWriter, tokens *Tokens) {
 		Secure:   s.secureCookies,
 		SameSite: sameSite,
 	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     csrfTokenCookie,
-		Value:    tokens.CSRFToken,
-		Path:     "/",
-		Domain:   s.cookieDomain,
-		MaxAge:   int(s.refreshExpiry.Seconds()),
-		HttpOnly: false,
-		Secure:   s.secureCookies,
-		SameSite: sameSite,
-	})
 }
 
 func (s *jwtService) ClearAuthCookies(w http.ResponseWriter) {
@@ -246,14 +230,14 @@ func (s *jwtService) ClearAuthCookies(w http.ResponseWriter) {
 		sameSite = http.SameSiteStrictMode
 	}
 
-	for _, name := range []string{accessTokenCookie, refreshTokenCookie, csrfTokenCookie} {
+	for _, name := range []string{accessTokenCookie, refreshTokenCookie} {
 		http.SetCookie(w, &http.Cookie{
 			Name:     name,
 			Value:    "",
 			Path:     "/",
 			Domain:   s.cookieDomain,
 			MaxAge:   -1,
-			HttpOnly: name != csrfTokenCookie,
+			HttpOnly: true,
 			Secure:   s.secureCookies,
 			SameSite: sameSite,
 		})
@@ -269,29 +253,6 @@ func (s *jwtService) getTokensFromRequest(r *http.Request) (accessToken, refresh
 		refreshToken = cookie.Value
 	}
 	return
-}
-
-// validateCSRF validates the CSRF token using constant-time comparison.
-func (s *jwtService) validateCSRF(r *http.Request) bool {
-	cookie, err := r.Cookie(csrfTokenCookie)
-	if err != nil {
-		return false
-	}
-
-	headerToken := r.Header.Get(csrfHeaderName)
-	if headerToken == "" {
-		return false
-	}
-
-	return subtle.ConstantTimeCompare([]byte(cookie.Value), []byte(headerToken)) == 1
-}
-
-func (s *jwtService) generateCSRFToken() string {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return base64.URLEncoding.EncodeToString([]byte(time.Now().String()))
-	}
-	return base64.URLEncoding.EncodeToString(b)
 }
 
 func (s *jwtService) isFirstUser(ctx context.Context) (bool, error) {
@@ -316,6 +277,5 @@ func (s *jwtService) generateTokens(user *User) (*Tokens, error) {
 	return &Tokens{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
-		CSRFToken:    s.generateCSRFToken(),
 	}, nil
 }

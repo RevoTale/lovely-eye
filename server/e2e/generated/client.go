@@ -301,19 +301,11 @@ func (v *LoginInput) GetPassword() string { return v.Password }
 
 // LoginLoginAuthPayload includes the requested fields of the GraphQL type AuthPayload.
 type LoginLoginAuthPayload struct {
-	User         LoginLoginAuthPayloadUser `json:"user"`
-	AccessToken  string                    `json:"accessToken"`
-	RefreshToken string                    `json:"refreshToken"`
+	User LoginLoginAuthPayloadUser `json:"user"`
 }
 
 // GetUser returns LoginLoginAuthPayload.User, and is useful for accessing the field via an interface.
 func (v *LoginLoginAuthPayload) GetUser() LoginLoginAuthPayloadUser { return v.User }
-
-// GetAccessToken returns LoginLoginAuthPayload.AccessToken, and is useful for accessing the field via an interface.
-func (v *LoginLoginAuthPayload) GetAccessToken() string { return v.AccessToken }
-
-// GetRefreshToken returns LoginLoginAuthPayload.RefreshToken, and is useful for accessing the field via an interface.
-func (v *LoginLoginAuthPayload) GetRefreshToken() string { return v.RefreshToken }
 
 // LoginLoginAuthPayloadUser includes the requested fields of the GraphQL type User.
 type LoginLoginAuthPayloadUser struct {
@@ -402,19 +394,11 @@ func (v *RegisterInput) GetPassword() string { return v.Password }
 
 // RegisterRegisterAuthPayload includes the requested fields of the GraphQL type AuthPayload.
 type RegisterRegisterAuthPayload struct {
-	User         RegisterRegisterAuthPayloadUser `json:"user"`
-	AccessToken  string                          `json:"accessToken"`
-	RefreshToken string                          `json:"refreshToken"`
+	User RegisterRegisterAuthPayloadUser `json:"user"`
 }
 
 // GetUser returns RegisterRegisterAuthPayload.User, and is useful for accessing the field via an interface.
 func (v *RegisterRegisterAuthPayload) GetUser() RegisterRegisterAuthPayloadUser { return v.User }
-
-// GetAccessToken returns RegisterRegisterAuthPayload.AccessToken, and is useful for accessing the field via an interface.
-func (v *RegisterRegisterAuthPayload) GetAccessToken() string { return v.AccessToken }
-
-// GetRefreshToken returns RegisterRegisterAuthPayload.RefreshToken, and is useful for accessing the field via an interface.
-func (v *RegisterRegisterAuthPayload) GetRefreshToken() string { return v.RefreshToken }
 
 // RegisterRegisterAuthPayloadUser includes the requested fields of the GraphQL type User.
 type RegisterRegisterAuthPayloadUser struct {
@@ -774,8 +758,6 @@ mutation Login ($input: LoginInput!) {
 			username
 			role
 		}
-		accessToken
-		refreshToken
 	}
 }
 `
@@ -908,8 +890,6 @@ mutation Register ($input: RegisterInput!) {
 			username
 			role
 		}
-		accessToken
-		refreshToken
 	}
 }
 `

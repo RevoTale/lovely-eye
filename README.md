@@ -49,6 +49,20 @@ Server starts at http://localhost:8080. The first registered user becomes admin.
 | `SECURE_COOKIES` | `true` | Use secure cookies (requires HTTPS). Set to `false` for local dev |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
 
+## Authentication
+
+Lovely Eye uses modern, secure authentication with JWT tokens stored in HttpOnly cookies with proper SameSite settings:
+
+- **HttpOnly**: Prevents JavaScript access to tokens (XSS protection)
+- **Secure**: Cookies only sent over HTTPS in production
+- **SameSite=Strict** (production) or **SameSite=Lax** (development): Prevents CSRF attacks
+
+**No CSRF tokens needed!** Modern browsers with proper cookie settings eliminate the need for CSRF tokens. As explained in [this Reddit discussion](https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/):
+
+> "A JWT in a HTTP-Only Secure cookie + SameSite=Strict (or Lax) is basically what you need."
+
+This approach is simpler and more secure.
+
 ## License
 
 Copyright 2025 RevoTale

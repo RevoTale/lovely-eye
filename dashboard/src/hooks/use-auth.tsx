@@ -36,15 +36,19 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     const result = await loginMutation({ variables: { input } });
     if (result.data?.login?.user) {
       setUser(result.data.login.user as User);
+      // Refetch ME query to sync auth state with cookies
+      await refetch();
     }
-  }, [loginMutation]);
+  }, [loginMutation, refetch]);
 
   const register = useCallback(async (input: RegisterInput) => {
     const result = await registerMutation({ variables: { input } });
     if (result.data?.register?.user) {
       setUser(result.data.register.user as User);
+      // Refetch ME query to sync auth state with cookies
+      await refetch();
     }
-  }, [registerMutation]);
+  }, [registerMutation, refetch]);
 
   const logout = useCallback(async () => {
     await logoutMutation();

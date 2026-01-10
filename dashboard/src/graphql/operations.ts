@@ -98,8 +98,6 @@ export const LOGIN_MUTATION = gql`
         username
         role
       }
-      accessToken
-      refreshToken
     }
   }
 `;
@@ -112,8 +110,6 @@ export const REGISTER_MUTATION = gql`
         username
         role
       }
-      accessToken
-      refreshToken
     }
   }
 `;

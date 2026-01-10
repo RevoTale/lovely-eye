@@ -6,6 +6,7 @@ services:
     environment:
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
       - SECURE_COOKIES=${SECURE_COOKIES:-true}
+      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-false}
     volumes:
       - lovely-eye-data:/app/data
     networks:

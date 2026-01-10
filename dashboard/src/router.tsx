@@ -21,6 +21,10 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
   beforeLoad: ({ context }) => {
+    // Don't redirect while still loading auth state
+    if (context.auth.isLoading) {
+      return;
+    }
     if (context.auth.isAuthenticated) {
       throw redirect({ to: '/' });
     }
@@ -32,6 +36,10 @@ const registerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/register',
   beforeLoad: ({ context }) => {
+    // Don't redirect while still loading auth state
+    if (context.auth.isLoading) {
+      return;
+    }
     if (context.auth.isAuthenticated) {
       throw redirect({ to: '/' });
     }
@@ -44,6 +52,10 @@ const authLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'auth',
   beforeLoad: ({ context }) => {
+    // Don't redirect while still loading auth state
+    if (context.auth.isLoading) {
+      return;
+    }
     if (!context.auth.isAuthenticated) {
       throw redirect({ to: '/login' });
     }
