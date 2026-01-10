@@ -15,16 +15,60 @@ Privacy-focused web analytics. A simple self-hosted alternative to Google Analyt
 
 ## Quick Start
 
-### Docker
+### Docker (SQLite)
 
-```bash
-cd docker
-cp .env.example .env
-# Edit .env and set JWT_SECRET
-docker compose up -d
+```yaml
+services:
+  lovely-eye:
+    image: ghcr.io/revotale/lovely-eye:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - JWT_SECRET=your-secret-key-min-32-chars
+      - SECURE_COOKIES=true
+    volumes:
+      - lovely-eye-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  lovely-eye-data:
 ```
 
-For PostgreSQL, use `docker compose -f docker-compose.postgres.yml up -d`.
+### Docker (PostgreSQL)
+
+```yaml
+services:
+  lovely-eye:
+    image: ghcr.io/revotale/lovely-eye:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_DRIVER=postgres
+      - DB_DSN=postgres://lovely:lovely@postgres:5432/lovely_eye?sslmode=disable
+      - JWT_SECRET=your-secret-key-min-32-chars
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:18.1-alpine
+    environment:
+      - POSTGRES_USER=lovely
+      - POSTGRES_PASSWORD=lovely
+      - POSTGRES_DB=lovely_eye
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lovely -d lovely_eye"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+```
 
 ### From Source
 
@@ -51,17 +95,13 @@ Server starts at http://localhost:8080. The first registered user becomes admin.
 
 ## Authentication
 
-Lovely Eye uses modern, secure authentication with JWT tokens stored in HttpOnly cookies with proper SameSite settings:
+JWT tokens in HttpOnly cookies with SameSite settings:
 
-- **HttpOnly**: Prevents JavaScript access to tokens (XSS protection)
-- **Secure**: Cookies only sent over HTTPS in production
-- **SameSite=Strict** (production) or **SameSite=Lax** (development): Prevents CSRF attacks
+- **HttpOnly**: Prevents JavaScript access (XSS protection)
+- **Secure**: HTTPS only in production
+- **SameSite=Strict** (production) or **Lax** (development): Prevents CSRF
 
-**No CSRF tokens needed!** Modern browsers with proper cookie settings eliminate the need for CSRF tokens. As explained in [this Reddit discussion](https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/):
-
-> "A JWT in a HTTP-Only Secure cookie + SameSite=Strict (or Lax) is basically what you need."
-
-This approach is simpler and more secure.
+No CSRF tokens needed. See [discussion](https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/).
 
 ## License
 
