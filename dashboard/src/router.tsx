@@ -1,10 +1,5 @@
-import { createRouter, createRootRouteWithContext, createRoute, Outlet, redirect, Link, useNavigate } from '@tanstack/react-router';
+import { createRouter, createRootRouteWithContext, createRoute, Outlet, redirect, Link, useNavigate, lazyRouteComponent } from '@tanstack/react-router';
 import type { AuthContextType } from '@/hooks/use-auth';
-import { LoginPage } from './pages/login';
-import { RegisterPage } from './pages/register';
-import { SitesPage } from './pages/sites';
-import { DashboardPage } from './pages/dashboard';
-import { DashboardLayout } from './layouts/dashboard-layout';
 
 // Router context type
 interface RouterContext {
@@ -21,7 +16,6 @@ const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
   beforeLoad: ({ context }) => {
-    // Don't redirect while still loading auth state
     if (context.auth.isLoading) {
       return;
     }
@@ -29,14 +23,13 @@ const loginRoute = createRoute({
       throw redirect({ to: '/' });
     }
   },
-  component: LoginPage,
+  component: lazyRouteComponent(() => import('./pages/login').then(m => ({ default: m.LoginPage }))),
 });
 
 const registerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/register',
   beforeLoad: ({ context }) => {
-    // Don't redirect while still loading auth state
     if (context.auth.isLoading) {
       return;
     }
@@ -44,7 +37,7 @@ const registerRoute = createRoute({
       throw redirect({ to: '/' });
     }
   },
-  component: RegisterPage,
+  component: lazyRouteComponent(() => import('./pages/register').then(m => ({ default: m.RegisterPage }))),
 });
 
 // Auth layout route (protected)
@@ -52,7 +45,6 @@ const authLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'auth',
   beforeLoad: ({ context }) => {
-    // Don't redirect while still loading auth state
     if (context.auth.isLoading) {
       return;
     }
@@ -60,20 +52,20 @@ const authLayoutRoute = createRoute({
       throw redirect({ to: '/login' });
     }
   },
-  component: DashboardLayout,
+  component: lazyRouteComponent(() => import('./layouts/dashboard-layout').then(m => ({ default: m.DashboardLayout }))),
 });
 
 // Protected child routes
 const sitesRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: '/',
-  component: SitesPage,
+  component: lazyRouteComponent(() => import('./pages/sites').then(m => ({ default: m.SitesPage }))),
 });
 
 const siteDetailRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: '/sites/$siteId',
-  component: DashboardPage,
+  component: lazyRouteComponent(() => import('./pages/dashboard').then(m => ({ default: m.DashboardPage }))),
 });
 
 // Route tree
@@ -87,7 +79,6 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({
   routeTree,
   context: {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Set by RouterProvider
     auth: undefined!,
   },
   defaultPreload: 'intent',

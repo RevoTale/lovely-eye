@@ -6,9 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Lovely Eye - Privacy-friendly web analytics dashboard" />
     <title>Lovely Eye Dashboard</title>
-    <!-- 
+    <script>
+      (function() {
+        const stored = localStorage.getItem('theme');
+        const theme = stored === 'dark' || stored === 'light'
+          ? stored
+          : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.classList.add(theme);
+      })();
+    </script>
+    <!--
       Runtime configuration - loaded before app initialization.
-      This file is NOT bundled by Vite (intentionally non-module) and is 
+      This file is NOT bundled by Vite (intentionally non-module) and is
       replaced/modified at container startup to inject environment-specific values.
       The Vite warning about type="module" is expected and can be safely ignored.
     -->

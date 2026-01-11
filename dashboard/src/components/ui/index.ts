@@ -27,3 +27,13 @@ export {
   DropdownMenuTrigger,
 } from './dropdown-menu';
 export { Avatar, AvatarFallback, AvatarImage } from './avatar';
+export { Badge, badgeVariants } from './badge';
+export { Skeleton } from './skeleton';
+export { Separator } from './separator';
+export { Progress } from './progress';
+export {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from './tabs';
