@@ -50,6 +50,23 @@ func Handler(cfg Config) http.Handler {
 	// Parse config.js template
 	tmpl := template.Must(template.New("config.js").Parse(configJSTemplate))
 
+	// Read index.html and prepare it with base path replacements
+	indexPath := filepath.Join(StaticDir, "index.html")
+	indexHTML, err := os.ReadFile(indexPath)
+	if err != nil {
+		panic("Failed to read index.html: " + err.Error())
+	}
+	// Replace {{BASE_PATH}} placeholder with actual base path
+	indexContent := string(indexHTML)
+	if cfg.BasePath == "" {
+		// Remove base tag entirely when serving at root (base tag can interfere with SPA routing)
+		indexContent = strings.ReplaceAll(indexContent, `<base href="{{BASE_PATH}}/" />`, "")
+		indexContent = strings.ReplaceAll(indexContent, "{{BASE_PATH}}", "")
+	} else {
+		// Keep base tag for subpaths
+		indexContent = strings.ReplaceAll(indexContent, "{{BASE_PATH}}", cfg.BasePath)
+	}
+
 	// Create file server for static files
 	fileServer := http.FileServer(http.Dir(StaticDir))
 
@@ -73,7 +90,14 @@ func Handler(cfg Config) http.Handler {
 		// Try to check if file exists on disk
 		filePath := filepath.Join(StaticDir, filepath.Clean(urlPath))
 		if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
-			// File exists, serve it
+			// Special handling for index.html - serve with BASE_PATH replacements
+			if urlPath == "index.html" {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+				w.Write([]byte(indexContent))
+				return
+			}
+			// File exists, serve it normally
 			fileServer.ServeHTTP(w, r)
 			return
 		}
@@ -82,8 +106,10 @@ func Handler(cfg Config) http.Handler {
 		// serve index.html to let the client-side router handle it
 		ext := path.Ext(urlPath)
 		if ext == "" || ext == ".html" {
-			// Serve index.html for SPA routes
-			http.ServeFile(w, r, filepath.Join(StaticDir, "index.html"))
+			// Serve processed index.html for SPA routes
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+			w.Write([]byte(indexContent))
 			return
 		}
 
