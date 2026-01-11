@@ -302,3 +302,23 @@ func (r *AnalyticsRepository) GetDailyStats(ctx context.Context, siteID int64, f
 		Scan(ctx, &stats)
 	return stats, err
 }
+
+type ActivePageStats struct {
+	Path     string
+	Visitors int
+}
+
+func (r *AnalyticsRepository) GetActivePages(ctx context.Context, siteID int64, since time.Time) ([]ActivePageStats, error) {
+	var stats []ActivePageStats
+	err := r.db.NewSelect().
+		Model((*models.PageView)(nil)).
+		ColumnExpr("path").
+		ColumnExpr("COUNT(DISTINCT visitor_id) as visitors").
+		Where("site_id = ?", siteID).
+		Where("created_at >= ?", since).
+		Group("path").
+		Order("visitors DESC").
+		Limit(10).
+		Scan(ctx, &stats)
+	return stats, err
+}

@@ -2,6 +2,12 @@
 
 package model
 
+type ActivePageStats struct {
+	Path string `json:"path"`
+	// Number of visitors currently viewing this page
+	Visitors int `json:"visitors"`
+}
+
 type Mutation struct {
 }
 

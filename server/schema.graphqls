@@ -77,6 +77,14 @@ type DailyStats {
 type RealtimeStats {
   """Visitors active in last 5 minutes"""
   visitors: Int!
+  """Active pages with visitor count"""
+  activePages: [ActivePageStats!]!
+}
+
+type ActivePageStats {
+  path: String!
+  """Number of visitors currently viewing this page"""
+  visitors: Int!
 }
 
 type Event {

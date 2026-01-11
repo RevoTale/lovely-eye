@@ -65,7 +65,7 @@ const sitesRoute = createRoute({
 const siteDetailRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: '/sites/$siteId',
-  component: lazyRouteComponent(() => import('./pages/dashboard').then(m => ({ default: m.DashboardPage }))),
+  component: lazyRouteComponent(() => import('./pages/site-view').then(m => ({ default: m.SiteViewPage }))),
 });
 
 // Route tree

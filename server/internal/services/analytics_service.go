@@ -192,6 +192,12 @@ func (s *AnalyticsService) GetRealtimeVisitors(ctx context.Context, siteID int64
 	return s.analyticsRepo.GetVisitorCount(ctx, siteID, from, to)
 }
 
+func (s *AnalyticsService) GetActivePages(ctx context.Context, siteID int64) ([]repository.ActivePageStats, error) {
+	// Get pages viewed in last 5 minutes
+	since := time.Now().Add(-5 * time.Minute)
+	return s.analyticsRepo.GetActivePages(ctx, siteID, since)
+}
+
 // GetEvents retrieves events for a site within a time range
 func (s *AnalyticsService) GetEvents(ctx context.Context, siteID int64, from, to time.Time, limit, offset int) ([]*models.Event, error) {
 	return s.analyticsRepo.GetEvents(ctx, siteID, from, to, limit, offset)

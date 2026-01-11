@@ -41,12 +41,18 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
+	RealtimeStats() RealtimeStatsResolver
 }
 
 type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	ActivePageStats struct {
+		Path     func(childComplexity int) int
+		Visitors func(childComplexity int) int
+	}
+
 	AuthPayload struct {
 		User func(childComplexity int) int
 	}
@@ -132,7 +138,8 @@ type ComplexityRoot struct {
 	}
 
 	RealtimeStats struct {
-		Visitors func(childComplexity int) int
+		ActivePages func(childComplexity int) int
+		Visitors    func(childComplexity int) int
 	}
 
 	ReferrerStats struct {
@@ -180,6 +187,9 @@ type QueryResolver interface {
 	Realtime(ctx context.Context, siteID string) (*model.RealtimeStats, error)
 	Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) (*model.EventsResult, error)
 }
+type RealtimeStatsResolver interface {
+	ActivePages(ctx context.Context, obj *model.RealtimeStats) ([]*model.ActivePageStats, error)
+}
 
 type executableSchema struct {
 	schema     *ast.Schema
@@ -199,6 +209,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "ActivePageStats.path":
+		if e.complexity.ActivePageStats.Path == nil {
+			break
+		}
+
+		return e.complexity.ActivePageStats.Path(childComplexity), true
+	case "ActivePageStats.visitors":
+		if e.complexity.ActivePageStats.Visitors == nil {
+			break
+		}
+
+		return e.complexity.ActivePageStats.Visitors(childComplexity), true
 
 	case "AuthPayload.user":
 		if e.complexity.AuthPayload.User == nil {
@@ -555,6 +578,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.Sites(childComplexity), true
 
+	case "RealtimeStats.activePages":
+		if e.complexity.RealtimeStats.ActivePages == nil {
+			break
+		}
+
+		return e.complexity.RealtimeStats.ActivePages(childComplexity), true
 	case "RealtimeStats.visitors":
 		if e.complexity.RealtimeStats.Visitors == nil {
 			break
@@ -838,6 +867,14 @@ type DailyStats {
 
 type RealtimeStats {
   """Visitors active in last 5 minutes"""
+  visitors: Int!
+  """Active pages with visitor count"""
+  activePages: [ActivePageStats!]!
+}
+
+type ActivePageStats {
+  path: String!
+  """Number of visitors currently viewing this page"""
   visitors: Int!
 }
 
@@ -1126,6 +1163,64 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _ActivePageStats_path(ctx context.Context, field graphql.CollectedField, obj *model.ActivePageStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ActivePageStats_path,
+		func(ctx context.Context) (any, error) {
+			return obj.Path, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ActivePageStats_path(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActivePageStats",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ActivePageStats_visitors(ctx context.Context, field graphql.CollectedField, obj *model.ActivePageStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_ActivePageStats_visitors,
+		func(ctx context.Context) (any, error) {
+			return obj.Visitors, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_ActivePageStats_visitors(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ActivePageStats",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _AuthPayload_user(ctx context.Context, field graphql.CollectedField, obj *model.AuthPayload) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
@@ -2778,6 +2873,8 @@ func (ec *executionContext) fieldContext_Query_realtime(ctx context.Context, fie
 			switch field.Name {
 			case "visitors":
 				return ec.fieldContext_RealtimeStats_visitors(ctx, field)
+			case "activePages":
+				return ec.fieldContext_RealtimeStats_activePages(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type RealtimeStats", field.Name)
 		},
@@ -2975,6 +3072,41 @@ func (ec *executionContext) fieldContext_RealtimeStats_visitors(_ context.Contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RealtimeStats_activePages(ctx context.Context, field graphql.CollectedField, obj *model.RealtimeStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RealtimeStats_activePages,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.RealtimeStats().ActivePages(ctx, obj)
+		},
+		nil,
+		ec.marshalNActivePageStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐActivePageStatsᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RealtimeStats_activePages(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RealtimeStats",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "path":
+				return ec.fieldContext_ActivePageStats_path(ctx, field)
+			case "visitors":
+				return ec.fieldContext_ActivePageStats_visitors(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type ActivePageStats", field.Name)
 		},
 	}
 	return fc, nil
@@ -5015,6 +5147,50 @@ func (ec *executionContext) unmarshalInputUpdateSiteInput(ctx context.Context, o
 
 // region    **************************** object.gotpl ****************************
 
+var activePageStatsImplementors = []string{"ActivePageStats"}
+
+func (ec *executionContext) _ActivePageStats(ctx context.Context, sel ast.SelectionSet, obj *model.ActivePageStats) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, activePageStatsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ActivePageStats")
+		case "path":
+			out.Values[i] = ec._ActivePageStats_path(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "visitors":
+			out.Values[i] = ec._ActivePageStats_visitors(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var authPayloadImplementors = []string{"AuthPayload"}
 
 func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionSet, obj *model.AuthPayload) graphql.Marshaler {
@@ -5813,8 +5989,44 @@ func (ec *executionContext) _RealtimeStats(ctx context.Context, sel ast.Selectio
 		case "visitors":
 			out.Values[i] = ec._RealtimeStats_visitors(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "activePages":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RealtimeStats_activePages(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6375,6 +6587,60 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
+
+func (ec *executionContext) marshalNActivePageStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐActivePageStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ActivePageStats) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNActivePageStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐActivePageStats(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNActivePageStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐActivePageStats(ctx context.Context, sel ast.SelectionSet, v *model.ActivePageStats) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._ActivePageStats(ctx, sel, v)
+}
 
 func (ec *executionContext) marshalNAuthPayload2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐAuthPayload(ctx context.Context, sel ast.SelectionSet, v model.AuthPayload) graphql.Marshaler {
 	return ec._AuthPayload(ctx, sel, &v)

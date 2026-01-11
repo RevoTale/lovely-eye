@@ -5,8 +5,8 @@ import { resolve } from 'node:path';
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Use relative paths for assets - allows runtime base path configuration via Go server
-  base: './',
+  // Use absolute paths from root for SPA routing compatibility
+  base: '/',
   resolve: {
     alias: {
       '@': resolve(import.meta.dirname, './src'),

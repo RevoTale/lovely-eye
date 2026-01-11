@@ -317,6 +317,7 @@ func (r *queryResolver) Realtime(ctx context.Context, siteID string) (*model.Rea
 
 	return &model.RealtimeStats{
 		Visitors: visitors,
+		SiteID:   id,
 	}, nil
 }
 
@@ -359,11 +360,34 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 	return convertToGraphQLEvents(events, total), nil
 }
 
+// ActivePages is the resolver for the activePages field.
+func (r *realtimeStatsResolver) ActivePages(ctx context.Context, obj *model.RealtimeStats) ([]*model.ActivePageStats, error) {
+	activePages, err := r.AnalyticsService.GetActivePages(ctx, obj.SiteID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to GraphQL model
+	pages := make([]*model.ActivePageStats, len(activePages))
+	for i, page := range activePages {
+		pages[i] = &model.ActivePageStats{
+			Path:     page.Path,
+			Visitors: page.Visitors,
+		}
+	}
+
+	return pages, nil
+}
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+// RealtimeStats returns RealtimeStatsResolver implementation.
+func (r *Resolver) RealtimeStats() RealtimeStatsResolver { return &realtimeStatsResolver{r} }
+
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type realtimeStatsResolver struct{ *Resolver }

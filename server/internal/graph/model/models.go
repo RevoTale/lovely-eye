@@ -77,7 +77,8 @@ type DailyStats struct {
 }
 
 type RealtimeStats struct {
-	Visitors int `json:"visitors"`
+	Visitors int   `json:"visitors"`
+	SiteID   int64 `json:"-"` // Internal field, not exposed in GraphQL
 }
 
 type RegisterInput struct {

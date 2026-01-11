@@ -2,7 +2,10 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/lovely-eye/server/internal/auth"
@@ -17,6 +20,7 @@ import (
 	"github.com/uptrace/bun"
 )
 
+
 // Server holds all server dependencies.
 type Server struct {
 	DB               *bun.DB
@@ -25,10 +29,18 @@ type Server struct {
 	AnalyticsService *services.AnalyticsService
 	Handler          http.Handler
 	HTTPServer       *http.Server
+	trackerJS        []byte
 }
 
 // New creates a new Server from config.
 func New(cfg *config.Config) (*Server, error) {
+	// Load tracker.js file
+	trackerPath := filepath.Join("static", "tracker.js")
+	trackerJS, err := os.ReadFile(trackerPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load tracker.js: %w", err)
+	}
+
 	// Initialize database
 	db, err := database.New(&cfg.Database)
 	if err != nil {
@@ -97,18 +109,19 @@ func New(cfg *config.Config) (*Server, error) {
 
 	// Serve tracking script
 	mux.HandleFunc("GET "+basePath+"/tracker.js", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/javascript")
+		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 		w.Header().Set("Cache-Control", "public, max-age=86400")
-		http.ServeFile(w, r, "static/tracker.js")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Write(trackerJS)
 	})
 	hh := handlers.NewHealthHandler(db)
 
 	// Health check (always at root for load balancers)
-	mux.Handle("/health", hh)
+	mux.Handle("GET /health", hh)
 
 	// Setup dashboard handler with runtime config
 	dashboardCfg := dashboard.Config{
-		BasePath:   cfg.Server.BasePath,
+		BasePath:   basePath,
 		APIUrl:     basePath + "/api",
 		GraphQLUrl: basePath + "/graphql",
 	}
@@ -116,13 +129,13 @@ func New(cfg *config.Config) (*Server, error) {
 
 	// Serve dashboard at configured base path
 	if basePath == "" {
-		// Dashboard at root - catch-all handler
-		mux.Handle("/", dashboardHandler)
+		// Dashboard at root - catch-all handler for GET requests only
+		mux.Handle("GET /", dashboardHandler)
 	} else {
 		// Dashboard at subpath - strip prefix and serve
-		mux.Handle(basePath+"/", http.StripPrefix(basePath, dashboardHandler))
+		mux.Handle("GET "+basePath+"/", http.StripPrefix(basePath, dashboardHandler))
 		// Also handle the exact base path
-		mux.Handle(basePath, http.RedirectHandler(basePath+"/", http.StatusMovedPermanently))
+		mux.Handle("GET "+basePath, http.RedirectHandler(basePath+"/", http.StatusMovedPermanently))
 	}
 
 	// Apply global middleware
@@ -142,14 +155,17 @@ func New(cfg *config.Config) (*Server, error) {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	return &Server{
+	srv := &Server{
 		DB:               db,
 		AuthService:      authService,
 		SiteService:      siteService,
 		AnalyticsService: analyticsService,
 		Handler:          handler,
 		HTTPServer:       httpServer,
-	}, nil
+		trackerJS:        trackerJS,
+	}
+
+	return srv, nil
 }
 
 // Close closes the server and database connection.

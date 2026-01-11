@@ -2,10 +2,13 @@ import React from 'react';
 import { useParams } from '@tanstack/react-router';
 import { useQuery } from '@apollo/client';
 import { DASHBOARD_QUERY, REALTIME_QUERY, SITE_QUERY } from '@/graphql';
-import { Card, CardContent, CardHeader, CardTitle, Badge, Skeleton, Progress } from '@/components/ui';
-import { Users, Eye, Clock, TrendingDown, Globe, Monitor, Smartphone, Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, Badge, Skeleton, Progress, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui';
+import { Users, Eye, Clock, TrendingDown, Globe, Monitor, Smartphone, Activity, ArrowUpRight, ArrowDownRight, Settings, TrendingUp } from 'lucide-react';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import type { DashboardStats, Site, RealtimeStats } from '@/generated/graphql';
-import { siteDetailRoute } from '@/router';
+import { siteDetailRoute, Link } from '@/router';
+import { ReferrersCard } from '@/components/referrers-card';
+import { ActivePagesCard } from '@/components/active-pages-card';
 
 function StatCard({
   title,
@@ -124,17 +127,25 @@ export function DashboardPage(): React.JSX.Element {
           <h1 className="text-3xl font-bold tracking-tight">{site.name}</h1>
           <p className="text-muted-foreground mt-1">{site.domain}</p>
         </div>
-        {realtime ? (
-          <Badge variant="outline" className="flex items-center gap-2 px-3 py-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-            </span>
-            <Activity className="h-4 w-4" />
-            <span className="font-semibold">{realtime.visitors}</span>
-            <span className="text-muted-foreground">online</span>
-          </Badge>
-        ) : null}
+        <div className="flex items-center gap-3">
+          <Link to="/sites/$siteId" params={{ siteId }} search={{ view: 'settings' }}>
+            <Badge variant="outline" className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-accent">
+              <Settings className="h-4 w-4" />
+              <span>Settings</span>
+            </Badge>
+          </Link>
+          {realtime ? (
+            <Badge variant="outline" className="flex items-center gap-2 px-3 py-2">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <Activity className="h-4 w-4" />
+              <span className="font-semibold">{realtime.visitors}</span>
+              <span className="text-muted-foreground">online</span>
+            </Badge>
+          ) : null}
+        </div>
       </div>
 
       {/* Stats grid */}
@@ -162,6 +173,95 @@ export function DashboardPage(): React.JSX.Element {
               icon={TrendingDown}
             />
           </div>
+
+          {/* Analytics Chart */}
+          {stats.dailyStats && stats.dailyStats.length > 0 ? (
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                  </div>
+                  Analytics Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer
+                  config={{
+                    visitors: {
+                      label: 'Visitors',
+                      color: 'hsl(var(--primary))',
+                    },
+                    pageViews: {
+                      label: 'Page Views',
+                      color: 'hsl(var(--chart-2))',
+                    },
+                    sessions: {
+                      label: 'Sessions',
+                      color: 'hsl(var(--chart-3))',
+                    },
+                  } satisfies ChartConfig}
+                  className="h-[300px] w-full"
+                >
+                  <AreaChart
+                    data={stats.dailyStats.map(stat => ({
+                      date: new Date(stat.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                      visitors: stat.visitors,
+                      pageViews: stat.pageViews,
+                      sessions: stat.sessions,
+                    }))}
+                    margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      className="text-xs"
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      className="text-xs"
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <ChartLegend content={<ChartLegendContent />} />
+                    <Area
+                      type="monotone"
+                      dataKey="visitors"
+                      stackId="1"
+                      stroke="var(--color-visitors)"
+                      fill="var(--color-visitors)"
+                      fillOpacity={0.6}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="pageViews"
+                      stackId="2"
+                      stroke="var(--color-pageViews)"
+                      fill="var(--color-pageViews)"
+                      fillOpacity={0.6}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="sessions"
+                      stackId="3"
+                      stroke="var(--color-sessions)"
+                      fill="var(--color-sessions)"
+                      fillOpacity={0.6}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* Active Pages (Realtime) */}
+          {realtime && realtime.activePages ? (
+            <ActivePagesCard activePages={realtime.activePages} />
+          ) : null}
 
           {/* Top pages and referrers */}
           <div className="grid gap-6 md:grid-cols-2">
@@ -195,35 +295,10 @@ export function DashboardPage(): React.JSX.Element {
               </CardContent>
             </Card>
 
-            <Card className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Globe className="h-4 w-4 text-primary" />
-                  </div>
-                  Top Referrers
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {stats.topReferrers.length > 0 ? (
-                    stats.topReferrers.map((ref, index) => (
-                      <div key={index}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium truncate max-w-[200px]">{ref.referrer || 'Direct'}</span>
-                          <Badge variant="secondary" className="ml-2">
-                            {ref.visitors.toLocaleString()}
-                          </Badge>
-                        </div>
-                        <Progress value={stats.topReferrers[0] ? (ref.visitors / stats.topReferrers[0].visitors) * 100 : 0} className="h-2" />
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">No referrer data yet</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            <ReferrersCard
+              referrers={stats.topReferrers}
+              totalVisitors={stats.visitors}
+            />
           </div>
 
           {/* Device breakdown */}

@@ -86,6 +86,10 @@ export const REALTIME_QUERY = gql`
   query Realtime($siteId: ID!) {
     realtime(siteId: $siteId) {
       visitors
+      activePages {
+        path
+        visitors
+      }
     }
   }
 `;

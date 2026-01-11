@@ -10,7 +10,8 @@ function getConfig(): RuntimeConfig {
   if (!env) {
     throw new Error('Runtime environment configuration is missing.');
   }
-  if (!env.BASE_PATH || !env.API_URL || !env.GRAPHQL_URL) {
+  // Check if properties exist (allow empty strings for BASE_PATH when serving at root)
+  if (env.BASE_PATH === undefined || !env.API_URL || !env.GRAPHQL_URL) {
     throw new Error('Incomplete runtime environment configuration.');
   }
   return {

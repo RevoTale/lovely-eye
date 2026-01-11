@@ -39,16 +39,12 @@ window.__ENV__ = {
 
 // Handler returns an http.Handler that serves the dashboard with the given config
 func Handler(cfg Config) http.Handler {
-	// Normalize base path
-	if cfg.BasePath == "" {
-		cfg.BasePath = "/"
-	}
-	if !strings.HasPrefix(cfg.BasePath, "/") {
-		cfg.BasePath = "/" + cfg.BasePath
-	}
-	cfg.BasePath = strings.TrimSuffix(cfg.BasePath, "/")
-	if cfg.BasePath == "" {
-		cfg.BasePath = "/"
+	// Normalize base path - keep empty string for root, or ensure it starts with / and has no trailing /
+	if cfg.BasePath != "" {
+		if !strings.HasPrefix(cfg.BasePath, "/") {
+			cfg.BasePath = "/" + cfg.BasePath
+		}
+		cfg.BasePath = strings.TrimSuffix(cfg.BasePath, "/")
 	}
 
 	// Parse config.js template
