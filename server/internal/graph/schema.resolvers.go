@@ -206,7 +206,6 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 		ID:       strconv.FormatInt(user.ID, 10),
 		Username: user.Username,
 		Role:     user.Role,
-		// Note: CreatedAt is not available from auth.User, would need to add to interface if needed
 		CreatedAt: time.Now(),
 	}, nil
 }
@@ -412,15 +411,3 @@ type queryResolver struct{ *Resolver }
 type realtimeStatsResolver struct{ *Resolver }
 
 // !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-/*
-	func (r *authPayloadResolver) AccessToken(ctx context.Context, obj *model.AuthPayload) (string, error) {
-	panic(fmt.Errorf("not implemented: AccessToken - accessToken"))
-}
-func (r *Resolver) AuthPayload() AuthPayloadResolver { return &authPayloadResolver{r} }
-type authPayloadResolver struct{ *Resolver }
-*/

@@ -323,7 +323,6 @@ func (r *AnalyticsRepository) GetActivePages(ctx context.Context, siteID int64, 
 	return stats, err
 }
 
-// Helper function to apply filters to session queries
 func applySessionFilters(q *bun.SelectQuery, referrer, device, page *string) *bun.SelectQuery {
 	if referrer != nil {
 		// Apply referrer filter (empty string filters for direct traffic)
@@ -339,7 +338,6 @@ func applySessionFilters(q *bun.SelectQuery, referrer, device, page *string) *bu
 	return q
 }
 
-// Helper function to apply filters to page view queries
 func applyPageViewFilters(q *bun.SelectQuery, referrer, device, page *string) *bun.SelectQuery {
 	if page != nil && *page != "" {
 		q = q.Where("path = ?", *page)
