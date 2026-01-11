@@ -3,6 +3,8 @@ module github.com/lovely-eye/server
 go 1.25
 
 require (
+	ariga.io/atlas v1.0.0
+	ariga.io/atlas-provider-bun v0.0.3
 	github.com/99designs/gqlgen v0.17.85
 	github.com/Khan/genqlient v0.8.1
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -19,6 +21,7 @@ require (
 
 require (
 	github.com/agnivade/levenshtein v1.2.1 // indirect
+	github.com/alecthomas/kong v1.12.1 // indirect
 	github.com/alexflint/go-arg v1.5.1 // indirect
 	github.com/alexflint/go-scalar v1.2.0 // indirect
 	github.com/bmatcuk/doublestar/v4 v4.6.1 // indirect
@@ -40,13 +43,16 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/sosodev/duration v1.3.1 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
+	github.com/uptrace/bun/dialect/mssqldialect v1.2.16 // indirect
+	github.com/uptrace/bun/dialect/mysqldialect v1.2.16 // indirect
+	github.com/uptrace/bun/dialect/oracledialect v1.2.16 // indirect
 	github.com/urfave/cli/v3 v3.6.1 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.opentelemetry.io/otel v1.39.0 // indirect
 	go.opentelemetry.io/otel/trace v1.39.0 // indirect
 	golang.org/x/exp v0.0.0-20251219203646-944ab1f22d93 // indirect
-	golang.org/x/mod v0.31.0 // indirect
+	golang.org/x/mod v0.32.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.32.0 // indirect

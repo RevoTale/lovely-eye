@@ -14,6 +14,7 @@ type User struct {
 	Username     string    `bun:"username,unique,notnull" json:"username"`
 	PasswordHash string    `bun:"password_hash,notnull" json:"-"`
 	Role         string    `bun:"role,notnull,default:'user'" json:"role"` // admin, user
+	Email        string    `bun:"email" json:"email"`                      // New field for testing
 	CreatedAt    time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt    time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
 
