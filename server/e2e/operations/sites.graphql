@@ -1,0 +1,34 @@
+# @genqlient
+mutation CreateSite($input: CreateSiteInput!) {
+  createSite(input: $input) {
+    id
+    domain
+    name
+    publicKey
+  }
+}
+
+# @genqlient
+query Sites {
+  sites {
+    id
+    domain
+    name
+    publicKey
+  }
+}
+
+# @genqlient
+query Site($id: ID!) {
+  site(id: $id) {
+    id
+    domain
+    name
+    publicKey
+  }
+}
+
+# @genqlient
+mutation DeleteSite($id: ID!) {
+  deleteSite(id: $id)
+}

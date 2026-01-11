@@ -1,0 +1,35 @@
+# @genqlient
+mutation Register($input: RegisterInput!) {
+  register(input: $input) {
+    user {
+      id
+      username
+      role
+    }
+  }
+}
+
+# @genqlient
+mutation Login($input: LoginInput!) {
+  login(input: $input) {
+    user {
+      id
+      username
+      role
+    }
+  }
+}
+
+# @genqlient
+mutation Logout {
+  logout
+}
+
+# @genqlient(pointer: true)
+query Me {
+  me {
+    id
+    username
+    role
+  }
+}

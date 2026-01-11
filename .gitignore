@@ -30,3 +30,7 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Development symlinks for dashboard files
+server/dashboard
+server/e2e/dashboard
