@@ -34,11 +34,17 @@ type Server struct {
 
 // New creates a new Server from config.
 func New(cfg *config.Config) (*Server, error) {
-	// Load tracker.js file
-	trackerPath := filepath.Join("static", "tracker.js")
-	trackerJS, err := os.ReadFile(trackerPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load tracker.js: %w", err)
+	// Load tracker.js file (or use provided mock for testing)
+	var trackerJS []byte
+	if len(cfg.TrackerJS) == 0 {
+		trackerPath := filepath.Join("static", "tracker.js")
+		var err error
+		trackerJS, err = os.ReadFile(trackerPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load tracker.js: %w", err)
+		}
+	} else {
+		trackerJS = cfg.TrackerJS
 	}
 
 	// Initialize database

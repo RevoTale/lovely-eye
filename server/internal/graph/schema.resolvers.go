@@ -264,7 +264,7 @@ func (r *queryResolver) Site(ctx context.Context, id string) (*model.Site, error
 }
 
 // Dashboard is the resolver for the dashboard field.
-func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput) (*model.DashboardStats, error) {
+func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) (*model.DashboardStats, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
@@ -284,7 +284,26 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 	// Parse date range
 	from, to := parseDateRangeInput(dateRange)
 
-	stats, err := r.AnalyticsService.GetDashboardStats(ctx, id, from, to)
+	// Parse filters
+	var filterOpts services.DashboardFilter
+	if filter != nil {
+		if filter.Referrer != nil {
+			// Normalize "(direct)" display value to empty string for DB filtering
+			referrer := *filter.Referrer
+			if referrer == "(direct)" {
+				referrer = ""
+			}
+			filterOpts.Referrer = &referrer
+		}
+		if filter.Device != nil {
+			filterOpts.Device = filter.Device
+		}
+		if filter.Page != nil {
+			filterOpts.Page = filter.Page
+		}
+	}
+
+	stats, err := r.AnalyticsService.GetDashboardStatsWithFilter(ctx, id, from, to, filterOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -391,3 +410,17 @@ func (r *Resolver) RealtimeStats() RealtimeStatsResolver { return &realtimeStats
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type realtimeStatsResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+/*
+	func (r *authPayloadResolver) AccessToken(ctx context.Context, obj *model.AuthPayload) (string, error) {
+	panic(fmt.Errorf("not implemented: AccessToken - accessToken"))
+}
+func (r *Resolver) AuthPayload() AuthPayloadResolver { return &authPayloadResolver{r} }
+type authPayloadResolver struct{ *Resolver }
+*/

@@ -157,18 +157,28 @@ type DashboardStats struct {
 	DailyStats   []repository.DailyVisitorStats
 }
 
+type DashboardFilter struct {
+	Referrer *string
+	Device   *string
+	Page     *string
+}
+
 func (s *AnalyticsService) GetDashboardStats(ctx context.Context, siteID int64, from, to time.Time) (*DashboardStats, error) {
-	visitors, _ := s.analyticsRepo.GetVisitorCount(ctx, siteID, from, to)
-	pageViews, _ := s.analyticsRepo.GetPageViewCount(ctx, siteID, from, to)
-	sessions, _ := s.analyticsRepo.GetSessionCount(ctx, siteID, from, to)
-	bounceRate, _ := s.analyticsRepo.GetBounceRate(ctx, siteID, from, to)
-	avgDuration, _ := s.analyticsRepo.GetAvgSessionDuration(ctx, siteID, from, to)
-	topPages, _ := s.analyticsRepo.GetTopPages(ctx, siteID, from, to, 10)
-	topReferrers, _ := s.analyticsRepo.GetTopReferrers(ctx, siteID, from, to, 10)
-	browsers, _ := s.analyticsRepo.GetBrowserStats(ctx, siteID, from, to, 10)
-	devices, _ := s.analyticsRepo.GetDeviceStats(ctx, siteID, from, to, 10)
-	countries, _ := s.analyticsRepo.GetCountryStats(ctx, siteID, from, to, 10)
-	dailyStats, _ := s.analyticsRepo.GetDailyStats(ctx, siteID, from, to)
+	return s.GetDashboardStatsWithFilter(ctx, siteID, from, to, DashboardFilter{})
+}
+
+func (s *AnalyticsService) GetDashboardStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, filter DashboardFilter) (*DashboardStats, error) {
+	visitors, _ := s.analyticsRepo.GetVisitorCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page)
+	pageViews, _ := s.analyticsRepo.GetPageViewCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page)
+	sessions, _ := s.analyticsRepo.GetSessionCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page)
+	bounceRate, _ := s.analyticsRepo.GetBounceRateWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page)
+	avgDuration, _ := s.analyticsRepo.GetAvgSessionDurationWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page)
+	topPages, _ := s.analyticsRepo.GetTopPagesWithFilter(ctx, siteID, from, to, 10, filter.Referrer, filter.Device, filter.Page)
+	topReferrers, _ := s.analyticsRepo.GetTopReferrersWithFilter(ctx, siteID, from, to, 10, filter.Referrer, filter.Device, filter.Page)
+	browsers, _ := s.analyticsRepo.GetBrowserStatsWithFilter(ctx, siteID, from, to, 10, filter.Referrer, filter.Device, filter.Page)
+	devices, _ := s.analyticsRepo.GetDeviceStatsWithFilter(ctx, siteID, from, to, 10, filter.Referrer, filter.Device, filter.Page)
+	countries, _ := s.analyticsRepo.GetCountryStatsWithFilter(ctx, siteID, from, to, 10, filter.Referrer, filter.Device, filter.Page)
+	dailyStats, _ := s.analyticsRepo.GetDailyStatsWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page)
 
 	return &DashboardStats{
 		Visitors:     visitors,

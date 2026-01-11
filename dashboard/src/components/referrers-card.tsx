@@ -2,13 +2,15 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Badge, Progress } from '@/components/ui';
 import { Globe, ExternalLink, TrendingUp } from 'lucide-react';
 import type { ReferrerStats } from '@/generated/graphql';
+import { Link } from '@/router';
 
 interface ReferrersCardProps {
   referrers: ReferrerStats[];
   totalVisitors: number;
+  siteId: string;
 }
 
-export function ReferrersCard({ referrers, totalVisitors }: ReferrersCardProps): React.JSX.Element {
+export function ReferrersCard({ referrers, totalVisitors, siteId }: ReferrersCardProps): React.JSX.Element {
   const formatReferrer = (referrer: string | null): string => {
     if (!referrer) return 'Direct / None';
 
@@ -72,9 +74,14 @@ export function ReferrersCard({ referrers, totalVisitors }: ReferrersCardProps):
                       <span className="text-lg" role="img" aria-label="referrer icon">
                         {getReferrerIcon(ref.referrer)}
                       </span>
-                      <span className="text-sm font-medium truncate">
+                      <Link
+                        to="/sites/$siteId"
+                        params={{ siteId }}
+                        search={{ referrer: ref.referrer || '(direct)' }}
+                        className="text-sm font-medium truncate hover:text-primary hover:underline cursor-pointer"
+                      >
                         {formatReferrer(ref.referrer)}
-                      </span>
+                      </Link>
                       {ref.referrer && ref.referrer !== '' ? (
                         <a
                           href={ref.referrer}

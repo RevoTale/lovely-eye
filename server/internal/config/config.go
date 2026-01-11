@@ -11,9 +11,10 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Auth     AuthConfig
+	Server    ServerConfig
+	Database  DatabaseConfig
+	Auth      AuthConfig
+	TrackerJS []byte // Optional: for testing, to avoid loading from file
 }
 
 type ServerConfig struct {

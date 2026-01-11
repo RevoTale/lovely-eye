@@ -65,6 +65,26 @@ const sitesRoute = createRoute({
 const siteDetailRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: '/sites/$siteId',
+  validateSearch: (search: Record<string, unknown>): {
+    view?: string;
+    referrer?: string;
+    device?: string;
+    page?: string;
+  } => {
+    const result: {
+      view?: string;
+      referrer?: string;
+      device?: string;
+      page?: string;
+    } = {};
+
+    if (search.view) result.view = search.view as string;
+    if (search.referrer) result.referrer = search.referrer as string;
+    if (search.device) result.device = search.device as string;
+    if (search.page) result.page = search.page as string;
+
+    return result;
+  },
   component: lazyRouteComponent(() => import('./pages/site-view').then(m => ({ default: m.SiteViewPage }))),
 });
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -35,6 +36,8 @@ func testConfig() *config.Config {
 			SecureCookies:     false,
 			CookieDomain:      "",
 		},
+		// Mock tracker.js for testing (avoid file I/O)
+		TrackerJS: []byte(`console.log("mock tracker")`),
 	}
 }
 
@@ -84,6 +87,25 @@ func (ts *testServer) cookieClient(accessToken string) graphql.Client {
 		},
 	}
 	return graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
+}
+
+// authenticatedClient creates a client with a cookie jar and performs login
+// Returns the authenticated client that will use cookies for subsequent requests
+func (ts *testServer) authenticatedClient(ctx context.Context, t *testing.T, username, password string) graphql.Client {
+	t.Helper()
+	jar, err := cookiejar.New(nil)
+	require.NoError(t, err)
+	httpClient := &http.Client{Jar: jar}
+	client := graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
+
+	// Login to set cookies
+	_, err = operations.Login(ctx, client, operations.LoginInput{
+		Username: username,
+		Password: password,
+	})
+	require.NoError(t, err)
+
+	return client
 }
 
 type bearerTransport struct {
@@ -156,7 +178,6 @@ func TestLogin(t *testing.T) {
 		})
 		require.NoError(t, err)
 		require.Equal(t, "testuser", resp.Login.User.Username)
-		require.NotEmpty(t, resp.Login.AccessToken)
 	})
 
 	t.Run("invalid password", func(t *testing.T) {
@@ -180,13 +201,13 @@ func TestStatsCollection(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
+	_, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
 	require.NoError(t, err)
 
-	client := ts.bearerClient(regResp.Register.AccessToken)
+	client := ts.authenticatedClient(ctx, t, "admin", "password")
 
 	siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
 		Domain: "example.com",
@@ -256,13 +277,13 @@ func TestDashboardAuthorization(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
+	_, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
 	require.NoError(t, err)
 
-	authedClient := ts.bearerClient(regResp.Register.AccessToken)
+	authedClient := ts.authenticatedClient(ctx, t, "admin", "password")
 
 	siteResp, err := operations.CreateSite(ctx, authedClient, operations.CreateSiteInput{
 		Domain: "example.com",
@@ -273,13 +294,13 @@ func TestDashboardAuthorization(t *testing.T) {
 	siteID := siteResp.CreateSite.Id
 
 	t.Run("authenticated user can view dashboard", func(t *testing.T) {
-		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil)
+		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, resp.Dashboard.Visitors)
 	})
 
 	t.Run("unauthenticated user cannot view dashboard", func(t *testing.T) {
-		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil)
+		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil, nil)
 		require.Error(t, err)
 	})
 
@@ -308,13 +329,13 @@ func TestSiteManagement(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
+	_, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
 	require.NoError(t, err)
 
-	client := ts.bearerClient(regResp.Register.AccessToken)
+	client := ts.authenticatedClient(ctx, t, "admin", "password")
 
 	t.Run("create site", func(t *testing.T) {
 		resp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
@@ -345,13 +366,13 @@ func TestEventPropertiesValidation(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
+	_, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
 	require.NoError(t, err)
 
-	client := ts.bearerClient(regResp.Register.AccessToken)
+	client := ts.authenticatedClient(ctx, t, "admin", "password")
 
 	siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
 		Domain: "events-test.com",
@@ -537,13 +558,13 @@ func TestEventPropertiesStored(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
 
-	regResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
+	_, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
 		Password: "password",
 	})
 	require.NoError(t, err)
 
-	client := ts.bearerClient(regResp.Register.AccessToken)
+	client := ts.authenticatedClient(ctx, t, "admin", "password")
 
 	siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
 		Domain: "events-storage-test.com",

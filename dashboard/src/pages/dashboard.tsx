@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams } from '@tanstack/react-router';
+import { useParams, useSearch } from '@tanstack/react-router';
 import { useQuery } from '@apollo/client';
 import { DASHBOARD_QUERY, REALTIME_QUERY, SITE_QUERY } from '@/graphql';
 import { Card, CardContent, CardHeader, CardTitle, Badge, Skeleton, Progress, ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui';
@@ -67,14 +67,25 @@ function formatDuration(seconds: number): string {
 
 export function DashboardPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
+  const search = useSearch({ from: siteDetailRoute.id }) as { view?: string; referrer?: string; device?: string; page?: string };
 
   const { data: siteData, loading: siteLoading } = useQuery(SITE_QUERY, {
     variables: { id: siteId },
     skip: !siteId,
   });
 
+  // Build filter object from URL parameters
+  const filter = {
+    ...(search.referrer && { referrer: search.referrer }),
+    ...(search.device && { device: search.device }),
+    ...(search.page && { page: search.page }),
+  };
+
   const { data: dashboardData, loading: dashboardLoading } = useQuery(DASHBOARD_QUERY, {
-    variables: { siteId },
+    variables: {
+      siteId,
+      filter: Object.keys(filter).length > 0 ? filter : undefined,
+    },
     skip: !siteId,
     pollInterval: 60000, // Refresh every minute
   });
@@ -147,6 +158,42 @@ export function DashboardPage(): React.JSX.Element {
           ) : null}
         </div>
       </div>
+
+      {/* Active Filters */}
+      {(search.referrer || search.device || search.page) && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm text-muted-foreground">Filtered by:</span>
+          {search.referrer && (
+            <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
+              <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
+                <span className="text-xs">Referrer: {search.referrer}</span>
+                <span className="ml-1 text-xs">×</span>
+              </Badge>
+            </Link>
+          )}
+          {search.device && (
+            <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
+              <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
+                <span className="text-xs">Device: {search.device}</span>
+                <span className="ml-1 text-xs">×</span>
+              </Badge>
+            </Link>
+          )}
+          {search.page && (
+            <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
+              <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
+                <span className="text-xs">Page: {search.page}</span>
+                <span className="ml-1 text-xs">×</span>
+              </Badge>
+            </Link>
+          )}
+          <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
+            <Badge variant="outline" className="cursor-pointer hover:bg-accent text-xs">
+              Clear all
+            </Badge>
+          </Link>
+        </div>
+      )}
 
       {/* Stats grid */}
       {stats ? (
@@ -280,7 +327,14 @@ export function DashboardPage(): React.JSX.Element {
                     stats.topPages.map((page, index) => (
                       <div key={index}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-medium truncate max-w-[200px]">{page.path}</span>
+                          <Link
+                            to="/sites/$siteId"
+                            params={{ siteId }}
+                            search={{ page: page.path }}
+                            className="text-sm font-medium truncate max-w-[200px] hover:text-primary hover:underline cursor-pointer"
+                          >
+                            {page.path}
+                          </Link>
                           <Badge variant="secondary" className="ml-2">
                             {page.views.toLocaleString()}
                           </Badge>
@@ -298,6 +352,7 @@ export function DashboardPage(): React.JSX.Element {
             <ReferrersCard
               referrers={stats.topReferrers}
               totalVisitors={stats.visitors}
+              siteId={siteId}
             />
           </div>
 
@@ -320,14 +375,19 @@ export function DashboardPage(): React.JSX.Element {
                   return (
                     <div key={index} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                        <Link
+                          to="/sites/$siteId"
+                          params={{ siteId }}
+                          search={{ device: deviceStat.device }}
+                          className="flex items-center gap-2 hover:text-primary cursor-pointer"
+                        >
                           {deviceStat.device === 'desktop' ? (
                             <Monitor className="h-5 w-5 text-primary" />
                           ) : (
                             <Smartphone className="h-5 w-5 text-primary" />
                           )}
-                          <span className="text-sm font-medium capitalize">{deviceStat.device}</span>
-                        </div>
+                          <span className="text-sm font-medium capitalize hover:underline">{deviceStat.device}</span>
+                        </Link>
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary">
                             {deviceStat.visitors.toLocaleString()}

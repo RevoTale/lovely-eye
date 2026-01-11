@@ -8,6 +8,15 @@ type ActivePageStats struct {
 	Visitors int `json:"visitors"`
 }
 
+type FilterInput struct {
+	// Filter by specific referrer
+	Referrer *string `json:"referrer,omitempty"`
+	// Filter by device type (desktop, mobile, tablet)
+	Device *string `json:"device,omitempty"`
+	// Filter by page path
+	Page *string `json:"page,omitempty"`
+}
+
 type Mutation struct {
 }
 

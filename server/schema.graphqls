@@ -17,7 +17,7 @@ type Site {
 
 type AuthPayload {
   user: User!
-  # Tokens are set as HttpOnly cookies, not returned in response
+  # Modern auth: uses HttpOnly cookies with SameSite
   # See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
 }
 
@@ -130,13 +130,22 @@ input DateRangeInput {
   to: Time
 }
 
+input FilterInput {
+  """Filter by specific referrer"""
+  referrer: String
+  """Filter by device type (desktop, mobile, tablet)"""
+  device: String
+  """Filter by page path"""
+  page: String
+}
+
 scalar Time
 
 type Query {
   me: User
   sites: [Site!]!
   site(id: ID!): Site
-  dashboard(siteId: ID!, dateRange: DateRangeInput): DashboardStats!
+  dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
   realtime(siteId: ID!): RealtimeStats!
   """Get events for a site with pagination"""
   events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!

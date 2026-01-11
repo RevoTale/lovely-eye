@@ -44,8 +44,8 @@ export const SITE_QUERY = gql`
 `;
 
 export const DASHBOARD_QUERY = gql`
-  query Dashboard($siteId: ID!, $dateRange: DateRangeInput) {
-    dashboard(siteId: $siteId, dateRange: $dateRange) {
+  query Dashboard($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput) {
+    dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
       visitors
       pageViews
       sessions

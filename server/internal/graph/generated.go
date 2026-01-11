@@ -129,7 +129,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Dashboard func(childComplexity int, siteID string, dateRange *model.DateRangeInput) int
+		Dashboard func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) int
 		Events    func(childComplexity int, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) int
 		Me        func(childComplexity int) int
 		Realtime  func(childComplexity int, siteID string) int
@@ -183,7 +183,7 @@ type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	Sites(ctx context.Context) ([]*model.Site, error)
 	Site(ctx context.Context, id string) (*model.Site, error)
-	Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput) (*model.DashboardStats, error)
+	Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) (*model.DashboardStats, error)
 	Realtime(ctx context.Context, siteID string) (*model.RealtimeStats, error)
 	Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) (*model.EventsResult, error)
 }
@@ -531,7 +531,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Dashboard(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput)), true
+		return e.complexity.Query.Dashboard(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput)), true
 	case "Query.events":
 		if e.complexity.Query.Events == nil {
 			break
@@ -689,6 +689,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputCreateSiteInput,
 		ec.unmarshalInputDateRangeInput,
+		ec.unmarshalInputFilterInput,
 		ec.unmarshalInputLoginInput,
 		ec.unmarshalInputRegisterInput,
 		ec.unmarshalInputUpdateSiteInput,
@@ -808,7 +809,7 @@ type Site {
 
 type AuthPayload {
   user: User!
-  # Tokens are set as HttpOnly cookies, not returned in response
+  # Modern auth: uses HttpOnly cookies with SameSite
   # See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
 }
 
@@ -921,13 +922,22 @@ input DateRangeInput {
   to: Time
 }
 
+input FilterInput {
+  """Filter by specific referrer"""
+  referrer: String
+  """Filter by device type (desktop, mobile, tablet)"""
+  device: String
+  """Filter by page path"""
+  page: String
+}
+
 scalar Time
 
 type Query {
   me: User
   sites: [Site!]!
   site(id: ID!): Site
-  dashboard(siteId: ID!, dateRange: DateRangeInput): DashboardStats!
+  dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
   realtime(siteId: ID!): RealtimeStats!
   """Get events for a site with pagination"""
   events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!
@@ -1061,6 +1071,11 @@ func (ec *executionContext) field_Query_dashboard_args(ctx context.Context, rawA
 		return nil, err
 	}
 	args["dateRange"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter", ec.unmarshalOFilterInput2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐFilterInput)
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg2
 	return args, nil
 }
 
@@ -2789,7 +2804,7 @@ func (ec *executionContext) _Query_dashboard(ctx context.Context, field graphql.
 		ec.fieldContext_Query_dashboard,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Dashboard(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput))
+			return ec.resolvers.Query().Dashboard(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput))
 		},
 		nil,
 		ec.marshalNDashboardStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDashboardStats,
@@ -5038,6 +5053,47 @@ func (ec *executionContext) unmarshalInputDateRangeInput(ctx context.Context, ob
 				return it, err
 			}
 			it.To = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj any) (model.FilterInput, error) {
+	var it model.FilterInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"referrer", "device", "page"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "referrer":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("referrer"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Referrer = data
+		case "device":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("device"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Device = data
+		case "page":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Page = data
 		}
 	}
 
@@ -7616,6 +7672,14 @@ func (ec *executionContext) unmarshalODateRangeInput2ᚖgithubᚗcomᚋlovelyᚑ
 		return nil, nil
 	}
 	res, err := ec.unmarshalInputDateRangeInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOFilterInput2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐFilterInput(ctx context.Context, v any) (*model.FilterInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputFilterInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 

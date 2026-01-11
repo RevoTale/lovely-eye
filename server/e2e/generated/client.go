@@ -207,8 +207,8 @@ type DashboardResponse struct {
 func (v *DashboardResponse) GetDashboard() DashboardDashboardDashboardStats { return v.Dashboard }
 
 type DateRangeInput struct {
-	From time.Time `json:"from"`
-	To   time.Time `json:"to"`
+	From time.Time `json:"from,omitempty"`
+	To   time.Time `json:"to,omitempty"`
 }
 
 // GetFrom returns DateRangeInput.From, and is useful for accessing the field via an interface.
@@ -287,6 +287,24 @@ type EventsResponse struct {
 
 // GetEvents returns EventsResponse.Events, and is useful for accessing the field via an interface.
 func (v *EventsResponse) GetEvents() EventsEventsEventsResult { return v.Events }
+
+type FilterInput struct {
+	// Filter by specific referrer
+	Referrer string `json:"referrer,omitempty"`
+	// Filter by device type (desktop, mobile, tablet)
+	Device string `json:"device,omitempty"`
+	// Filter by page path
+	Page string `json:"page,omitempty"`
+}
+
+// GetReferrer returns FilterInput.Referrer, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetReferrer() string { return v.Referrer }
+
+// GetDevice returns FilterInput.Device, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetDevice() string { return v.Device }
+
+// GetPage returns FilterInput.Page, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetPage() string { return v.Page }
 
 type LoginInput struct {
 	Username string `json:"username"`
@@ -493,8 +511,9 @@ func (v *__CreateSiteInput) GetInput() CreateSiteInput { return v.Input }
 
 // __DashboardInput is used internally by genqlient
 type __DashboardInput struct {
-	SiteId    string          `json:"siteId"`
-	DateRange *DateRangeInput `json:"dateRange"`
+	SiteId    string          `json:"siteId,omitempty"`
+	DateRange *DateRangeInput `json:"dateRange,omitempty"`
+	Filter    *FilterInput    `json:"filter,omitempty"`
 }
 
 // GetSiteId returns __DashboardInput.SiteId, and is useful for accessing the field via an interface.
@@ -502,6 +521,9 @@ func (v *__DashboardInput) GetSiteId() string { return v.SiteId }
 
 // GetDateRange returns __DashboardInput.DateRange, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetDateRange() *DateRangeInput { return v.DateRange }
+
+// GetFilter returns __DashboardInput.Filter, and is useful for accessing the field via an interface.
+func (v *__DashboardInput) GetFilter() *FilterInput { return v.Filter }
 
 // __DeleteSiteInput is used internally by genqlient
 type __DeleteSiteInput struct {
@@ -602,8 +624,8 @@ func CreateSite(
 
 // The query executed by Dashboard.
 const Dashboard_Operation = `
-query Dashboard ($siteId: ID!, $dateRange: DateRangeInput) {
-	dashboard(siteId: $siteId, dateRange: $dateRange) {
+query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput) {
+	dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
 		visitors
 		pageViews
 		sessions
@@ -645,6 +667,7 @@ func Dashboard(
 	client_ graphql.Client,
 	siteId string,
 	dateRange *DateRangeInput,
+	filter *FilterInput,
 ) (data_ *DashboardResponse, err_ error) {
 	req_ := &graphql.Request{
 		OpName: "Dashboard",
@@ -652,6 +675,7 @@ func Dashboard(
 		Variables: &__DashboardInput{
 			SiteId:    siteId,
 			DateRange: dateRange,
+			Filter:    filter,
 		},
 	}
 
