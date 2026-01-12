@@ -1,6 +1,7 @@
 # Lovely Eye
 
-Privacy-focused web analytics. A simple self-hosted alternative to Google Analytics, Umami and Plausible.
+Privacy-focused web analytics. A simple, blazingly fast, self-hosted alternative to Google Analytics, Umami and Plausible. 
+Written in Go programming language. 
 
 > [!WARNING]
 > Work in progress
@@ -8,6 +9,7 @@ Privacy-focused web analytics. A simple self-hosted alternative to Google Analyt
 ## Features
 
 - Privacy-first: No cookies, no personal data collection
+- Low-RAM, lightweight docker builds for the systems where every MB matters.
 - Lightweight tracking script
 - Real-time dashboard via GraphQL
 - SQLite (default) or PostgreSQL
@@ -25,7 +27,6 @@ services:
       - "8080:8080"
     environment:
       - JWT_SECRET=your-secret-key-min-32-chars
-      - SECURE_COOKIES=true
     volumes:
       - lovely-eye-data:/app/data
     restart: unless-stopped
@@ -79,7 +80,7 @@ cd server
 go run ./cmd/server
 ```
 
-Server starts at http://localhost:8080. The first registered user becomes admin.
+Server starts at http://localhost:8080. The first registered user becomes admin. SQLite by default.
 
 ## Configuration
 
@@ -90,7 +91,7 @@ Server starts at http://localhost:8080. The first registered user becomes admin.
 | `DB_DRIVER` | `sqlite` | `sqlite` or `postgres` |
 | `DB_DSN` | `file:lovely_eye.db?cache=shared&mode=rwc` | Database connection string |
 | `JWT_SECRET` | (random) | JWT signing key (min 32 chars, required for production) |
-| `SECURE_COOKIES` | `true` | Use secure cookies (requires HTTPS). Set to `false` for local dev |
+| `SECURE_COOKIES` | `true` | Use secure cookies for the dashboard login (requires HTTPS). Set to `false` for local dev |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
 
 ## Authentication
