@@ -65,6 +65,12 @@ func newTestServer(t *testing.T) *testServer {
 	}
 }
 
+// newTestHTTPServer creates a test HTTP server without t.Cleanup
+// for use in benchmarks and scenarios where cleanup is manual
+func newTestHTTPServer(handler http.Handler) *httptest.Server {
+	return httptest.NewServer(handler)
+}
+
 func (ts *testServer) graphqlClient() graphql.Client {
 	return graphql.NewClient(ts.httpServer.URL+"/graphql", ts.httpServer.Client())
 }
