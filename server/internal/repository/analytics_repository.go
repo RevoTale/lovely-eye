@@ -161,7 +161,7 @@ func (r *AnalyticsRepository) GetAvgSessionDuration(ctx context.Context, siteID 
 	var avg float64
 	err := r.db.NewSelect().
 		Model((*models.Session)(nil)).
-		ColumnExpr("COALESCE(AVG(duration), 0)").
+		ColumnExpr("COALESCE(AVG(duration * 1.0), 0)"). // * 1.0 is a worlaprund int64 to float conversion
 		Where("site_id = ?", siteID).
 		Where("started_at >= ?", from).
 		Where("started_at <= ?", to).
@@ -415,7 +415,7 @@ func (r *AnalyticsRepository) GetAvgSessionDurationWithFilter(ctx context.Contex
 	var avg float64
 	q := r.db.NewSelect().
 		Model((*models.Session)(nil)).
-		ColumnExpr("COALESCE(AVG(duration), 0)").
+		ColumnExpr("COALESCE(AVG(duration * 1.0), 0)").
 		Where("site_id = ?", siteID).
 		Where("started_at >= ?", from).
 		Where("started_at <= ?", to).
