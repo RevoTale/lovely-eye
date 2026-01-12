@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "bun --bun run lint && bun --bun run tsc",
+    "tsc": "tsc --noEmit",
     "codegen": "graphql-codegen --config codegen.ts"
   },
   "dependencies": {
