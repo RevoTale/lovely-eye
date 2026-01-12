@@ -7,8 +7,8 @@ services:
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
       - SECURE_COOKIES=${SECURE_COOKIES:-true}
       - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-false}
-    volumes:
-      - lovely-eye-data:/app/data
+      - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
     networks:
       - lovely-eye-net
     restart: unless-stopped

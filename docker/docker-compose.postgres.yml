@@ -7,6 +7,8 @@ services:
       - DB_DRIVER=postgres
       - DB_DSN=postgres://${POSTGRES_USER:-lovely}:${POSTGRES_PASSWORD:-lovely}@postgres:5432/${POSTGRES_DB:-lovely_eye}?sslmode=disable
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
+      - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
     depends_on:
       postgres:
         condition: service_healthy
