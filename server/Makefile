@@ -1,8 +1,9 @@
-.PHONY: build run test clean generate migrate migrate-down migrate-status migrate-init atlas-diff atlas-hash
+.PHONY: build run test clean generate migrate-init migrate-up migrate-down migrate-status migrator-diff migrator-hash
 
 build:
 	go build -o bin/server ./cmd/server
 	go build -o bin/migrate ./cmd/migrate
+	go build -o bin/migrator ./cmd/migrator
 
 run:
 	go run ./cmd/server
@@ -17,25 +18,22 @@ clean:
 generate:
 	go generate ./...
 
-# Migration commands
+# Production migration commands (runtime)
 migrate-init:
-	go run ./cmd/migrate db init
+	go run ./cmd/migrate init
 
-migrate:
-	go run ./cmd/migrate db migrate
+migrate-up:
+	go run ./cmd/migrate up
 
 migrate-down:
-	go run ./cmd/migrate db rollback
+	go run ./cmd/migrate down
 
 migrate-status:
-	go run ./cmd/migrate db status
+	go run ./cmd/migrate status
 
-# Atlas - auto-generate migrations for both databases
-atlas-diff:
-	@read -p "Migration name: " name; \
-	atlas migrate diff $$name --env sqlite && \
-	atlas migrate diff $$name --env postgres --dev-url "sqlite://file?mode=memory"
+# Development migration commands (preparation)
+migrator-diff:
+	go run ./cmd/migrator diff
 
-atlas-hash:
-	@atlas migrate hash --env sqlite
-	@atlas migrate hash --env postgres
+migrator-hash:
+	go run ./cmd/migrator hash
