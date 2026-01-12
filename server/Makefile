@@ -8,11 +8,11 @@ run:
 	go run ./cmd/server
 
 test:
-	go test -v ./...
+	go test -v ./... --count=2
 
 clean:
 	rm -rf bin/
-	rm -f lovely_eye.db
+	rm -rf data/*
 
 generate:
 	go generate ./...
