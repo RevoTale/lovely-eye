@@ -34,3 +34,4 @@ go.work.sum
 # Development symlinks for dashboard files
 server/dashboard
 server/e2e/dashboard
+server/vendor
