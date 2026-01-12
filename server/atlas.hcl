@@ -2,7 +2,7 @@ data "external_schema" "bun_sqlite" {
   program = [
     "sh",
     "-c",
-    "ATLAS_DIALECT=sqlite go run -mod=mod -tags=tools atlas-schema.go",
+    "ATLAS_DIALECT=sqlite go run -mod=mod -tags=tools migrations/atlas-schema.go",
   ]
 }
 
@@ -10,7 +10,7 @@ data "external_schema" "bun_postgres" {
   program = [
     "sh",
     "-c",
-    "ATLAS_DIALECT=postgres go run -mod=mod -tags=tools atlas-schema.go",
+    "ATLAS_DIALECT=postgres go run -mod=mod -tags=tools migrations/atlas-schema.go",
   ]
 }
 

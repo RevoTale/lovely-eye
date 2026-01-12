@@ -35,3 +35,5 @@ go.work.sum
 server/dashboard
 server/e2e/dashboard
 server/vendor
+server/data
+server/bin

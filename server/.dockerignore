@@ -29,6 +29,8 @@ Dockerfile
 .env
 .env.*
 *.log
+bin
+data
 
 # Development symlinks for dashboard files
 dashboard
