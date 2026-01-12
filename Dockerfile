@@ -27,6 +27,16 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags='-s -w' \
     -o server ./cmd/server
 
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags='-s -w' \
+    -o migrate ./cmd/migrate
+
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags='-s -w' \
+    -o test-migrations ./cmd/test-migrations
+
 # Stage 3: Final minimal image
 FROM alpine
 

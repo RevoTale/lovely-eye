@@ -1,23 +1,58 @@
-# Migrations
+# Database Migrations
 
-Atlas generates SQL from Bun models → Bun applies at runtime.
+Atlas auto-generates SQL migrations from Bun models, Bun applies them at runtime.
 
-## Workflow
+## Development Workflow
 
-1. Edit `internal/models/models.go`
-2. `make atlas-diff` - generates SQLite + PostgreSQL migrations
-3. `make migrate` - applies migrations
+### Create New Migrations
+1. Edit models in `internal/models/models.go`
+2. Run `make migrator-diff` (prompts for migration name)
+3. Atlas generates `.up.sql` and `.down.sql` for both SQLite and PostgreSQL
 
-## Runtime Database
-
+### Test Before Committing
 ```bash
-make migrate              # SQLite
-DB_DRIVER=postgres make migrate  # PostgreSQL
+make test-migrations  # Tests full up/down cycle on both databases
 ```
 
-Correct migrations load automatically based on `DB_DRIVER`.
+### Apply Locally
+```bash
+make migrate-up
+```
 
-## Why Separate Files?
+## Production Deployment
 
-SQLite uses `INTEGER AUTOINCREMENT`, PostgreSQL uses `BIGSERIAL`.  
-Atlas generates both from the same Bun models.
+```bash
+make migrate-init    # First time only - creates migration tracking tables
+make migrate-up      # Applies all pending migrations
+make migrate-status  # Shows what's applied
+make migrate-down    # Rollback if needed
+```
+
+## CI/CD Integration
+
+Two parallel test jobs run on every release:
+- `test-migrations-sqlite` - Tests on SQLite
+- `test-migrations-postgres` - Tests on real PostgreSQL
+
+Both must pass before Docker images are published. Each test:
+1. Builds with production Dockerfile
+2. Runs all migrations up
+3. Rolls all migrations down
+4. Applies them again (idempotency check)
+
+## Structure
+
+```
+migrations/
+├── sqlite/      # SQLite-specific migrations
+├── postgres/    # PostgreSQL-specific migrations
+└── atlas-schema.go  # Schema definition for Atlas
+```
+
+Separate directories needed because SQLite and PostgreSQL use different syntax (e.g., `INTEGER AUTOINCREMENT` vs `BIGSERIAL`).
+
+## Environment Variables
+
+- `DB_DRIVER` - `sqlite` (default) or `postgres`
+- `DB_DSN` - Connection string
+- `JWT_SECRET` - Required for app initialization

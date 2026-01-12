@@ -1,4 +1,4 @@
-.PHONY: build run test clean generate migrate-init migrate-up migrate-down migrate-status migrator-diff migrator-hash
+.PHONY: build run test clean generate migrate-init migrate-up migrate-down migrate-status migrator-diff migrator-hash test-migrations test-migrations-sqlite test-migrations-postgres
 
 build:
 	go build -o bin/server ./cmd/server
@@ -37,3 +37,12 @@ migrator-diff:
 
 migrator-hash:
 	go run ./cmd/migrator hash
+
+# Migration testing (runs full up/down cycle)
+test-migrations-sqlite:
+	@../scripts/test-migrations-sqlite.sh
+
+test-migrations-postgres:
+	@../scripts/test-migrations-postgres.sh
+
+test-migrations: test-migrations-sqlite test-migrations-postgres
