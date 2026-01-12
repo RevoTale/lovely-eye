@@ -65,8 +65,25 @@ export function SiteFormPage(): React.JSX.Element {
     e.preventDefault();
     setError('');
 
-    if (!name.trim() || !domain.trim()) {
+    const trimmedName = name.trim();
+    const trimmedDomain = domain.trim();
+
+    // Validate required fields
+    if (!trimmedName || !trimmedDomain) {
       setError('Name and domain are required');
+      return;
+    }
+
+    // Validate site name (1-100 characters, alphanumeric and common punctuation)
+    if (trimmedName.length < 1 || trimmedName.length > 100) {
+      setError('Site name must be between 1 and 100 characters');
+      return;
+    }
+
+    // Validate domain format (basic domain validation)
+    const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
+    if (!domainRegex.test(trimmedDomain)) {
+      setError('Please enter a valid domain (e.g., example.com)');
       return;
     }
 
@@ -74,8 +91,8 @@ export function SiteFormPage(): React.JSX.Element {
       await createSite({
         variables: {
           input: {
-            name: name.trim(),
-            domain: domain.trim(),
+            name: trimmedName,
+            domain: trimmedDomain,
           },
         },
       });
@@ -213,7 +230,17 @@ export function SiteFormPage(): React.JSX.Element {
                 id="domain"
                 placeholder="example.com"
                 value={domain}
-                onChange={(e) => setDomain(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Automatically truncate domain to domain.com format
+                  const truncated = value
+                    .replace(/^https?:\/\//, '') // Remove http:// or https://
+                    .replace(/^www\./, '') // Remove www.
+                    .replace(/\/.*$/, '') // Remove path and trailing slashes
+                    .toLowerCase() // Convert to lowercase
+                    .trim();
+                  setDomain(truncated);
+                }}
                 disabled={!isNew}
                 required
               />

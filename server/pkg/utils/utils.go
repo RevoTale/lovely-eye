@@ -3,7 +3,9 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"net"
+	"regexp"
 	"strings"
 )
 
@@ -73,4 +75,76 @@ func TruncateString(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen]
+}
+
+var (
+	// ErrInvalidDomain indicates the domain format is invalid
+	ErrInvalidDomain = errors.New("invalid domain format")
+	// ErrInvalidSiteName indicates the site name is invalid
+	ErrInvalidSiteName = errors.New("invalid site name")
+	// ErrDomainTooLong indicates the domain exceeds maximum length
+	ErrDomainTooLong = errors.New("domain name too long")
+	// ErrSiteNameTooLong indicates the site name exceeds maximum length
+	ErrSiteNameTooLong = errors.New("site name must be between 1 and 100 characters")
+)
+
+// Domain regex pattern for valid domain names
+// Matches: example.com, sub.example.com, example-site.com
+// Does not match: -example.com, example-.com, example..com, http://example.com
+var domainRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$`)
+
+// ValidateDomain validates and normalizes a domain name
+func ValidateDomain(domain string) (string, error) {
+	// Trim whitespace
+	domain = strings.TrimSpace(domain)
+
+	// Convert to lowercase first
+	domain = strings.ToLower(domain)
+
+	// Remove protocol if present
+	domain = strings.TrimPrefix(domain, "https://")
+	domain = strings.TrimPrefix(domain, "http://")
+
+	// Remove www. prefix
+	domain = strings.TrimPrefix(domain, "www.")
+
+	// Remove path and trailing slashes
+	if idx := strings.Index(domain, "/"); idx != -1 {
+		domain = domain[:idx]
+	}
+
+	// Check if empty after normalization
+	if domain == "" {
+		return "", ErrInvalidDomain
+	}
+
+	// Check maximum length (253 characters is DNS limit)
+	if len(domain) > 253 {
+		return "", ErrDomainTooLong
+	}
+
+	// Validate format using regex
+	if !domainRegex.MatchString(domain) {
+		return "", ErrInvalidDomain
+	}
+
+	return domain, nil
+}
+
+// ValidateSiteName validates a site name
+func ValidateSiteName(name string) (string, error) {
+	// Trim whitespace
+	name = strings.TrimSpace(name)
+
+	// Check length (1-100 characters)
+	if len(name) < 1 || len(name) > 100 {
+		return "", ErrSiteNameTooLong
+	}
+
+	// Site name should not be empty or just whitespace
+	if name == "" {
+		return "", ErrInvalidSiteName
+	}
+
+	return name, nil
 }

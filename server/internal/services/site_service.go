@@ -8,6 +8,7 @@ import (
 
 	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/repository"
+	"github.com/lovely-eye/server/pkg/utils"
 )
 
 var (
@@ -31,8 +32,20 @@ type CreateSiteInput struct {
 }
 
 func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*models.Site, error) {
+	// Validate and normalize domain
+	normalizedDomain, err := utils.ValidateDomain(input.Domain)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate site name
+	validatedName, err := utils.ValidateSiteName(input.Name)
+	if err != nil {
+		return nil, err
+	}
+
 	// Check if domain already exists
-	existing, _ := s.siteRepo.GetByDomain(ctx, input.Domain)
+	existing, _ := s.siteRepo.GetByDomain(ctx, normalizedDomain)
 	if existing != nil {
 		return nil, ErrSiteExists
 	}
@@ -44,8 +57,8 @@ func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*model
 
 	site := &models.Site{
 		UserID:    input.UserID,
-		Domain:    input.Domain,
-		Name:      input.Name,
+		Domain:    normalizedDomain,
+		Name:      validatedName,
 		PublicKey: publicKey,
 	}
 
@@ -78,6 +91,12 @@ func (s *SiteService) GetUserSites(ctx context.Context, userID int64) ([]*models
 }
 
 func (s *SiteService) Update(ctx context.Context, id, userID int64, name string) (*models.Site, error) {
+	// Validate site name
+	validatedName, err := utils.ValidateSiteName(name)
+	if err != nil {
+		return nil, err
+	}
+
 	site, err := s.siteRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, ErrSiteNotFound
@@ -87,7 +106,7 @@ func (s *SiteService) Update(ctx context.Context, id, userID int64, name string)
 		return nil, ErrNotAuthorized
 	}
 
-	site.Name = name
+	site.Name = validatedName
 	if err := s.siteRepo.Update(ctx, site); err != nil {
 		return nil, err
 	}
