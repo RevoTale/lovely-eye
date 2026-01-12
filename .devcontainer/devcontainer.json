@@ -11,9 +11,6 @@
         "vscode": {
             "extensions": [
                 "golang.go",
-                "ms-azuretools.vscode-docker",
-                "ms-vscode.remote-repositories",
-                "GitHub.remotehub",
                 "GraphQL.vscode-graphql",
                 "GraphQL.vscode-graphql-syntax",
                 "-ms-vscode.azure-repos",
