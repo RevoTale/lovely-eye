@@ -3,7 +3,6 @@
 build:
 	go build -o bin/server ./cmd/server
 	go build -o bin/migrate ./cmd/migrate
-	go build -o bin/migrator ./cmd/migrator
 
 run:
 	go run ./cmd/server
@@ -31,12 +30,21 @@ migrate-down:
 migrate-status:
 	go run ./cmd/migrate status
 
-# Development migration commands (preparation)
+# Development migration commands (preparation using Atlas CLI)
 migrator-diff:
-	go run ./cmd/migrator diff
+	@read -p "Migration name: " name; \
+	echo "\nGenerating SQLite migration..."; \
+	atlas migrate diff $$name --env sqlite; \
+	echo "\nGenerating PostgreSQL migration..."; \
+	atlas migrate diff $$name --env postgres; \
+	echo "\nMigrations generated successfully!"
 
 migrator-hash:
-	go run ./cmd/migrator hash
+	@echo "Hashing SQLite migrations..."; \
+	atlas migrate hash --env sqlite; \
+	echo "Hashing PostgreSQL migrations..."; \
+	atlas migrate hash --env postgres; \
+	echo "\nHash files updated successfully!"
 
 # Migration testing (runs full up/down cycle)
 test-migrations-sqlite:

@@ -2,12 +2,18 @@
 
 Atlas auto-generates SQL migrations from Bun models, Bun applies them at runtime.
 
+## Prerequisites
+
+The devcontainer automatically provides:
+- Atlas CLI (installed in Dockerfile)
+- PostgreSQL 18 (via docker-compose service)
+
 ## Development Workflow
 
 ### Create New Migrations
 1. Edit models in `internal/models/models.go`
 2. Run `make migrator-diff` (prompts for migration name)
-3. Atlas generates `.up.sql` and `.down.sql` for both SQLite and PostgreSQL
+3. Atlas CLI generates `.up.sql` and `.down.sql` for both SQLite and PostgreSQL
 
 ### Test Before Committing
 ```bash

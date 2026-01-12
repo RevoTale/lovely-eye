@@ -25,7 +25,7 @@ env "sqlite" {
 
 env "postgres" {
   src = data.external_schema.bun_postgres.url
-  dev = "docker://postgres/15/dev"
+  dev = "postgres://postgres:postgres@localhost/dev?sslmode=disable"
   migration {
     dir = "file://migrations/postgres"
     format = golang-migrate
