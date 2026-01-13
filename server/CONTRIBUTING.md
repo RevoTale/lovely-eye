@@ -25,7 +25,7 @@
 
 - Supports both SQLite and PostgreSQL
 - SQLite is default for development (no configuration needed)
-- `DB_DRIVER` and `DB_DSN` are optional - defaults to SQLite with `lovely_eye.db`
+- `DB_DRIVER` and `DB_DSN` are optional - defaults to SQLite with `data/lovely_eye.db`
 - To use PostgreSQL, set both `DB_DRIVER=postgres` and `DB_DSN=postgres://...`'
 
 ## Code structure

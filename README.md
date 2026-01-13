@@ -89,7 +89,7 @@ Server starts at http://localhost:8080. The first registered user becomes admin.
 | `SERVER_HOST` | `0.0.0.0` | Server bind address |
 | `SERVER_PORT` | `8080` | Server port |
 | `DB_DRIVER` | `sqlite` | `sqlite` or `postgres` |
-| `DB_DSN` | `file:lovely_eye.db?cache=shared&mode=rwc` | Database connection string |
+| `DB_DSN` | `file:data/lovely_eye.db?cache=shared&mode=rwc` | Database connection string |
 | `JWT_SECRET` | (random) | JWT signing key (min 32 chars, required for production) |
 | `SECURE_COOKIES` | `true` | Use secure cookies for the dashboard login (requires HTTPS). Set to `false` for local dev |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
