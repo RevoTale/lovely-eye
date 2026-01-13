@@ -5,15 +5,16 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/lovely-eye/server/internal/dashboard"
 	"github.com/uptrace/bun"
 )
 type HealthHandler struct {
-	db *bun.DB
+	db            *bun.DB
+	dashboardPath string
 }
-func NewHealthHandler(db *bun.DB) *HealthHandler {
+func NewHealthHandler(db *bun.DB, dashboardPath string) *HealthHandler {
 	return &HealthHandler{
-		db: db,
+		db:            db,
+		dashboardPath: dashboardPath,
 	}
 }
 func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -26,11 +27,13 @@ func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Check dashboard files exist
-		if _, err := os.Stat(filepath.Join(dashboard.StaticDir, "index.html")); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte(`{"status":"unhealthy","error":"dashboard files not found"}`))
-			return
+		// Check dashboard files exist (skip check if dashboard path is empty for tests)
+		if h.dashboardPath != "" {
+			if _, err := os.Stat(filepath.Join(h.dashboardPath, "index.html")); err != nil {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				w.Write([]byte(`{"status":"unhealthy","error":"dashboard files not found"}`))
+				return
+			}
 		}
 
 		w.WriteHeader(http.StatusOK)

@@ -18,9 +18,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host     string
-	Port     string
-	BasePath string // Base path for all routes (e.g., "/app" or "/")
+	Host          string
+	Port          string
+	BasePath      string // Base path for all routes (e.g., "/app" or "/")
+	DashboardPath string // Path to dashboard files (defaults to "dashboard")
 }
 
 type DatabaseConfig struct {
@@ -49,9 +50,10 @@ func Load() *Config {
 	}
 	return &Config{
 		Server: ServerConfig{
-			Host:     getEnv("SERVER_HOST", "0.0.0.0"),
-			Port:     getEnv("SERVER_PORT", "8080"),
-			BasePath: basePath,
+			Host:          getEnv("SERVER_HOST", "0.0.0.0"),
+			Port:          getEnv("SERVER_PORT", "8080"),
+			BasePath:      basePath,
+			DashboardPath: getEnv("DASHBOARD_PATH", "dashboard"),
 		},
 		Database: DatabaseConfig{
 			Driver:   getEnv("DB_DRIVER", "sqlite"),

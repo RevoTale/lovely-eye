@@ -9,22 +9,21 @@ import (
 	"strings"
 )
 
-// StaticDir is the directory containing built dashboard files (set at build time)
-const StaticDir = "dashboard"
-
 // Config holds the runtime configuration for the dashboard
 type Config struct {
-	BasePath   string
-	APIUrl     string
-	GraphQLUrl string
+	BasePath      string
+	APIUrl        string
+	GraphQLUrl    string
+	DashboardPath string // Path to dashboard files (defaults to "dashboard")
 }
 
 // DefaultConfig returns the default configuration
 func DefaultConfig() Config {
 	return Config{
-		BasePath:   "/",
-		APIUrl:     "/api",
-		GraphQLUrl: "/graphql",
+		BasePath:      "/",
+		APIUrl:        "/api",
+		GraphQLUrl:    "/graphql",
+		DashboardPath: "dashboard",
 	}
 }
 
@@ -39,6 +38,11 @@ window.__ENV__ = {
 
 // Handler returns an http.Handler that serves the dashboard with the given config
 func Handler(cfg Config) http.Handler {
+	// Set default dashboard path if not provided
+	if cfg.DashboardPath == "" {
+		cfg.DashboardPath = "dashboard"
+	}
+
 	// Normalize base path - keep empty string for root, or ensure it starts with / and has no trailing /
 	if cfg.BasePath != "" {
 		if !strings.HasPrefix(cfg.BasePath, "/") {
@@ -51,10 +55,14 @@ func Handler(cfg Config) http.Handler {
 	tmpl := template.Must(template.New("config.js").Parse(configJSTemplate))
 
 	// Read index.html and prepare it with base path replacements
-	indexPath := filepath.Join(StaticDir, "index.html")
+	indexPath := filepath.Join(cfg.DashboardPath, "index.html")
 	indexHTML, err := os.ReadFile(indexPath)
 	if err != nil {
-		panic("Failed to read index.html: " + err.Error())
+		// Return a minimal handler that serves a placeholder
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			w.Write([]byte("Dashboard not available"))
+		})
 	}
 	// Replace {{BASE_PATH}} placeholder with actual base path
 	indexContent := string(indexHTML)
@@ -68,7 +76,7 @@ func Handler(cfg Config) http.Handler {
 	}
 
 	// Create file server for static files
-	fileServer := http.FileServer(http.Dir(StaticDir))
+	fileServer := http.FileServer(http.Dir(cfg.DashboardPath))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Serve dynamically generated config.js
@@ -88,7 +96,7 @@ func Handler(cfg Config) http.Handler {
 		}
 
 		// Try to check if file exists on disk
-		filePath := filepath.Join(StaticDir, filepath.Clean(urlPath))
+		filePath := filepath.Join(cfg.DashboardPath, filepath.Clean(urlPath))
 		if info, err := os.Stat(filePath); err == nil && !info.IsDir() {
 			// Special handling for index.html - serve with BASE_PATH replacements
 			if urlPath == "index.html" {

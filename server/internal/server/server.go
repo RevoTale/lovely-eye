@@ -120,16 +120,17 @@ func New(cfg *config.Config) (*Server, error) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Write(trackerJS)
 	})
-	hh := handlers.NewHealthHandler(db)
+	hh := handlers.NewHealthHandler(db, cfg.Server.DashboardPath)
 
 	// Health check (always at root for load balancers)
 	mux.Handle("GET /health", hh)
 
 	// Setup dashboard handler with runtime config
 	dashboardCfg := dashboard.Config{
-		BasePath:   basePath,
-		APIUrl:     basePath + "/api",
-		GraphQLUrl: basePath + "/graphql",
+		BasePath:      basePath,
+		APIUrl:        basePath + "/api",
+		GraphQLUrl:    basePath + "/graphql",
+		DashboardPath: cfg.Server.DashboardPath,
 	}
 	dashboardHandler := dashboard.Handler(dashboardCfg)
 

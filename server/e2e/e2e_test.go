@@ -21,8 +21,9 @@ import (
 func testConfig() *config.Config {
 	return &config.Config{
 		Server: config.ServerConfig{
-			Host: "127.0.0.1",
-			Port: "0",
+			Host:          "127.0.0.1",
+			Port:          "0",
+			DashboardPath: "", // Empty for tests - dashboard not required
 		},
 		Database: config.DatabaseConfig{
 			Driver: "sqlite",
