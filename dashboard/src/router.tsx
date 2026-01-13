@@ -99,7 +99,7 @@ const routeTree = rootRoute.addChildren([
 export const router = createRouter({
   routeTree,
   context: {
-    auth: undefined!,
+    auth: undefined as unknown as AuthContextType,
   },
   defaultPreload: 'intent',
   basepath: window.__ENV__?.BASE_PATH ?? '/',

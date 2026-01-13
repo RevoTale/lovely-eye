@@ -88,7 +88,9 @@ export function ReferrersCard({ referrers, totalVisitors, siteId }: ReferrersCar
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-muted-foreground hover:text-primary transition-colors"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
                         >
                           <ExternalLink className="h-3 w-3" />
                         </a>

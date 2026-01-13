@@ -67,7 +67,7 @@ function formatDuration(seconds: number): string {
 
 export function DashboardPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
-  const search = useSearch({ from: siteDetailRoute.id }) as { view?: string; referrer?: string; device?: string; page?: string };
+  const search = useSearch({ from: siteDetailRoute.id });
 
   const { data: siteData, loading: siteLoading } = useQuery(SITE_QUERY, {
     variables: { id: siteId },
@@ -160,7 +160,7 @@ export function DashboardPage(): React.JSX.Element {
       </div>
 
       {/* Active Filters */}
-      {(search.referrer || search.device || search.page) && (
+      {(search.referrer ?? search.device ?? search.page) && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-muted-foreground">Filtered by:</span>
           {search.referrer && (
@@ -222,7 +222,7 @@ export function DashboardPage(): React.JSX.Element {
           </div>
 
           {/* Analytics Chart */}
-          {stats.dailyStats && stats.dailyStats.length > 0 ? (
+          {stats.dailyStats.length > 0 ? (
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -306,7 +306,7 @@ export function DashboardPage(): React.JSX.Element {
           ) : null}
 
           {/* Active Pages (Realtime) */}
-          {realtime && realtime.activePages ? (
+          {realtime?.activePages ? (
             <ActivePagesCard activePages={realtime.activePages} />
           ) : null}
 

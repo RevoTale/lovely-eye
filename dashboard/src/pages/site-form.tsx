@@ -35,7 +35,7 @@ export function SiteFormPage(): React.JSX.Element {
     refetchQueries: [{ query: SITES_QUERY }],
     onCompleted: (data) => {
       if (data?.createSite) {
-        navigate({ to: '/sites/$siteId', params: { siteId: data.createSite.id } });
+        void navigate({ to: '/sites/$siteId', params: { siteId: data.createSite.id } });
       }
     },
     onError: (err) => {
@@ -46,7 +46,7 @@ export function SiteFormPage(): React.JSX.Element {
   const [deleteSite, { loading: deleting }] = useMutation(DELETE_SITE_MUTATION, {
     refetchQueries: [{ query: SITES_QUERY }],
     onCompleted: () => {
-      navigate({ to: '/' });
+      void navigate({ to: '/' });
     },
     onError: (err) => {
       setError(err.message);
@@ -128,14 +128,16 @@ export function SiteFormPage(): React.JSX.Element {
 
     await navigator.clipboard.writeText(site.publicKey);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => {
+      setCopied(false);
+    }, 2000);
   };
 
   const generateTrackingScript = (): string => {
     if (!site) return '';
 
     // Use the base path from environment config
-    const basePath = window.__ENV__?.BASE_PATH || '';
+    const basePath = window.__ENV__?.BASE_PATH ?? '';
     const trackerUrl = `${window.location.origin}${basePath}/tracker.js`;
 
     return `<script>
@@ -172,7 +174,9 @@ export function SiteFormPage(): React.JSX.Element {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => navigate({ to: '/' })}
+          onClick={() => {
+            void navigate({ to: '/' });
+          }}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Sites
@@ -195,7 +199,9 @@ export function SiteFormPage(): React.JSX.Element {
         </div>
       ) : null}
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => {
+        void handleSubmit(e);
+      }}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -215,7 +221,9 @@ export function SiteFormPage(): React.JSX.Element {
                 id="name"
                 placeholder="My Awesome Website"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(e.target.value);
+                }}
                 disabled={!isNew}
                 required
               />
@@ -258,7 +266,9 @@ export function SiteFormPage(): React.JSX.Element {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate({ to: '/' })}
+                  onClick={() => {
+                    void navigate({ to: '/' });
+                  }}
                   disabled={creating}
                 >
                   Cancel
@@ -291,7 +301,9 @@ export function SiteFormPage(): React.JSX.Element {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleCopyKey}
+                    onClick={() => {
+                      void handleCopyKey();
+                    }}
                   >
                     {copied ? (
                       <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -303,7 +315,9 @@ export function SiteFormPage(): React.JSX.Element {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleRegenerateKey}
+                    onClick={() => {
+                      void handleRegenerateKey();
+                    }}
                     disabled={regenerating}
                   >
                     <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
@@ -325,10 +339,14 @@ export function SiteFormPage(): React.JSX.Element {
                     variant="outline"
                     size="sm"
                     className="absolute top-2 right-2"
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(generateTrackingScript());
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
+                    onClick={() => {
+                      void (async () => {
+                        await navigator.clipboard.writeText(generateTrackingScript());
+                        setCopied(true);
+                        setTimeout(() => {
+                          setCopied(false);
+                        }, 2000);
+                      })();
                     }}
                   >
                     {copied ? (
@@ -346,7 +364,9 @@ export function SiteFormPage(): React.JSX.Element {
               <div className="pt-4">
                 <Button
                   variant="outline"
-                  onClick={() => navigate({ to: '/sites/$siteId', params: { siteId: site.id }, search: { view: 'analytics' } })}
+                  onClick={() => {
+                    void navigate({ to: '/sites/$siteId', params: { siteId: site.id }, search: { view: 'analytics' } });
+                  }}
                 >
                   View Analytics
                 </Button>
@@ -364,7 +384,9 @@ export function SiteFormPage(): React.JSX.Element {
             <CardContent>
               <Button
                 variant="destructive"
-                onClick={handleDelete}
+                onClick={() => {
+                  void handleDelete();
+                }}
                 disabled={deleting}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
