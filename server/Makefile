@@ -8,7 +8,7 @@ run:
 	go run ./cmd/server
 
 test:
-	go test -v ./... --count=2
+	go test ./... --count=2
 
 clean:
 	rm -rf bin/
