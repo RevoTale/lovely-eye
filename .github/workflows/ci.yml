@@ -10,5 +10,12 @@ permissions:
   pull-requests: read
 
 jobs:
-  test:
+  run-tests:
     uses: ./.github/workflows/test.yml
+
+  test:
+    runs-on: ubuntu-latest
+    needs: run-tests
+    steps:
+      - name: All tests passed
+        run: echo "All tests passed successfully"
