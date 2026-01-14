@@ -19,9 +19,6 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Generated files
-src/generated/
-
 # Logs
 *.log
 npm-debug.log*

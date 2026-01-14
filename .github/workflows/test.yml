@@ -30,7 +30,10 @@ jobs:
             exit 1
           fi
       - name: Lint
-        run: golangci-lint run ./...
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61.0
+          working-directory: server
       - name: Test
         run: go test ./...
 
