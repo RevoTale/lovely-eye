@@ -72,6 +72,23 @@ func (r *AnalyticsRepository) GetPageViews(ctx context.Context, siteID int64, fr
 	return pageViews, err
 }
 
+func (r *AnalyticsRepository) GetRecentPageView(ctx context.Context, siteID int64, visitorID, path string, since time.Time) (*models.PageView, error) {
+	pageView := new(models.PageView)
+	err := r.db.NewSelect().
+		Model(pageView).
+		Where("site_id = ?", siteID).
+		Where("visitor_id = ?", visitorID).
+		Where("path = ?", path).
+		Where("created_at > ?", since).
+		Order("created_at DESC").
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return pageView, nil
+}
+
 // Event methods
 func (r *AnalyticsRepository) CreateEvent(ctx context.Context, event *models.Event) error {
 	_, err := r.db.NewInsert().Model(event).Exec(ctx)

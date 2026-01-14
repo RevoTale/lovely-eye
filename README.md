@@ -1,6 +1,6 @@
 # Lovely Eye
 
-Privacy-focused web analytics. A simple, blazingly fast, self-hosted alternative to Google Analytics, Umami and Plausible. 
+Privacy-focused web analytics. A simple, blazingly fast, self-hosted alternative to Google Analytics, Umami and Plausible. Designed to work well with low resource systems.
 Written in Go programming language. 
 
 > [!WARNING]
@@ -8,12 +8,11 @@ Written in Go programming language.
 
 ## Features
 
-- Privacy-first: No cookies, no personal data collection
-- Low-RAM, lightweight docker builds for the systems where every MB matters.
-- Lightweight tracking script
-- Real-time dashboard via GraphQL
-- SQLite (default) or PostgreSQL
-- Docker support
+- **Privacy-first**: No cookies, daily visitor ID rotation.
+- **Bot filtering**: Excludes crawlers, scrapers, and monitoring bots
+- **Lightweight**: Low-RAM Docker builds, SQLite or PostgreSQL for data persitance. Lightweight tracking script
+- **Real-time dashboard**: GraphQL API with modern React UI
+- **Custom events**: Track clicks and user interactions via custom events
 
 ## Quick Start
 
@@ -91,8 +90,9 @@ Server starts at http://localhost:8080. The first registered user becomes admin.
 | `DB_DRIVER` | `sqlite` | `sqlite` or `postgres` |
 | `DB_DSN` | `file:data/lovely_eye.db?cache=shared&mode=rwc` | Database connection string |
 | `JWT_SECRET` | (random) | JWT signing key (min 32 chars, required for production) |
-| `SECURE_COOKIES` | `true` | Use secure cookies for the dashboard login (requires HTTPS). Set to `false` for local dev |
+| `SECURE_COOKIES` | `true` | Use secure cookies (requires HTTPS). Set to `false` for local dev |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
+| `GEOIP_DB_PATH` | - | Path to GeoLite2-Country.mmdb for country stats (optional) |
 
 ## Authentication
 
@@ -103,6 +103,9 @@ JWT tokens in HttpOnly cookies with SameSite settings:
 - **SameSite=Strict** (production) or **Lax** (development): Prevents CSRF
 
 No CSRF tokens needed. See [discussion](https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/).
+
+## How tracking work
+For main mechanics of the tracking look at the [ANALYTICS.md](./ANALYTICS.md)
 
 ## License
 

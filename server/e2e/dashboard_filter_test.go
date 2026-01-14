@@ -72,7 +72,7 @@ func TestDashboardFiltering(t *testing.T) {
 	}
 
 	// Collect all page views
-	for _, data := range testData {
+	for i, data := range testData {
 		payload := map[string]interface{}{
 			"site_key":     siteKey,
 			"path":         data.path,
@@ -84,7 +84,9 @@ func TestDashboardFiltering(t *testing.T) {
 
 		req, _ := http.NewRequest("POST", ts.httpServer.URL+"/api/collect", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("User-Agent", data.userAgent)
+		// Append index to user agent to create different visitor IDs
+		// This simulates different visitors to avoid deduplication
+		req.Header.Set("User-Agent", data.userAgent+" TestVisitor/"+string(rune('A'+i)))
 
 		resp, err := ts.httpServer.Client().Do(req)
 		require.NoError(t, err)

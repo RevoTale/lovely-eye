@@ -4,21 +4,28 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/repository"
+	"github.com/mileusna/useragent"
 )
 
 type AnalyticsService struct {
 	analyticsRepo *repository.AnalyticsRepository
 	siteRepo      *repository.SiteRepository
+	botDetector   *BotDetector
+	geoIPService  *GeoIPService
 }
 
-func NewAnalyticsService(analyticsRepo *repository.AnalyticsRepository, siteRepo *repository.SiteRepository) *AnalyticsService {
+func NewAnalyticsService(analyticsRepo *repository.AnalyticsRepository, siteRepo *repository.SiteRepository, geoIPService *GeoIPService) *AnalyticsService {
 	return &AnalyticsService{
 		analyticsRepo: analyticsRepo,
 		siteRepo:      siteRepo,
+		botDetector:   NewBotDetector(),
+		geoIPService:  geoIPService,
 	}
 }
 
@@ -48,22 +55,41 @@ type EventInput struct {
 
 // CollectPageView records a page view and manages sessions
 func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInput) error {
+	// Filter out bots
+	if s.botDetector.IsBot(input.UserAgent) {
+		return nil // Silently ignore bot traffic
+	}
+
 	site, err := s.siteRepo.GetByPublicKey(ctx, input.SiteKey)
 	if err != nil {
 		return err
 	}
 
-	// Generate anonymous visitor ID
-	visitorID := generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
+	// Generate anonymous visitor ID with daily salt rotation for privacy
+	visitorID := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
 
 	// Try to find existing session (within 30 minutes)
 	sessionTimeout := time.Now().Add(-30 * time.Minute)
 	session, err := s.analyticsRepo.GetSessionByVisitor(ctx, site.ID, visitorID, sessionTimeout)
 
-	device := parseDevice(input.UserAgent)
-	browser := parseBrowser(input.UserAgent)
-	os := parseOS(input.UserAgent)
+	// Parse user agent with proper library
+	ua := useragent.Parse(input.UserAgent)
+	device := categorizeDevice(ua)
+	browser := ua.Name
+	if browser == "" {
+		browser = "Other"
+	}
+	os := ua.OS
+	if os == "" {
+		os = "Other"
+	}
 	screenSize := categorizeScreenSize(input.ScreenWidth)
+
+	// Get country from IP
+	country := ""
+	if s.geoIPService != nil {
+		country = s.geoIPService.GetCountry(input.IP)
+	}
 
 	if err != nil || session == nil {
 		// Create new session
@@ -84,6 +110,7 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 			ScreenSize:  screenSize,
 			PageViews:   1,
 			IsBounce:    true,
+			Country:     country,
 		}
 		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
 			return err
@@ -95,9 +122,21 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		session.PageViews++
 		session.IsBounce = false
 		session.Duration = int(time.Since(session.StartedAt).Seconds())
+		// Update country if not set
+		if session.Country == "" && country != "" {
+			session.Country = country
+		}
 		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
 			return err
 		}
+	}
+
+	// Deduplicate page views: check if same visitor viewed same page in last 10 seconds
+	// This prevents duplicate counts from double-clicks, SPA route changes, or script reloads
+	recentPageView, _ := s.analyticsRepo.GetRecentPageView(ctx, site.ID, visitorID, input.Path, time.Now().Add(-10*time.Second))
+	if recentPageView != nil {
+		// Same page view within 10 seconds - ignore to prevent duplicates
+		return nil
 	}
 
 	// Record page view
@@ -115,12 +154,17 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 
 // CollectEvent records a custom event
 func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) error {
+	// Filter out bots
+	if s.botDetector.IsBot(input.UserAgent) {
+		return nil // Silently ignore bot traffic
+	}
+
 	site, err := s.siteRepo.GetByPublicKey(ctx, input.SiteKey)
 	if err != nil {
 		return err
 	}
 
-	visitorID := generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
+	visitorID := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
 
 	// Try to find existing session
 	sessionTimeout := time.Now().Add(-30 * time.Minute)
@@ -228,56 +272,62 @@ func (s *AnalyticsService) GetEventsWithTotal(ctx context.Context, siteID int64,
 	return events, total, nil
 }
 
-// Helper functions for parsing user agent
-func generateVisitorID(ip, userAgent, salt string) string {
-	data := ip + userAgent + salt
+// Helper functions for visitor identification and user agent parsing
+
+// generateVisitorID creates a privacy-preserving visitor identifier
+// Uses daily salt rotation to prevent long-term tracking while maintaining session continuity
+func (s *AnalyticsService) generateVisitorID(ip, userAgent, siteKey string) string {
+	// Use daily salt for privacy - visitor IDs change daily
+	// This prevents long-term tracking while allowing accurate daily counts
+	dateSalt := time.Now().Format("2006-01-02")
+
+	// Hash: IP + UserAgent + SiteKey + DateSalt
+	// This approach balances privacy and accuracy:
+	// - Same visitor gets same ID within a day
+	// - Different ID each day prevents tracking across days
+	// - IP ensures different networks get different IDs
+	// - UserAgent helps distinguish different devices on same network
+	data := fmt.Sprintf("%s|%s|%s|%s", ip, userAgent, siteKey, dateSalt)
 	hash := sha256.Sum256([]byte(data))
 	return hex.EncodeToString(hash[:])[:32]
 }
 
-func parseDevice(userAgent string) string {
-	// Simplified device detection
-	if contains(userAgent, "Mobile", "Android", "iPhone", "iPad") {
-		if contains(userAgent, "iPad", "Tablet") {
-			return "tablet"
-		}
+// categorizeDevice determines device type from parsed user agent
+func categorizeDevice(ua useragent.UserAgent) string {
+	if ua.Tablet {
+		return "tablet"
+	}
+	if ua.Mobile {
 		return "mobile"
 	}
+	if ua.Desktop {
+		return "desktop"
+	}
+
+	// Fallback: manual detection when library doesn't recognize the device
+	// This handles simplified/incomplete user agent strings
+	uaString := strings.ToLower(ua.String)
+	if strings.Contains(uaString, "iphone") || strings.Contains(uaString, "android") {
+		if strings.Contains(uaString, "mobile") {
+			return "mobile"
+		}
+		// Android tablets don't have "mobile" in UA
+		if strings.Contains(uaString, "tablet") {
+			return "tablet"
+		}
+		// iPhone is always mobile
+		if strings.Contains(uaString, "iphone") {
+			return "mobile"
+		}
+		// iPad is tablet
+		if strings.Contains(uaString, "ipad") {
+			return "tablet"
+		}
+	}
+
+	// Default to desktop for unknown user agents
+	// This is more accurate than "other" since most traffic is desktop
 	return "desktop"
-}
-
-func parseBrowser(userAgent string) string {
-	switch {
-	case contains(userAgent, "Firefox"):
-		return "Firefox"
-	case contains(userAgent, "Edg"):
-		return "Edge"
-	case contains(userAgent, "Chrome"):
-		return "Chrome"
-	case contains(userAgent, "Safari"):
-		return "Safari"
-	case contains(userAgent, "Opera"):
-		return "Opera"
-	default:
-		return "Other"
-	}
-}
-
-func parseOS(userAgent string) string {
-	switch {
-	case contains(userAgent, "Windows"):
-		return "Windows"
-	case contains(userAgent, "Mac OS"):
-		return "macOS"
-	case contains(userAgent, "Linux"):
-		return "Linux"
-	case contains(userAgent, "Android"):
-		return "Android"
-	case contains(userAgent, "iOS", "iPhone", "iPad"):
-		return "iOS"
-	default:
-		return "Other"
-	}
 }
 
 func categorizeScreenSize(width int) string {
@@ -293,17 +343,4 @@ func categorizeScreenSize(width int) string {
 	default:
 		return "xl"
 	}
-}
-
-func contains(s string, substrs ...string) bool {
-	for _, substr := range substrs {
-		if len(s) >= len(substr) {
-			for i := 0; i <= len(s)-len(substr); i++ {
-				if s[i:i+len(substr)] == substr {
-					return true
-				}
-			}
-		}
-	}
-	return false
 }

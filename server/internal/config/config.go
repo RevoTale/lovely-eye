@@ -11,10 +11,11 @@ import (
 )
 
 type Config struct {
-	Server    ServerConfig
-	Database  DatabaseConfig
-	Auth      AuthConfig
-	TrackerJS []byte // Optional: for testing, to avoid loading from file
+	Server      ServerConfig
+	Database    DatabaseConfig
+	Auth        AuthConfig
+	GeoIPDBPath string // Optional: path to GeoLite2-Country.mmdb for IP geolocation
+	TrackerJS   []byte // Optional: for testing, to avoid loading from file
 }
 
 type ServerConfig struct {
@@ -71,6 +72,7 @@ func Load() *Config {
 			InitialAdminUsername: getEnv("INITIAL_ADMIN_USERNAME", ""),
 			InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
 		},
+		GeoIPDBPath: getEnv("GEOIP_DB_PATH", ""),
 	}
 }
 

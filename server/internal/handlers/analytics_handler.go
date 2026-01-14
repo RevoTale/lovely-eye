@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
+	"net"
 	"net/http"
+	"strings"
 
 	"github.com/lovely-eye/server/internal/services"
 )
@@ -50,15 +52,6 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get client IP (handle proxies)
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip == "" {
-		ip = r.Header.Get("X-Real-IP")
-	}
-	if ip == "" {
-		ip = r.RemoteAddr
-	}
-
 	err := h.analyticsService.CollectPageView(r.Context(), services.CollectInput{
 		SiteKey:     req.SiteKey,
 		Path:        req.Path,
@@ -66,7 +59,7 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 		Referrer:    req.Referrer,
 		ScreenWidth: req.ScreenWidth,
 		UserAgent:   r.UserAgent(),
-		IP:          ip,
+		IP:          getClientIP(r),
 		UTMSource:   req.UTMSource,
 		UTMMedium:   req.UTMMedium,
 		UTMCampaign: req.UTMCampaign,
@@ -103,21 +96,13 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip == "" {
-		ip = r.Header.Get("X-Real-IP")
-	}
-	if ip == "" {
-		ip = r.RemoteAddr
-	}
-
 	err := h.analyticsService.CollectEvent(r.Context(), services.EventInput{
 		SiteKey:    req.SiteKey,
 		Name:       req.Name,
 		Path:       req.Path,
 		Properties: req.Properties,
 		UserAgent:  r.UserAgent(),
-		IP:         ip,
+		IP:         getClientIP(r),
 	})
 
 	if err != nil {
@@ -136,4 +121,36 @@ func respondJSON(w http.ResponseWriter, status int, data interface{}) {
 
 func respondError(w http.ResponseWriter, status int, message string) {
 	respondJSON(w, status, map[string]string{"error": message})
+}
+
+// getClientIP extracts the real client IP address from the request
+// Handles X-Forwarded-For header (takes first IP) and strips port from RemoteAddr
+func getClientIP(r *http.Request) string {
+	// X-Forwarded-For can contain multiple IPs: "client-ip, proxy1-ip, proxy2-ip"
+	// We want the first one (the original client IP)
+	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		// Take the first IP in the list
+		ips := strings.Split(forwarded, ",")
+		if len(ips) > 0 {
+			ip := strings.TrimSpace(ips[0])
+			if ip != "" {
+				return ip
+			}
+		}
+	}
+
+	// Try X-Real-IP header
+	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
+		return realIP
+	}
+
+	// Fall back to RemoteAddr, but strip the port
+	// RemoteAddr format is "IP:port" or "[IPv6]:port"
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		// If SplitHostPort fails, return RemoteAddr as-is
+		// This handles cases where RemoteAddr is just an IP without port
+		return r.RemoteAddr
+	}
+	return ip
 }

@@ -74,9 +74,16 @@ func New(cfg *config.Config) (*Server, error) {
 		CookieDomain:      cfg.Auth.CookieDomain,
 	})
 
+	// Initialize GeoIP service (optional - can work without GeoIP database)
+	geoIPService, err := services.NewGeoIPService(cfg.GeoIPDBPath)
+	if err != nil {
+		// Log warning but continue - analytics will work without geolocation
+		fmt.Printf("Warning: Failed to initialize GeoIP service: %v. Country detection will be disabled.\n", err)
+	}
+
 	// Initialize other services
 	siteService := services.NewSiteService(siteRepo)
-	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo)
+	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo, geoIPService)
 
 	// Create initial admin from env vars if configured
 	if err := authService.CreateInitialAdmin(context.Background(), cfg.Auth.InitialAdminUsername, cfg.Auth.InitialAdminPassword); err != nil {
