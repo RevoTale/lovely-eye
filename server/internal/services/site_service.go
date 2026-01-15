@@ -37,19 +37,16 @@ type UpdateSiteInput struct {
 }
 
 func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*models.Site, error) {
-	// Validate and normalize domain
 	normalizedDomain, err := utils.ValidateDomain(input.Domain)
 	if err != nil {
 		return nil, err
 	}
 
-	// Validate site name
 	validatedName, err := utils.ValidateSiteName(input.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	// Check if domain already exists
 	existing, _ := s.siteRepo.GetByDomain(ctx, normalizedDomain)
 	if existing != nil {
 		return nil, ErrSiteExists
@@ -96,7 +93,6 @@ func (s *SiteService) GetUserSites(ctx context.Context, userID int64) ([]*models
 }
 
 func (s *SiteService) Update(ctx context.Context, id, userID int64, input UpdateSiteInput) (*models.Site, error) {
-	// Validate site name
 	validatedName, err := utils.ValidateSiteName(input.Name)
 	if err != nil {
 		return nil, err

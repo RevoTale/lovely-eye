@@ -80,7 +80,6 @@ func New(cfg *config.Config) (*Server, error) {
 		MaxMindLicenseKey: cfg.GeoIPMaxMindLicenseKey,
 	})
 	if err != nil {
-		// Log warning but continue - analytics will work without geolocation
 		fmt.Printf("Warning: Failed to initialize GeoIP service: %v. Country detection will be disabled.\n", err)
 	}
 

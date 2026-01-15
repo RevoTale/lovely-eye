@@ -16,7 +16,6 @@ func NewAnalyticsRepository(db *bun.DB) *AnalyticsRepository {
 	return &AnalyticsRepository{db: db}
 }
 
-// Session methods
 func (r *AnalyticsRepository) CreateSession(ctx context.Context, session *models.Session) error {
 	_, err := r.db.NewInsert().Model(session).Exec(ctx)
 	return err
@@ -52,7 +51,6 @@ func (r *AnalyticsRepository) UpdateSession(ctx context.Context, session *models
 	return err
 }
 
-// PageView methods
 func (r *AnalyticsRepository) CreatePageView(ctx context.Context, pageView *models.PageView) error {
 	_, err := r.db.NewInsert().Model(pageView).Exec(ctx)
 	return err
@@ -89,7 +87,6 @@ func (r *AnalyticsRepository) GetRecentPageView(ctx context.Context, siteID int6
 	return pageView, nil
 }
 
-// Event methods
 func (r *AnalyticsRepository) CreateEvent(ctx context.Context, event *models.Event) error {
 	_, err := r.db.NewInsert().Model(event).Exec(ctx)
 	return err
@@ -119,7 +116,6 @@ func (r *AnalyticsRepository) GetEventCount(ctx context.Context, siteID int64, f
 	return count, err
 }
 
-// Aggregation methods
 func (r *AnalyticsRepository) GetVisitorCount(ctx context.Context, siteID int64, from, to time.Time) (int, error) {
 	var count int
 	err := r.db.NewSelect().
@@ -410,7 +406,6 @@ func normalizeCountryValues(values []string) []string {
 	return normalized
 }
 
-// Filtered aggregation methods
 func (r *AnalyticsRepository) GetVisitorCountWithFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string) (int, error) {
 	var count int
 	q := r.db.NewSelect().

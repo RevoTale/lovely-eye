@@ -13,14 +13,12 @@ export function SiteFormPage(): React.JSX.Element {
   const navigate = useNavigate();
   const isNew = siteId === 'new';
 
-  // Form state
   const [name, setName] = useState('');
   const [domain, setDomain] = useState('');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
   const [trackCountry, setTrackCountry] = useState(false);
 
-  // Queries and mutations
   const { data: siteData, loading: siteLoading } = useQuery(SITE_QUERY, {
     variables: { id: siteId },
     skip: isNew,
@@ -89,19 +87,16 @@ export function SiteFormPage(): React.JSX.Element {
     const trimmedName = name.trim();
     const trimmedDomain = domain.trim();
 
-    // Validate required fields
     if (!trimmedName || !trimmedDomain) {
       setError('Name and domain are required');
       return;
     }
 
-    // Validate site name (1-100 characters, alphanumeric and common punctuation)
     if (trimmedName.length < 1 || trimmedName.length > 100) {
       setError('Site name must be between 1 and 100 characters');
       return;
     }
 
-    // Validate domain format (basic domain validation)
     const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
     if (!domainRegex.test(trimmedDomain)) {
       setError('Please enter a valid domain (e.g., example.com)');
@@ -182,7 +177,6 @@ export function SiteFormPage(): React.JSX.Element {
   const generateTrackingScript = (): string => {
     if (!site) return '';
 
-    // Use the base path from environment config
     const basePath = window.__ENV__?.BASE_PATH ?? '';
     const trackerUrl = `${window.location.origin}${basePath}/tracker.js`;
 
@@ -286,12 +280,11 @@ export function SiteFormPage(): React.JSX.Element {
                 value={domain}
                 onChange={(e) => {
                   const value = e.target.value;
-                  // Automatically truncate domain to domain.com format
                   const truncated = value
-                    .replace(/^https?:\/\//, '') // Remove http:// or https://
-                    .replace(/^www\./, '') // Remove www.
-                    .replace(/\/.*$/, '') // Remove path and trailing slashes
-                    .toLowerCase() // Convert to lowercase
+                    .replace(/^https?:\/\//, '')
+                    .replace(/^www\./, '')
+                    .replace(/\/.*$/, '')
+                    .toLowerCase()
                     .trim();
                   setDomain(truncated);
                 }}

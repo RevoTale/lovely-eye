@@ -89,7 +89,6 @@ export function DashboardPage(): React.JSX.Element {
     ...(countries.length ? { country: countries } : {}),
   };
 
-  // Build filter object from URL parameters
   const filter = {
     ...(referrers.length ? { referrer: referrers } : {}),
     ...(devices.length ? { device: devices } : {}),
@@ -103,13 +102,13 @@ export function DashboardPage(): React.JSX.Element {
       filter: Object.keys(filter).length > 0 ? filter : undefined,
     },
     skip: !siteId,
-    pollInterval: 60000, // Refresh every minute
+    pollInterval: 60000,
   });
 
   const { data: realtimeData } = useQuery(REALTIME_QUERY, {
     variables: { siteId },
     skip: !siteId,
-    pollInterval: 5000, // Refresh every 5 seconds
+    pollInterval: 5000,
   });
 
   if (siteLoading || dashboardLoading) {
@@ -175,10 +174,8 @@ export function DashboardPage(): React.JSX.Element {
         </div>
       </div>
 
-      {/* Active Filters */}
       <ActiveFilters siteId={siteId} search={decodedSearch} />
 
-      {/* Stats grid */}
       {stats ? (
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -204,7 +201,6 @@ export function DashboardPage(): React.JSX.Element {
             />
           </div>
 
-          {/* Analytics Chart */}
           {stats.dailyStats.length > 0 ? (
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader>
@@ -288,12 +284,10 @@ export function DashboardPage(): React.JSX.Element {
             </Card>
           ) : null}
 
-          {/* Active Pages (Realtime) */}
           {realtime?.activePages ? (
             <ActivePagesCard activePages={realtime.activePages} />
           ) : null}
 
-          {/* Top pages and referrers */}
           <div className="grid gap-6 md:grid-cols-2">
             <Card className="hover:shadow-md transition-shadow">
               <CardHeader>
@@ -344,7 +338,6 @@ export function DashboardPage(): React.JSX.Element {
 
           <CountryCard countries={stats.countries} siteId={siteId} />
 
-          {/* Device breakdown */}
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

@@ -1,4 +1,3 @@
-// GraphQL operations for the dashboard
 import { gql } from '@apollo/client';
 
 export const ME_QUERY = gql`

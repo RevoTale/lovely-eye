@@ -5,7 +5,6 @@
 (function() {
   'use strict';
 
-  // Configuration
   var script = document.currentScript;
   var siteKey = script.getAttribute('data-site-key');
   var apiUrl = script.getAttribute('data-api-url') || (script.src.replace(/\/[^/]*$/, ''));
@@ -15,11 +14,9 @@
     return;
   }
 
-  // State
   var lastPath = null;
   var pageStartTime = Date.now();
 
-  // Utility functions
   function getPath() {
     return window.location.pathname + window.location.search;
   }
@@ -65,11 +62,9 @@
     }
   }
 
-  // Track page view
   function trackPageView() {
     var path = getPath();
 
-    // Avoid duplicate tracking
     if (path === lastPath) return;
     lastPath = path;
 
@@ -89,7 +84,6 @@
     pageStartTime = Date.now();
   }
 
-  // Track custom events
   function trackEvent(name, properties) {
     if (!name) return;
 
@@ -101,7 +95,6 @@
     });
   }
 
-  // Track time on page when leaving
   function trackLeave() {
     var duration = Math.round((Date.now() - pageStartTime) / 1000);
     if (duration > 0 && duration < 3600) { // Sanity check: max 1 hour
@@ -113,19 +106,15 @@
     }
   }
 
-  // Initialize
   function init() {
-    // Track initial page view
     trackPageView();
 
-    // Track page visibility changes
     document.addEventListener('visibilitychange', function() {
       if (document.visibilityState === 'hidden') {
         trackLeave();
       }
     });
 
-    // Track SPA navigation (History API)
     var originalPushState = history.pushState;
     history.pushState = function() {
       originalPushState.apply(this, arguments);
@@ -140,17 +129,14 @@
 
     window.addEventListener('popstate', trackPageView);
 
-    // Track before unload
     window.addEventListener('beforeunload', trackLeave);
   }
 
-  // Expose API for custom events
   window.lovelyEye = {
     track: trackEvent,
     trackPageView: trackPageView
   };
 
-  // Start tracking when DOM is ready
   if (document.readyState === 'complete') {
     init();
   } else {

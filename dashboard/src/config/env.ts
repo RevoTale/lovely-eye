@@ -4,13 +4,11 @@ interface RuntimeConfig {
   GRAPHQL_URL: string;
 }
 
-
 function getConfig(): RuntimeConfig {
   const env = window.__ENV__
   if (!env) {
     throw new Error('Runtime environment configuration is missing.');
   }
-  // Check if properties exist (allow empty strings for BASE_PATH when serving at root)
   if (env.BASE_PATH === undefined || !env.API_URL || !env.GRAPHQL_URL) {
     throw new Error('Incomplete runtime environment configuration.');
   }
@@ -24,7 +22,6 @@ function getConfig(): RuntimeConfig {
 export const config = getConfig();
 
 export function getBasePath(): string {
-  // Remove trailing slash for consistency
   return config.BASE_PATH.replace(/\/$/, '') || '/';
 }
 

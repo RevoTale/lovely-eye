@@ -1,17 +1,14 @@
 import { createRouter, createRootRouteWithContext, createRoute, Outlet, redirect, Link, useNavigate, lazyRouteComponent } from '@tanstack/react-router';
 import type { AuthContextType } from '@/hooks/use-auth';
 
-// Router context type
 interface RouterContext {
   auth: AuthContextType;
 }
 
-// Root route
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: () => <Outlet />,
 });
 
-// Public routes
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
@@ -40,7 +37,6 @@ const registerRoute = createRoute({
   component: lazyRouteComponent(() => import('./pages/register').then(m => ({ default: m.RegisterPage }))),
 });
 
-// Auth layout route (protected)
 const authLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'auth',
@@ -55,7 +51,6 @@ const authLayoutRoute = createRoute({
   component: lazyRouteComponent(() => import('./layouts/dashboard-layout').then(m => ({ default: m.DashboardLayout }))),
 });
 
-// Protected child routes
 const sitesRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: '/',
@@ -91,14 +86,12 @@ const siteDetailRoute = createRoute({
   component: lazyRouteComponent(() => import('./pages/site-view').then(m => ({ default: m.SiteViewPage }))),
 });
 
-// Route tree
 const routeTree = rootRoute.addChildren([
   loginRoute,
   registerRoute,
   authLayoutRoute.addChildren([sitesRoute, siteDetailRoute]),
 ]);
 
-// Create router
 export const router = createRouter({
   routeTree,
   context: {
@@ -108,15 +101,12 @@ export const router = createRouter({
   basepath: window.__ENV__?.BASE_PATH ?? '/',
 });
 
-// Type registration
 declare module '@tanstack/react-router' {
   interface Register {
     router: typeof router;
   }
 }
 
-// Re-export Link and useNavigate for convenience
 export { Link, useNavigate };
 
-// Export route for params access
 export { siteDetailRoute };

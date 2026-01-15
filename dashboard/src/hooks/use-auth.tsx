@@ -16,7 +16,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }): React.JSX.Element {
   const [user, setUser] = useState<User | null>(null);
-  
+
   const { loading: meLoading, data: meData, refetch } = useQuery(ME_QUERY, {
     fetchPolicy: 'network-only',
     errorPolicy: 'ignore',
@@ -36,7 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     const result = await loginMutation({ variables: { input } });
     if (result.data?.login?.user) {
       setUser(result.data.login.user as User);
-      // Refetch ME query to sync auth state with cookies
       await refetch();
     }
   }, [loginMutation, refetch]);
@@ -45,7 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     const result = await registerMutation({ variables: { input } });
     if (result.data?.register?.user) {
       setUser(result.data.register.user as User);
-      // Refetch ME query to sync auth state with cookies
       await refetch();
     }
   }, [registerMutation, refetch]);
