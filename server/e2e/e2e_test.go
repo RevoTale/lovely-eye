@@ -388,6 +388,34 @@ func TestEventPropertiesValidation(t *testing.T) {
 	require.NoError(t, err)
 
 	siteKey := siteResp.CreateSite.PublicKey
+	siteID := siteResp.CreateSite.Id
+	maxLen := 500
+
+	definitions := []operations.EventDefinitionInput{
+		{
+			Name: "purchase",
+			Fields: []operations.EventDefinitionFieldInput{
+				{Key: "product_id", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+				{Key: "price", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+				{Key: "currency", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+			},
+		},
+		{
+			Name:   "page_scroll",
+			Fields: []operations.EventDefinitionFieldInput{},
+		},
+		{
+			Name: "click",
+			Fields: []operations.EventDefinitionFieldInput{
+				{Key: "key", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+			},
+		},
+	}
+
+	for _, definition := range definitions {
+		_, err := operations.UpsertEventDefinition(ctx, client, siteID, definition)
+		require.NoError(t, err)
+	}
 
 	t.Run("valid string:string properties accepted", func(t *testing.T) {
 		payload := map[string]interface{}{
@@ -538,7 +566,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 
 	t.Run("nested objects rejected (must be string:string)", func(t *testing.T) {
@@ -557,7 +585,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 }
 
@@ -581,6 +609,44 @@ func TestEventPropertiesStored(t *testing.T) {
 
 	siteKey := siteResp.CreateSite.PublicKey
 	siteID := siteResp.CreateSite.Id
+	maxLen := 500
+
+	definitions := []operations.EventDefinitionInput{
+		{
+			Name: "button_click",
+			Fields: []operations.EventDefinitionFieldInput{
+				{Key: "button", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+				{Key: "variant", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+				{Key: "position", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+			},
+		},
+		{
+			Name: "form_submit",
+			Fields: []operations.EventDefinitionFieldInput{
+				{Key: "form_id", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+				{Key: "fields", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+			},
+		},
+		{
+			Name: "video_play",
+			Fields: []operations.EventDefinitionFieldInput{
+				{Key: "video_id", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+				{Key: "duration", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+			},
+		},
+		{
+			Name: "download",
+			Fields: []operations.EventDefinitionFieldInput{
+				{Key: "file", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+				{Key: "size_mb", Type: operations.EventFieldTypeString, Required: true, MaxLength: maxLen},
+			},
+		},
+	}
+
+	for _, definition := range definitions {
+		_, err := operations.UpsertEventDefinition(ctx, client, siteID, definition)
+		require.NoError(t, err)
+	}
 
 	t.Run("event properties are persisted and retrieved via GraphQL", func(t *testing.T) {
 		// Send event with string:string properties

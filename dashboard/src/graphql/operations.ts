@@ -94,6 +94,24 @@ export const REALTIME_QUERY = gql`
   }
 `;
 
+export const EVENTS_QUERY = gql`
+  query Events($siteId: ID!, $dateRange: DateRangeInput, $limit: Int, $offset: Int) {
+    events(siteId: $siteId, dateRange: $dateRange, limit: $limit, offset: $offset) {
+      total
+      events {
+        id
+        name
+        path
+        createdAt
+        properties {
+          key
+          value
+        }
+      }
+    }
+  }
+`;
+
 export const LOGIN_MUTATION = gql`
   mutation Login($input: LoginInput!) {
     login(input: $input) {
@@ -146,6 +164,48 @@ export const UPDATE_SITE_MUTATION = gql`
       trackCountry
       createdAt
     }
+  }
+`;
+
+export const EVENT_DEFINITIONS_QUERY = gql`
+  query EventDefinitions($siteId: ID!) {
+    eventDefinitions(siteId: $siteId) {
+      id
+      name
+      createdAt
+      updatedAt
+      fields {
+        id
+        key
+        type
+        required
+        maxLength
+      }
+    }
+  }
+`;
+
+export const UPSERT_EVENT_DEFINITION_MUTATION = gql`
+  mutation UpsertEventDefinition($siteId: ID!, $input: EventDefinitionInput!) {
+    upsertEventDefinition(siteId: $siteId, input: $input) {
+      id
+      name
+      createdAt
+      updatedAt
+      fields {
+        id
+        key
+        type
+        required
+        maxLength
+      }
+    }
+  }
+`;
+
+export const DELETE_EVENT_DEFINITION_MUTATION = gql`
+  mutation DeleteEventDefinition($siteId: ID!, $name: String!) {
+    deleteEventDefinition(siteId: $siteId, name: $name)
   }
 `;
 

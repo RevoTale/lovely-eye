@@ -9,10 +9,12 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lovely-eye/server/internal/auth"
 	"github.com/lovely-eye/server/internal/graph/model"
+	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/services"
 )
 
@@ -206,6 +208,69 @@ func (r *mutationResolver) RefreshGeoIPDatabase(ctx context.Context) (*model.Geo
 
 	status, _ := r.AnalyticsService.RefreshGeoIPDatabase(ctx)
 	return convertToGraphQLGeoIPStatus(status), nil
+}
+
+// UpsertEventDefinition is the resolver for the upsertEventDefinition field.
+func (r *mutationResolver) UpsertEventDefinition(ctx context.Context, siteID string, input model.EventDefinitionInput) (*model.EventDefinition, error) {
+	claims := auth.GetUserFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized")
+	}
+
+	id, err := strconv.ParseInt(siteID, 10, 64)
+	if err != nil {
+		return nil, errors.New("invalid site ID")
+	}
+
+	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	fields := make([]services.EventFieldInput, 0, len(input.Fields))
+	for _, field := range input.Fields {
+		fields = append(fields, services.EventFieldInput{
+			Key:       field.Key,
+			Type:      strings.ToLower(string(field.Type)),
+			Required:  field.Required,
+			MaxLength: field.MaxLength,
+		})
+	}
+
+	definition, err := r.EventDefService.Upsert(ctx, id, services.EventDefinitionInput{
+		Name:   input.Name,
+		Fields: fields,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	results := convertToGraphQLEventDefinitions([]*models.EventDefinition{definition})
+	return results[0], nil
+}
+
+// DeleteEventDefinition is the resolver for the deleteEventDefinition field.
+func (r *mutationResolver) DeleteEventDefinition(ctx context.Context, siteID string, name string) (bool, error) {
+	claims := auth.GetUserFromContext(ctx)
+	if claims == nil {
+		return false, errors.New("unauthorized")
+	}
+
+	id, err := strconv.ParseInt(siteID, 10, 64)
+	if err != nil {
+		return false, errors.New("invalid site ID")
+	}
+
+	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
+	if err != nil {
+		return false, err
+	}
+
+	if err := r.EventDefService.Delete(ctx, id, name); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // Me is the resolver for the me field.
@@ -412,6 +477,31 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 	}
 
 	return convertToGraphQLEvents(events, total), nil
+}
+
+// EventDefinitions is the resolver for the eventDefinitions field.
+func (r *queryResolver) EventDefinitions(ctx context.Context, siteID string) ([]*model.EventDefinition, error) {
+	claims := auth.GetUserFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized")
+	}
+
+	id, err := strconv.ParseInt(siteID, 10, 64)
+	if err != nil {
+		return nil, errors.New("invalid site ID")
+	}
+
+	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	definitions, err := r.EventDefService.List(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return convertToGraphQLEventDefinitions(definitions), nil
 }
 
 // ActivePages is the resolver for the activePages field.

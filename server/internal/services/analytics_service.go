@@ -3,7 +3,10 @@ package services
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -14,18 +17,25 @@ import (
 )
 
 type AnalyticsService struct {
-	analyticsRepo *repository.AnalyticsRepository
-	siteRepo      *repository.SiteRepository
-	botDetector   *BotDetector
-	geoIPService  *GeoIPService
+	analyticsRepo       *repository.AnalyticsRepository
+	siteRepo            *repository.SiteRepository
+	eventDefinitionRepo *repository.EventDefinitionRepository
+	botDetector         *BotDetector
+	geoIPService        *GeoIPService
 }
 
-func NewAnalyticsService(analyticsRepo *repository.AnalyticsRepository, siteRepo *repository.SiteRepository, geoIPService *GeoIPService) *AnalyticsService {
+func NewAnalyticsService(
+	analyticsRepo *repository.AnalyticsRepository,
+	siteRepo *repository.SiteRepository,
+	eventDefinitionRepo *repository.EventDefinitionRepository,
+	geoIPService *GeoIPService,
+) *AnalyticsService {
 	return &AnalyticsService{
-		analyticsRepo: analyticsRepo,
-		siteRepo:      siteRepo,
-		botDetector:   NewBotDetector(),
-		geoIPService:  geoIPService,
+		analyticsRepo:       analyticsRepo,
+		siteRepo:            siteRepo,
+		eventDefinitionRepo: eventDefinitionRepo,
+		botDetector:         NewBotDetector(),
+		geoIPService:        geoIPService,
 	}
 }
 
@@ -164,6 +174,26 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		return err
 	}
 
+	if s.eventDefinitionRepo == nil {
+		return nil
+	}
+
+	definition, err := s.eventDefinitionRepo.GetByName(ctx, site.ID, input.Name)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		return err
+	}
+
+	sanitizedProps, ok, err := sanitizeEventProperties(input.Properties, definition.Fields)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return nil
+	}
+
 	visitorID := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
 
 	// Try to find existing session
@@ -181,7 +211,7 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		VisitorID:  visitorID,
 		Name:       input.Name,
 		Path:       input.Path,
-		Properties: input.Properties,
+		Properties: sanitizedProps,
 	}
 
 	return s.analyticsRepo.CreateEvent(ctx, event)
@@ -321,6 +351,82 @@ func (s *AnalyticsService) generateVisitorID(ip, userAgent, siteKey string) stri
 	data := fmt.Sprintf("%s|%s|%s|%s", ip, userAgent, siteKey, dateSalt)
 	hash := sha256.Sum256([]byte(data))
 	return hex.EncodeToString(hash[:])[:32]
+}
+
+func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionField) (string, bool, error) {
+	if len(fields) == 0 {
+		return "", true, nil
+	}
+
+	allowed := make(map[string]*models.EventDefinitionField, len(fields))
+	for _, field := range fields {
+		allowed[field.Key] = field
+	}
+
+	var props map[string]interface{}
+	if propsJSON != "" {
+		if err := json.Unmarshal([]byte(propsJSON), &props); err != nil {
+			return "", false, nil
+		}
+	} else {
+		props = map[string]interface{}{}
+	}
+
+	sanitized := make(map[string]interface{})
+	for key, value := range props {
+		field, ok := allowed[key]
+		if !ok {
+			continue
+		}
+
+		switch field.Type {
+		case eventFieldTypeString:
+			strValue, ok := value.(string)
+			if !ok {
+				return "", false, nil
+			}
+			maxLen := field.MaxLength
+			if maxLen <= 0 {
+				maxLen = defaultEventMaxLength
+			}
+			if len(strValue) > maxLen {
+				strValue = strValue[:maxLen]
+			}
+			sanitized[key] = strValue
+		case eventFieldTypeNumber:
+			numberValue, ok := value.(float64)
+			if !ok {
+				return "", false, nil
+			}
+			sanitized[key] = numberValue
+		case eventFieldTypeBoolean:
+			boolValue, ok := value.(bool)
+			if !ok {
+				return "", false, nil
+			}
+			sanitized[key] = boolValue
+		default:
+			return "", false, nil
+		}
+	}
+
+	for _, field := range fields {
+		if field.Required {
+			if _, ok := sanitized[field.Key]; !ok {
+				return "", false, nil
+			}
+		}
+	}
+
+	if len(sanitized) == 0 {
+		return "", true, nil
+	}
+
+	bytes, err := json.Marshal(sanitized)
+	if err != nil {
+		return "", false, err
+	}
+	return string(bytes), true, nil
 }
 
 // categorizeDevice determines device type from parsed user agent

@@ -16,9 +16,10 @@
 
   var lastPath = null;
   var pageStartTime = Date.now();
+  var includeQuery = script.getAttribute('data-include-query') === 'true';
 
   function getPath() {
-    return window.location.pathname + window.location.search;
+    return includeQuery ? window.location.pathname + window.location.search : window.location.pathname;
   }
 
   function getReferrer() {

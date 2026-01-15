@@ -39,6 +39,8 @@ func main() {
 		&models.Session{},
 		&models.PageView{},
 		&models.Event{},
+		&models.EventDefinition{},
+		&models.EventDefinitionField{},
 		&models.DailyStats{},
 	)
 	if err != nil {

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery } from '@apollo/client';
-import { CREATE_SITE_MUTATION, SITE_QUERY, SITES_QUERY, DELETE_SITE_MUTATION, REGENERATE_SITE_KEY_MUTATION, UPDATE_SITE_MUTATION, GEOIP_STATUS_QUERY, REFRESH_GEOIP_MUTATION } from '@/graphql';
+import { CREATE_SITE_MUTATION, SITE_QUERY, SITES_QUERY, DELETE_SITE_MUTATION, REGENERATE_SITE_KEY_MUTATION, UPDATE_SITE_MUTATION, GEOIP_STATUS_QUERY, REFRESH_GEOIP_MUTATION, EVENT_DEFINITIONS_QUERY, UPSERT_EVENT_DEFINITION_MUTATION, DELETE_EVENT_DEFINITION_MUTATION } from '@/graphql';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton } from '@/components/ui';
 import { Globe, ArrowLeft, Save, Trash2, RefreshCw, Copy, CheckCircle2, AlertCircle } from 'lucide-react';
 import { siteDetailRoute } from '@/router';
 import { CountryTrackingCard } from '@/components/country-tracking-card';
-import type { Site } from '@/generated/graphql';
+import { EventDefinitionsCard } from '@/components/event-definitions-card';
+import type { EventDefinitionInput, Site } from '@/generated/graphql';
 
 export function SiteFormPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
@@ -35,6 +36,11 @@ export function SiteFormPage(): React.JSX.Element {
   const { data: geoIPData } = useQuery(GEOIP_STATUS_QUERY, {
     skip: isNew,
     pollInterval: 5000,
+  });
+
+  const { data: eventDefinitionsData } = useQuery(EVENT_DEFINITIONS_QUERY, {
+    variables: { siteId },
+    skip: isNew,
   });
 
   const [createSite, { loading: creating }] = useMutation(CREATE_SITE_MUTATION, {
@@ -77,8 +83,12 @@ export function SiteFormPage(): React.JSX.Element {
     },
   });
 
+  const [upsertEventDefinition, { loading: savingDefinition }] = useMutation(UPSERT_EVENT_DEFINITION_MUTATION);
+  const [deleteEventDefinition, { loading: deletingDefinition }] = useMutation(DELETE_EVENT_DEFINITION_MUTATION);
+
   const site = siteData?.site as Site | undefined;
   const geoIPStatus = geoIPData?.geoIPStatus;
+  const eventDefinitions = eventDefinitionsData?.eventDefinitions ?? [];
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -172,6 +182,28 @@ export function SiteFormPage(): React.JSX.Element {
     setTimeout(() => {
       setCopied(false);
     }, 2000);
+  };
+
+  const handleSaveEventDefinition = async (input: EventDefinitionInput): Promise<void> => {
+    if (!site) return;
+    await upsertEventDefinition({
+      variables: {
+        siteId: site.id,
+        input,
+      },
+      refetchQueries: [{ query: EVENT_DEFINITIONS_QUERY, variables: { siteId: site.id } }],
+    });
+  };
+
+  const handleDeleteEventDefinition = async (nameToDelete: string): Promise<void> => {
+    if (!site) return;
+    await deleteEventDefinition({
+      variables: {
+        siteId: site.id,
+        name: nameToDelete,
+      },
+      refetchQueries: [{ query: EVENT_DEFINITIONS_QUERY, variables: { siteId: site.id } }],
+    });
   };
 
   const generateTrackingScript = (): string => {
@@ -424,6 +456,14 @@ export function SiteFormPage(): React.JSX.Element {
             onRetry={() => {
               void handleRefreshGeoIP();
             }}
+          />
+
+          <EventDefinitionsCard
+            definitions={eventDefinitions}
+            saving={savingDefinition}
+            deleting={deletingDefinition}
+            onSave={handleSaveEventDefinition}
+            onDelete={handleDeleteEventDefinition}
           />
 
           <Card className="border-destructive/50">

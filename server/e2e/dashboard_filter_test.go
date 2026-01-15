@@ -111,7 +111,7 @@ func TestDashboardFiltering(t *testing.T) {
 	t.Run("filter by referrer", func(t *testing.T) {
 		googleReferrer := "https://google.com/search"
 		filter := &operations.FilterInput{
-			Referrer: googleReferrer,
+			Referrer: []string{googleReferrer},
 		}
 
 		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
@@ -133,7 +133,7 @@ func TestDashboardFiltering(t *testing.T) {
 	t.Run("filter by device", func(t *testing.T) {
 		mobileDevice := "mobile"
 		filter := &operations.FilterInput{
-			Device: mobileDevice,
+			Device: []string{mobileDevice},
 		}
 
 		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
@@ -159,7 +159,7 @@ func TestDashboardFiltering(t *testing.T) {
 	t.Run("filter by page", func(t *testing.T) {
 		homePage := "/home"
 		filter := &operations.FilterInput{
-			Page: homePage,
+			Page: []string{homePage},
 		}
 
 		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
@@ -180,8 +180,8 @@ func TestDashboardFiltering(t *testing.T) {
 		facebookReferrer := "https://facebook.com"
 		mobileDevice := "mobile"
 		filter := &operations.FilterInput{
-			Referrer: facebookReferrer,
-			Device:   mobileDevice,
+			Referrer: []string{facebookReferrer},
+			Device:   []string{mobileDevice},
 		}
 
 		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
@@ -200,8 +200,8 @@ func TestDashboardFiltering(t *testing.T) {
 		homePage := "/home"
 		desktopDevice := "desktop"
 		filter := &operations.FilterInput{
-			Page:   homePage,
-			Device: desktopDevice,
+			Page:   []string{homePage},
+			Device: []string{desktopDevice},
 		}
 
 		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
@@ -218,7 +218,7 @@ func TestDashboardFiltering(t *testing.T) {
 	t.Run("filter with non-existent values returns empty results", func(t *testing.T) {
 		nonExistentReferrer := "https://nonexistent.com"
 		filter := &operations.FilterInput{
-			Referrer: nonExistentReferrer,
+			Referrer: []string{nonExistentReferrer},
 		}
 
 		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
@@ -235,7 +235,7 @@ func TestDashboardFiltering(t *testing.T) {
 	t.Run("direct traffic filter", func(t *testing.T) {
 		directReferrer := "(direct)"
 		filter := &operations.FilterInput{
-			Referrer: directReferrer,
+			Referrer: []string{directReferrer},
 		}
 
 		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)

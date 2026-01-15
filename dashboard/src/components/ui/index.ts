@@ -1,6 +1,7 @@
 export { Button, buttonVariants } from './button';
 export { Input } from './input';
 export { Label } from './label';
+export { Calendar } from './calendar';
 export {
   Card,
   CardContent,
@@ -32,6 +33,15 @@ export { Checkbox } from './checkbox';
 export { Skeleton } from './skeleton';
 export { Separator } from './separator';
 export { Progress } from './progress';
+export { DateTimePicker } from './datetime-picker';
+export { Popover, PopoverContent, PopoverTrigger } from './popover';
+export {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './select';
 export {
   Tabs,
   TabsContent,

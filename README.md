@@ -120,6 +120,23 @@ No CSRF tokens needed. See [discussion](https://www.reddit.com/r/node/comments/1
 ## How tracking work
 For main mechanics of the tracking look at the [ANALYTICS.md](./ANALYTICS.md)
 
+## How do we handle privacy
+To learn more about how we handle the privacy take a look at the [PRIVACY.md](./PRIVACY.md).
+
+### Track Custom Events
+
+```html
+<script>
+  // Example: track an error event with metadata
+  window.lovelyEye?.track('error', {
+    message: 'Checkout failed',
+    code: 'PAYMENT_DECLINED',
+  });
+</script>
+```
+
+Events must be allowlisted in the site settings. Unknown event names or fields are ignored.
+
 ## License
 
 Copyright 2025 RevoTale

@@ -1,4 +1,5 @@
 import { createRouter, createRootRouteWithContext, createRoute, Outlet, redirect, Link, useNavigate, lazyRouteComponent } from '@tanstack/react-router';
+import { z } from 'zod';
 import type { AuthContextType } from '@/hooks/use-auth';
 
 interface RouterContext {
@@ -60,28 +61,23 @@ const sitesRoute = createRoute({
 const siteDetailRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: '/sites/$siteId',
-  validateSearch: (search: Record<string, unknown>): {
-    view?: string;
-    referrer?: string | string[];
-    device?: string | string[];
-    page?: string | string[];
-    country?: string | string[];
-  } => {
-    const result: {
-      view?: string;
-      referrer?: string | string[];
-      device?: string | string[];
-      page?: string | string[];
-      country?: string | string[];
-    } = {};
+  validateSearch: (search: Record<string, unknown>) => {
+    const filterValue = z.union([z.string(), z.array(z.string())]).optional();
+    const searchSchema = z.object({
+      view: z.string().optional(),
+      preset: z.enum(['7d', '30d', '90d', 'custom', 'all']).optional(),
+      from: z.string().optional(),
+      to: z.string().optional(),
+      fromTime: z.string().optional(),
+      toTime: z.string().optional(),
+      referrer: filterValue,
+      device: filterValue,
+      page: filterValue,
+      country: filterValue,
+    });
 
-    if (search.view) result.view = search.view as string;
-    if (search.referrer) result.referrer = search.referrer as string | string[];
-    if (search.device) result.device = search.device as string | string[];
-    if (search.page) result.page = search.page as string | string[];
-    if (search.country) result.country = search.country as string | string[];
-
-    return result;
+    const parsed = searchSchema.safeParse(search);
+    return parsed.success ? parsed.data : {};
   },
   component: lazyRouteComponent(() => import('./pages/site-view').then(m => ({ default: m.SiteViewPage }))),
 });

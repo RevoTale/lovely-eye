@@ -124,3 +124,39 @@ type EventsResult struct {
 	Events []*Event `json:"events"`
 	Total  int      `json:"total"`
 }
+
+type EventFieldType string
+
+const (
+	EventFieldTypeString  EventFieldType = "STRING"
+	EventFieldTypeNumber  EventFieldType = "NUMBER"
+	EventFieldTypeBoolean EventFieldType = "BOOLEAN"
+)
+
+type EventDefinitionField struct {
+	ID        string         `json:"id"`
+	Key       string         `json:"key"`
+	Type      EventFieldType `json:"type"`
+	Required  bool           `json:"required"`
+	MaxLength int            `json:"maxLength"`
+}
+
+type EventDefinition struct {
+	ID        string                  `json:"id"`
+	Name      string                  `json:"name"`
+	Fields    []*EventDefinitionField `json:"fields"`
+	CreatedAt time.Time               `json:"createdAt"`
+	UpdatedAt time.Time               `json:"updatedAt"`
+}
+
+type EventDefinitionFieldInput struct {
+	Key       string         `json:"key"`
+	Type      EventFieldType `json:"type"`
+	Required  bool           `json:"required"`
+	MaxLength *int           `json:"maxLength,omitempty"`
+}
+
+type EventDefinitionInput struct {
+	Name   string                       `json:"name"`
+	Fields []*EventDefinitionFieldInput `json:"fields"`
+}

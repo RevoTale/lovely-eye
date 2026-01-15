@@ -26,6 +26,12 @@ Prevents duplicate counting:
 - Filters double-clicks, script reloads, SPA navigation
 - Ensures accurate page view metrics
 
+## Query Parameters
+
+- By default, query parameters are not included in tracked page paths
+- UTM parameters are captured separately for campaign reporting
+- Use `data-include-query="true"` on the tracker script to include full query strings
+
 ## IP Address Handling
 
 Extracts real client IP from proxied requests:
@@ -50,3 +56,9 @@ Tracks browsing sessions:
 - Site key prevents cross-site tracking
 - IP addresses never stored in database
 - Country-level geolocation only (no city data)
+
+## Event Allowlist
+
+- Custom events are recorded only if the event name is allowlisted for the site
+- Event properties are filtered to the allowed keys and types
+- Required fields must be present for the event to be stored

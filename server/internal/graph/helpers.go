@@ -2,7 +2,9 @@ package graph
 
 import (
 	"encoding/json"
+	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lovely-eye/server/internal/graph/model"
@@ -109,6 +111,30 @@ func convertToGraphQLEvents(events []*models.Event, total int) *model.EventsResu
 	return result
 }
 
+func convertToGraphQLEventDefinitions(definitions []*models.EventDefinition) []*model.EventDefinition {
+	result := make([]*model.EventDefinition, 0, len(definitions))
+	for _, def := range definitions {
+		fields := make([]*model.EventDefinitionField, 0, len(def.Fields))
+		for _, field := range def.Fields {
+			fields = append(fields, &model.EventDefinitionField{
+				ID:        strconv.FormatInt(field.ID, 10),
+				Key:       field.Key,
+				Type:      model.EventFieldType(strings.ToUpper(field.Type)),
+				Required:  field.Required,
+				MaxLength: field.MaxLength,
+			})
+		}
+		result = append(result, &model.EventDefinition{
+			ID:        strconv.FormatInt(def.ID, 10),
+			Name:      def.Name,
+			Fields:    fields,
+			CreatedAt: def.CreatedAt,
+			UpdatedAt: def.UpdatedAt,
+		})
+	}
+	return result
+}
+
 func convertToGraphQLGeoIPStatus(status services.GeoIPStatus) *model.GeoIPStatus {
 	var source *string
 	if status.Source != "" {
@@ -132,7 +158,7 @@ func parseEventProperties(propsJSON string) []*model.EventProperty {
 		return []*model.EventProperty{}
 	}
 
-	var props map[string]string
+	var props map[string]interface{}
 	if err := json.Unmarshal([]byte(propsJSON), &props); err != nil {
 		return []*model.EventProperty{}
 	}
@@ -141,7 +167,7 @@ func parseEventProperties(propsJSON string) []*model.EventProperty {
 	for k, v := range props {
 		result = append(result, &model.EventProperty{
 			Key:   k,
-			Value: v,
+			Value: fmt.Sprint(v),
 		})
 	}
 

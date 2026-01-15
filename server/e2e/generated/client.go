@@ -226,6 +226,50 @@ type DeleteSiteResponse struct {
 // GetDeleteSite returns DeleteSiteResponse.DeleteSite, and is useful for accessing the field via an interface.
 func (v *DeleteSiteResponse) GetDeleteSite() bool { return v.DeleteSite }
 
+type EventDefinitionFieldInput struct {
+	Key       string         `json:"key"`
+	Type      EventFieldType `json:"type"`
+	Required  bool           `json:"required"`
+	MaxLength int            `json:"maxLength"`
+}
+
+// GetKey returns EventDefinitionFieldInput.Key, and is useful for accessing the field via an interface.
+func (v *EventDefinitionFieldInput) GetKey() string { return v.Key }
+
+// GetType returns EventDefinitionFieldInput.Type, and is useful for accessing the field via an interface.
+func (v *EventDefinitionFieldInput) GetType() EventFieldType { return v.Type }
+
+// GetRequired returns EventDefinitionFieldInput.Required, and is useful for accessing the field via an interface.
+func (v *EventDefinitionFieldInput) GetRequired() bool { return v.Required }
+
+// GetMaxLength returns EventDefinitionFieldInput.MaxLength, and is useful for accessing the field via an interface.
+func (v *EventDefinitionFieldInput) GetMaxLength() int { return v.MaxLength }
+
+type EventDefinitionInput struct {
+	Name   string                      `json:"name"`
+	Fields []EventDefinitionFieldInput `json:"fields"`
+}
+
+// GetName returns EventDefinitionInput.Name, and is useful for accessing the field via an interface.
+func (v *EventDefinitionInput) GetName() string { return v.Name }
+
+// GetFields returns EventDefinitionInput.Fields, and is useful for accessing the field via an interface.
+func (v *EventDefinitionInput) GetFields() []EventDefinitionFieldInput { return v.Fields }
+
+type EventFieldType string
+
+const (
+	EventFieldTypeString  EventFieldType = "STRING"
+	EventFieldTypeNumber  EventFieldType = "NUMBER"
+	EventFieldTypeBoolean EventFieldType = "BOOLEAN"
+)
+
+var AllEventFieldType = []EventFieldType{
+	EventFieldTypeString,
+	EventFieldTypeNumber,
+	EventFieldTypeBoolean,
+}
+
 // EventsEventsEventsResult includes the requested fields of the GraphQL type EventsResult.
 type EventsEventsEventsResult struct {
 	Events []EventsEventsEventsResultEventsEvent `json:"events"`
@@ -290,26 +334,26 @@ func (v *EventsResponse) GetEvents() EventsEventsEventsResult { return v.Events 
 
 type FilterInput struct {
 	// Filter by specific referrer
-	Referrer string `json:"referrer,omitempty"`
+	Referrer []string `json:"referrer,omitempty"`
 	// Filter by device type (desktop, mobile, tablet)
-	Device string `json:"device,omitempty"`
+	Device []string `json:"device,omitempty"`
 	// Filter by page path
-	Page string `json:"page,omitempty"`
+	Page []string `json:"page,omitempty"`
 	// Filter by country (stored country name)
-	Country string `json:"country,omitempty"`
+	Country []string `json:"country,omitempty"`
 }
 
 // GetReferrer returns FilterInput.Referrer, and is useful for accessing the field via an interface.
-func (v *FilterInput) GetReferrer() string { return v.Referrer }
+func (v *FilterInput) GetReferrer() []string { return v.Referrer }
 
 // GetDevice returns FilterInput.Device, and is useful for accessing the field via an interface.
-func (v *FilterInput) GetDevice() string { return v.Device }
+func (v *FilterInput) GetDevice() []string { return v.Device }
 
 // GetPage returns FilterInput.Page, and is useful for accessing the field via an interface.
-func (v *FilterInput) GetPage() string { return v.Page }
+func (v *FilterInput) GetPage() []string { return v.Page }
 
 // GetCountry returns FilterInput.Country, and is useful for accessing the field via an interface.
-func (v *FilterInput) GetCountry() string { return v.Country }
+func (v *FilterInput) GetCountry() []string { return v.Country }
 
 type LoginInput struct {
 	Username string `json:"username"`
@@ -506,6 +550,68 @@ func (v *SitesSitesSite) GetName() string { return v.Name }
 // GetPublicKey returns SitesSitesSite.PublicKey, and is useful for accessing the field via an interface.
 func (v *SitesSitesSite) GetPublicKey() string { return v.PublicKey }
 
+// UpsertEventDefinitionResponse is returned by UpsertEventDefinition on success.
+type UpsertEventDefinitionResponse struct {
+	UpsertEventDefinition UpsertEventDefinitionUpsertEventDefinition `json:"upsertEventDefinition"`
+}
+
+// GetUpsertEventDefinition returns UpsertEventDefinitionResponse.UpsertEventDefinition, and is useful for accessing the field via an interface.
+func (v *UpsertEventDefinitionResponse) GetUpsertEventDefinition() UpsertEventDefinitionUpsertEventDefinition {
+	return v.UpsertEventDefinition
+}
+
+// UpsertEventDefinitionUpsertEventDefinition includes the requested fields of the GraphQL type EventDefinition.
+type UpsertEventDefinitionUpsertEventDefinition struct {
+	Id     string                                                                 `json:"id"`
+	Name   string                                                                 `json:"name"`
+	Fields []UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField `json:"fields"`
+}
+
+// GetId returns UpsertEventDefinitionUpsertEventDefinition.Id, and is useful for accessing the field via an interface.
+func (v *UpsertEventDefinitionUpsertEventDefinition) GetId() string { return v.Id }
+
+// GetName returns UpsertEventDefinitionUpsertEventDefinition.Name, and is useful for accessing the field via an interface.
+func (v *UpsertEventDefinitionUpsertEventDefinition) GetName() string { return v.Name }
+
+// GetFields returns UpsertEventDefinitionUpsertEventDefinition.Fields, and is useful for accessing the field via an interface.
+func (v *UpsertEventDefinitionUpsertEventDefinition) GetFields() []UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField {
+	return v.Fields
+}
+
+// UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField includes the requested fields of the GraphQL type EventDefinitionField.
+type UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField struct {
+	Id        string         `json:"id"`
+	Key       string         `json:"key"`
+	Type      EventFieldType `json:"type"`
+	Required  bool           `json:"required"`
+	MaxLength int            `json:"maxLength"`
+}
+
+// GetId returns UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField.Id, and is useful for accessing the field via an interface.
+func (v *UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField) GetId() string {
+	return v.Id
+}
+
+// GetKey returns UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField.Key, and is useful for accessing the field via an interface.
+func (v *UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField) GetKey() string {
+	return v.Key
+}
+
+// GetType returns UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField.Type, and is useful for accessing the field via an interface.
+func (v *UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField) GetType() EventFieldType {
+	return v.Type
+}
+
+// GetRequired returns UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField.Required, and is useful for accessing the field via an interface.
+func (v *UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField) GetRequired() bool {
+	return v.Required
+}
+
+// GetMaxLength returns UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField.MaxLength, and is useful for accessing the field via an interface.
+func (v *UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField) GetMaxLength() int {
+	return v.MaxLength
+}
+
 // __CreateSiteInput is used internally by genqlient
 type __CreateSiteInput struct {
 	Input CreateSiteInput `json:"input"`
@@ -589,6 +695,18 @@ type __SiteInput struct {
 
 // GetId returns __SiteInput.Id, and is useful for accessing the field via an interface.
 func (v *__SiteInput) GetId() string { return v.Id }
+
+// __UpsertEventDefinitionInput is used internally by genqlient
+type __UpsertEventDefinitionInput struct {
+	SiteId string               `json:"siteId"`
+	Input  EventDefinitionInput `json:"input"`
+}
+
+// GetSiteId returns __UpsertEventDefinitionInput.SiteId, and is useful for accessing the field via an interface.
+func (v *__UpsertEventDefinitionInput) GetSiteId() string { return v.SiteId }
+
+// GetInput returns __UpsertEventDefinitionInput.Input, and is useful for accessing the field via an interface.
+func (v *__UpsertEventDefinitionInput) GetInput() EventDefinitionInput { return v.Input }
 
 // The mutation executed by CreateSite.
 const CreateSite_Operation = `
@@ -1007,6 +1125,50 @@ func Sites(
 	}
 
 	data_ = &SitesResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The mutation executed by UpsertEventDefinition.
+const UpsertEventDefinition_Operation = `
+mutation UpsertEventDefinition ($siteId: ID!, $input: EventDefinitionInput!) {
+	upsertEventDefinition(siteId: $siteId, input: $input) {
+		id
+		name
+		fields {
+			id
+			key
+			type
+			required
+			maxLength
+		}
+	}
+}
+`
+
+func UpsertEventDefinition(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	siteId string,
+	input EventDefinitionInput,
+) (data_ *UpsertEventDefinitionResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "UpsertEventDefinition",
+		Query:  UpsertEventDefinition_Operation,
+		Variables: &__UpsertEventDefinitionInput{
+			SiteId: siteId,
+			Input:  input,
+		},
+	}
+
+	data_ = &UpsertEventDefinitionResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(

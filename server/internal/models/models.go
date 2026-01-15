@@ -34,10 +34,11 @@ type Site struct {
 	CreatedAt    time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt    time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
 
-	User      *User       `bun:"rel:belongs-to,join:user_id=id" json:"user,omitempty"`
-	PageViews []*PageView `bun:"rel:has-many,join:id=site_id" json:"page_views,omitempty"`
-	Events    []*Event    `bun:"rel:has-many,join:id=site_id" json:"events,omitempty"`
-	Sessions  []*Session  `bun:"rel:has-many,join:id=site_id" json:"sessions,omitempty"`
+	User             *User              `bun:"rel:belongs-to,join:user_id=id" json:"user,omitempty"`
+	PageViews        []*PageView        `bun:"rel:has-many,join:id=site_id" json:"page_views,omitempty"`
+	Events           []*Event           `bun:"rel:has-many,join:id=site_id" json:"events,omitempty"`
+	Sessions         []*Session         `bun:"rel:has-many,join:id=site_id" json:"sessions,omitempty"`
+	EventDefinitions []*EventDefinition `bun:"rel:has-many,join:id=site_id" json:"event_definitions,omitempty"`
 }
 
 // Session represents a visitor session
@@ -101,6 +102,36 @@ type Event struct {
 
 	Site    *Site    `bun:"rel:belongs-to,join:site_id=id" json:"site,omitempty"`
 	Session *Session `bun:"rel:belongs-to,join:session_id=id" json:"session,omitempty"`
+}
+
+// EventDefinition represents an allowlisted event name for a site
+type EventDefinition struct {
+	bun.BaseModel `bun:"table:event_definitions,alias:ed"`
+
+	ID        int64     `bun:"id,pk,autoincrement" json:"id"`
+	SiteID    int64     `bun:"site_id,notnull" json:"site_id"`
+	Name      string    `bun:"name,notnull" json:"name"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+
+	Site   *Site                   `bun:"rel:belongs-to,join:site_id=id" json:"site,omitempty"`
+	Fields []*EventDefinitionField `bun:"rel:has-many,join:id=event_definition_id" json:"fields,omitempty"`
+}
+
+// EventDefinitionField describes allowed properties for an event
+type EventDefinitionField struct {
+	bun.BaseModel `bun:"table:event_definition_fields,alias:edf"`
+
+	ID                 int64     `bun:"id,pk,autoincrement" json:"id"`
+	EventDefinitionID  int64     `bun:"event_definition_id,notnull" json:"event_definition_id"`
+	Key                string    `bun:"key,notnull" json:"key"`
+	Type               string    `bun:"type,notnull" json:"type"`
+	Required           bool      `bun:"required,notnull,default:false" json:"required"`
+	MaxLength          int       `bun:"max_length,notnull,default:500" json:"max_length"`
+	CreatedAt          time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt          time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+
+	EventDefinition *EventDefinition `bun:"rel:belongs-to,join:event_definition_id=id" json:"event_definition,omitempty"`
 }
 
 // DailyStats represents aggregated daily statistics for a site

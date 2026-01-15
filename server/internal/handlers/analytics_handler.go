@@ -87,11 +87,11 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate properties is a valid map[string]string if provided
+	// Validate properties is a valid JSON object if provided
 	if req.Properties != "" {
-		var props map[string]string
+		var props map[string]interface{}
 		if err := json.Unmarshal([]byte(req.Properties), &props); err != nil {
-			respondError(w, http.StatusBadRequest, "properties must be a JSON object with string values")
+			respondError(w, http.StatusBadRequest, "properties must be a JSON object")
 			return
 		}
 	}

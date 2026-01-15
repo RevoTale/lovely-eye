@@ -4,14 +4,27 @@ import { Globe, ExternalLink, TrendingUp } from 'lucide-react';
 import type { ReferrerStats } from '@/generated/graphql';
 import { Link } from '@/router';
 import { addFilterValue } from '@/lib/filter-utils';
+import { PaginationControls } from '@/components/pagination-controls';
 
 interface ReferrersCardProps {
   referrers: ReferrerStats[];
+  totalCount: number;
   totalVisitors: number;
   siteId: string;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
-export function ReferrersCard({ referrers, totalVisitors, siteId }: ReferrersCardProps): React.JSX.Element {
+export function ReferrersCard({
+  referrers,
+  totalCount,
+  totalVisitors,
+  siteId,
+  page,
+  pageSize,
+  onPageChange,
+}: ReferrersCardProps): React.JSX.Element {
   const formatReferrer = (referrer: string | null): string => {
     if (!referrer) return 'Direct / None';
 
@@ -53,7 +66,7 @@ export function ReferrersCard({ referrers, totalVisitors, siteId }: ReferrersCar
           </div>
           <Badge variant="secondary" className="flex items-center gap-1">
             <TrendingUp className="h-3 w-3" />
-            {referrers.length}
+            {totalCount}
           </Badge>
         </CardTitle>
       </CardHeader>
@@ -123,6 +136,16 @@ export function ReferrersCard({ referrers, totalVisitors, siteId }: ReferrersCar
             </div>
           )}
         </div>
+        {totalCount > pageSize ? (
+          <div className="mt-4">
+            <PaginationControls
+              page={page}
+              pageSize={pageSize}
+              total={totalCount}
+              onPageChange={onPageChange}
+            />
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

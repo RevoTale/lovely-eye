@@ -32,3 +32,18 @@ query Site($id: ID!) {
 mutation DeleteSite($id: ID!) {
   deleteSite(id: $id)
 }
+
+# @genqlient
+mutation UpsertEventDefinition($siteId: ID!, $input: EventDefinitionInput!) {
+  upsertEventDefinition(siteId: $siteId, input: $input) {
+    id
+    name
+    fields {
+      id
+      key
+      type
+      required
+      maxLength
+    }
+  }
+}

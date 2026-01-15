@@ -116,6 +116,28 @@ type EventsResult {
   total: Int!
 }
 
+enum EventFieldType {
+  STRING
+  NUMBER
+  BOOLEAN
+}
+
+type EventDefinitionField {
+  id: ID!
+  key: String!
+  type: EventFieldType!
+  required: Boolean!
+  maxLength: Int!
+}
+
+type EventDefinition {
+  id: ID!
+  name: String!
+  fields: [EventDefinitionField!]!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
 input RegisterInput {
   username: String!
   password: String!
@@ -152,6 +174,18 @@ input FilterInput {
   country: [String!]
 }
 
+input EventDefinitionFieldInput {
+  key: String!
+  type: EventFieldType!
+  required: Boolean!
+  maxLength: Int
+}
+
+input EventDefinitionInput {
+  name: String!
+  fields: [EventDefinitionFieldInput!]!
+}
+
 scalar Time
 
 type Query {
@@ -163,6 +197,8 @@ type Query {
   geoIPStatus: GeoIPStatus!
   """Get events for a site with pagination"""
   events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!
+  """Get event definitions for a site"""
+  eventDefinitions(siteId: ID!): [EventDefinition!]!
 }
 
 type Mutation {
@@ -179,4 +215,6 @@ type Mutation {
   """Invalidates old tracking scripts"""
   regenerateSiteKey(id: ID!): Site!
   refreshGeoIPDatabase: GeoIPStatus!
+  upsertEventDefinition(siteId: ID!, input: EventDefinitionInput!): EventDefinition!
+  deleteEventDefinition(siteId: ID!, name: String!): Boolean!
 }

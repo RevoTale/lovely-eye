@@ -92,6 +92,41 @@ export type Event = {
   properties: Array<EventProperty>;
 };
 
+export type EventDefinition = {
+  __typename: 'EventDefinition';
+  createdAt: Scalars['Time']['output'];
+  fields: Array<EventDefinitionField>;
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  updatedAt: Scalars['Time']['output'];
+};
+
+export type EventDefinitionField = {
+  __typename: 'EventDefinitionField';
+  id: Scalars['ID']['output'];
+  key: Scalars['String']['output'];
+  maxLength: Scalars['Int']['output'];
+  required: Scalars['Boolean']['output'];
+  type: EventFieldType;
+};
+
+export type EventDefinitionFieldInput = {
+  key: Scalars['String']['input'];
+  maxLength?: InputMaybe<Scalars['Int']['input']>;
+  required: Scalars['Boolean']['input'];
+  type: EventFieldType;
+};
+
+export type EventDefinitionInput = {
+  fields: Array<EventDefinitionFieldInput>;
+  name: Scalars['String']['input'];
+};
+
+export type EventFieldType =
+  | 'BOOLEAN'
+  | 'NUMBER'
+  | 'STRING';
+
 export type EventProperty = {
   __typename: 'EventProperty';
   key: Scalars['String']['output'];
@@ -132,6 +167,7 @@ export type LoginInput = {
 export type Mutation = {
   __typename: 'Mutation';
   createSite: Site;
+  deleteEventDefinition: Scalars['Boolean']['output'];
   /** Deletes site and all analytics data */
   deleteSite: Scalars['Boolean']['output'];
   login: AuthPayload;
@@ -144,11 +180,18 @@ export type Mutation = {
   /** First user becomes admin */
   register: AuthPayload;
   updateSite: Site;
+  upsertEventDefinition: EventDefinition;
 };
 
 
 export type MutationCreateSiteArgs = {
   input: CreateSiteInput;
+};
+
+
+export type MutationDeleteEventDefinitionArgs = {
+  name: Scalars['String']['input'];
+  siteId: Scalars['ID']['input'];
 };
 
 
@@ -182,6 +225,12 @@ export type MutationUpdateSiteArgs = {
   input: UpdateSiteInput;
 };
 
+
+export type MutationUpsertEventDefinitionArgs = {
+  input: EventDefinitionInput;
+  siteId: Scalars['ID']['input'];
+};
+
 export type PageStats = {
   __typename: 'PageStats';
   path: Scalars['String']['output'];
@@ -192,6 +241,8 @@ export type PageStats = {
 export type Query = {
   __typename: 'Query';
   dashboard: DashboardStats;
+  /** Get event definitions for a site */
+  eventDefinitions: Array<EventDefinition>;
   /** Get events for a site with pagination */
   events: EventsResult;
   geoIPStatus: GeoIpStatus;
@@ -205,6 +256,11 @@ export type Query = {
 export type QueryDashboardArgs = {
   dateRange: InputMaybe<DateRangeInput>;
   filter: InputMaybe<FilterInput>;
+  siteId: Scalars['ID']['input'];
+};
+
+
+export type QueryEventDefinitionsArgs = {
   siteId: Scalars['ID']['input'];
 };
 
@@ -310,6 +366,16 @@ export type RealtimeQueryVariables = Exact<{
 
 export type RealtimeQuery = { __typename: 'Query', realtime: { __typename: 'RealtimeStats', visitors: number, activePages: Array<{ __typename: 'ActivePageStats', path: string, visitors: number }> } };
 
+export type EventsQueryVariables = Exact<{
+  siteId: Scalars['ID']['input'];
+  dateRange: InputMaybe<DateRangeInput>;
+  limit: InputMaybe<Scalars['Int']['input']>;
+  offset: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type EventsQuery = { __typename: 'Query', events: { __typename: 'EventsResult', total: number, events: Array<{ __typename: 'Event', id: string, name: string, path: string, createdAt: string, properties: Array<{ __typename: 'EventProperty', key: string, value: string }> }> } };
+
 export type LoginMutationVariables = Exact<{
   input: LoginInput;
 }>;
@@ -343,6 +409,29 @@ export type UpdateSiteMutationVariables = Exact<{
 
 
 export type UpdateSiteMutation = { __typename: 'Mutation', updateSite: { __typename: 'Site', id: string, domain: string, name: string, publicKey: string, trackCountry: boolean, createdAt: string } };
+
+export type EventDefinitionsQueryVariables = Exact<{
+  siteId: Scalars['ID']['input'];
+}>;
+
+
+export type EventDefinitionsQuery = { __typename: 'Query', eventDefinitions: Array<{ __typename: 'EventDefinition', id: string, name: string, createdAt: string, updatedAt: string, fields: Array<{ __typename: 'EventDefinitionField', id: string, key: string, type: EventFieldType, required: boolean, maxLength: number }> }> };
+
+export type UpsertEventDefinitionMutationVariables = Exact<{
+  siteId: Scalars['ID']['input'];
+  input: EventDefinitionInput;
+}>;
+
+
+export type UpsertEventDefinitionMutation = { __typename: 'Mutation', upsertEventDefinition: { __typename: 'EventDefinition', id: string, name: string, createdAt: string, updatedAt: string, fields: Array<{ __typename: 'EventDefinitionField', id: string, key: string, type: EventFieldType, required: boolean, maxLength: number }> } };
+
+export type DeleteEventDefinitionMutationVariables = Exact<{
+  siteId: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+}>;
+
+
+export type DeleteEventDefinitionMutation = { __typename: 'Mutation', deleteEventDefinition: boolean };
 
 export type GeoIpStatusQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -638,6 +727,62 @@ export type RealtimeQueryHookResult = ReturnType<typeof useRealtimeQuery>;
 export type RealtimeLazyQueryHookResult = ReturnType<typeof useRealtimeLazyQuery>;
 export type RealtimeSuspenseQueryHookResult = ReturnType<typeof useRealtimeSuspenseQuery>;
 export type RealtimeQueryResult = Apollo.QueryResult<RealtimeQuery, RealtimeQueryVariables>;
+export const EventsDocument = gql`
+    query Events($siteId: ID!, $dateRange: DateRangeInput, $limit: Int, $offset: Int) {
+  events(siteId: $siteId, dateRange: $dateRange, limit: $limit, offset: $offset) {
+    total
+    events {
+      id
+      name
+      path
+      createdAt
+      properties {
+        key
+        value
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useEventsQuery__
+ *
+ * To run a query within a React component, call `useEventsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useEventsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useEventsQuery({
+ *   variables: {
+ *      siteId: // value for 'siteId'
+ *      dateRange: // value for 'dateRange'
+ *      limit: // value for 'limit'
+ *      offset: // value for 'offset'
+ *   },
+ * });
+ */
+export function useEventsQuery(baseOptions: Apollo.QueryHookOptions<EventsQuery, EventsQueryVariables> & ({ variables: EventsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<EventsQuery, EventsQueryVariables>(EventsDocument, options);
+      }
+export function useEventsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<EventsQuery, EventsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<EventsQuery, EventsQueryVariables>(EventsDocument, options);
+        }
+// @ts-ignore
+export function useEventsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<EventsQuery, EventsQueryVariables>): Apollo.UseSuspenseQueryResult<EventsQuery, EventsQueryVariables>;
+export function useEventsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<EventsQuery, EventsQueryVariables>): Apollo.UseSuspenseQueryResult<EventsQuery | undefined, EventsQueryVariables>;
+export function useEventsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<EventsQuery, EventsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<EventsQuery, EventsQueryVariables>(EventsDocument, options);
+        }
+export type EventsQueryHookResult = ReturnType<typeof useEventsQuery>;
+export type EventsLazyQueryHookResult = ReturnType<typeof useEventsLazyQuery>;
+export type EventsSuspenseQueryHookResult = ReturnType<typeof useEventsSuspenseQuery>;
+export type EventsQueryResult = Apollo.QueryResult<EventsQuery, EventsQueryVariables>;
 export const LoginDocument = gql`
     mutation Login($input: LoginInput!) {
   login(input: $input) {
@@ -818,6 +963,135 @@ export function useUpdateSiteMutation(baseOptions?: Apollo.MutationHookOptions<U
 export type UpdateSiteMutationHookResult = ReturnType<typeof useUpdateSiteMutation>;
 export type UpdateSiteMutationResult = Apollo.MutationResult<UpdateSiteMutation>;
 export type UpdateSiteMutationOptions = Apollo.BaseMutationOptions<UpdateSiteMutation, UpdateSiteMutationVariables>;
+export const EventDefinitionsDocument = gql`
+    query EventDefinitions($siteId: ID!) {
+  eventDefinitions(siteId: $siteId) {
+    id
+    name
+    createdAt
+    updatedAt
+    fields {
+      id
+      key
+      type
+      required
+      maxLength
+    }
+  }
+}
+    `;
+
+/**
+ * __useEventDefinitionsQuery__
+ *
+ * To run a query within a React component, call `useEventDefinitionsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useEventDefinitionsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useEventDefinitionsQuery({
+ *   variables: {
+ *      siteId: // value for 'siteId'
+ *   },
+ * });
+ */
+export function useEventDefinitionsQuery(baseOptions: Apollo.QueryHookOptions<EventDefinitionsQuery, EventDefinitionsQueryVariables> & ({ variables: EventDefinitionsQueryVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<EventDefinitionsQuery, EventDefinitionsQueryVariables>(EventDefinitionsDocument, options);
+      }
+export function useEventDefinitionsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<EventDefinitionsQuery, EventDefinitionsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<EventDefinitionsQuery, EventDefinitionsQueryVariables>(EventDefinitionsDocument, options);
+        }
+// @ts-ignore
+export function useEventDefinitionsSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<EventDefinitionsQuery, EventDefinitionsQueryVariables>): Apollo.UseSuspenseQueryResult<EventDefinitionsQuery, EventDefinitionsQueryVariables>;
+export function useEventDefinitionsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<EventDefinitionsQuery, EventDefinitionsQueryVariables>): Apollo.UseSuspenseQueryResult<EventDefinitionsQuery | undefined, EventDefinitionsQueryVariables>;
+export function useEventDefinitionsSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<EventDefinitionsQuery, EventDefinitionsQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<EventDefinitionsQuery, EventDefinitionsQueryVariables>(EventDefinitionsDocument, options);
+        }
+export type EventDefinitionsQueryHookResult = ReturnType<typeof useEventDefinitionsQuery>;
+export type EventDefinitionsLazyQueryHookResult = ReturnType<typeof useEventDefinitionsLazyQuery>;
+export type EventDefinitionsSuspenseQueryHookResult = ReturnType<typeof useEventDefinitionsSuspenseQuery>;
+export type EventDefinitionsQueryResult = Apollo.QueryResult<EventDefinitionsQuery, EventDefinitionsQueryVariables>;
+export const UpsertEventDefinitionDocument = gql`
+    mutation UpsertEventDefinition($siteId: ID!, $input: EventDefinitionInput!) {
+  upsertEventDefinition(siteId: $siteId, input: $input) {
+    id
+    name
+    createdAt
+    updatedAt
+    fields {
+      id
+      key
+      type
+      required
+      maxLength
+    }
+  }
+}
+    `;
+export type UpsertEventDefinitionMutationFn = Apollo.MutationFunction<UpsertEventDefinitionMutation, UpsertEventDefinitionMutationVariables>;
+
+/**
+ * __useUpsertEventDefinitionMutation__
+ *
+ * To run a mutation, you first call `useUpsertEventDefinitionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpsertEventDefinitionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [upsertEventDefinitionMutation, { data, loading, error }] = useUpsertEventDefinitionMutation({
+ *   variables: {
+ *      siteId: // value for 'siteId'
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useUpsertEventDefinitionMutation(baseOptions?: Apollo.MutationHookOptions<UpsertEventDefinitionMutation, UpsertEventDefinitionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpsertEventDefinitionMutation, UpsertEventDefinitionMutationVariables>(UpsertEventDefinitionDocument, options);
+      }
+export type UpsertEventDefinitionMutationHookResult = ReturnType<typeof useUpsertEventDefinitionMutation>;
+export type UpsertEventDefinitionMutationResult = Apollo.MutationResult<UpsertEventDefinitionMutation>;
+export type UpsertEventDefinitionMutationOptions = Apollo.BaseMutationOptions<UpsertEventDefinitionMutation, UpsertEventDefinitionMutationVariables>;
+export const DeleteEventDefinitionDocument = gql`
+    mutation DeleteEventDefinition($siteId: ID!, $name: String!) {
+  deleteEventDefinition(siteId: $siteId, name: $name)
+}
+    `;
+export type DeleteEventDefinitionMutationFn = Apollo.MutationFunction<DeleteEventDefinitionMutation, DeleteEventDefinitionMutationVariables>;
+
+/**
+ * __useDeleteEventDefinitionMutation__
+ *
+ * To run a mutation, you first call `useDeleteEventDefinitionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteEventDefinitionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteEventDefinitionMutation, { data, loading, error }] = useDeleteEventDefinitionMutation({
+ *   variables: {
+ *      siteId: // value for 'siteId'
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useDeleteEventDefinitionMutation(baseOptions?: Apollo.MutationHookOptions<DeleteEventDefinitionMutation, DeleteEventDefinitionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteEventDefinitionMutation, DeleteEventDefinitionMutationVariables>(DeleteEventDefinitionDocument, options);
+      }
+export type DeleteEventDefinitionMutationHookResult = ReturnType<typeof useDeleteEventDefinitionMutation>;
+export type DeleteEventDefinitionMutationResult = Apollo.MutationResult<DeleteEventDefinitionMutation>;
+export type DeleteEventDefinitionMutationOptions = Apollo.BaseMutationOptions<DeleteEventDefinitionMutation, DeleteEventDefinitionMutationVariables>;
 export const GeoIpStatusDocument = gql`
     query GeoIPStatus {
   geoIPStatus {
