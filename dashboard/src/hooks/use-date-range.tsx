@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import {
   buildDateRange,
@@ -28,10 +28,9 @@ export function useDateRange(): DateRangeState {
   const search = useSearch({ from: siteDetailRoute.id });
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const navigate = useNavigate();
-  const today = useMemo(() => new Date(), []);
   const defaultPreset: DatePreset = '30d';
 
-  const resolveSearchState = (raw: typeof search): { preset: DatePreset } & DateRangeInput => {
+  const resolveSearchState = useCallback((raw: typeof search): { preset: DatePreset } & DateRangeInput => {
     const presetValue = isDatePreset(raw.preset) ? raw.preset : defaultPreset;
     if (presetValue === 'all') {
       return {
@@ -67,7 +66,7 @@ export function useDateRange(): DateRangeState {
       fromTime: '00:00',
       toTime: '23:59',
     };
-  };
+  }, [defaultPreset]);
 
   const [state, setState] = useState(() => resolveSearchState(search));
   const { preset, fromDate, toDate, fromTime, toTime } = state;
@@ -86,7 +85,7 @@ export function useDateRange(): DateRangeState {
       }
       return nextState;
     });
-  }, [search.from, search.fromTime, search.preset, search.to, search.toTime]);
+  }, [resolveSearchState, search]);
 
   const dateRange = useMemo(() => {
     if (preset === 'all') {
@@ -106,7 +105,7 @@ export function useDateRange(): DateRangeState {
         return;
       }
       setState((prev) => ({ ...prev, preset: 'custom' }));
-      navigate({
+      void navigate({
         to: '/sites/$siteId',
         params: { siteId },
         search: (prev) => ({
@@ -128,7 +127,7 @@ export function useDateRange(): DateRangeState {
         fromTime: '',
         toTime: '',
       });
-      navigate({
+      void navigate({
         to: '/sites/$siteId',
         params: { siteId },
         search: (prev) => {
@@ -149,7 +148,7 @@ export function useDateRange(): DateRangeState {
       fromTime: '00:00',
       toTime: '23:59',
     });
-    navigate({
+    void navigate({
       to: '/sites/$siteId',
       params: { siteId },
       search: (prev) => {
@@ -183,7 +182,7 @@ export function useDateRange(): DateRangeState {
       fromTime: nextFromTime,
       toTime: nextToTime,
     });
-    navigate({
+    void navigate({
       to: '/sites/$siteId',
       params: { siteId },
       search: (prev) => ({

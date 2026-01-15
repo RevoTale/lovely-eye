@@ -88,13 +88,9 @@ export function TimeRangeCard({
                   From date
                 </Label>
                 <DateTimePicker
-                  value={draftFromDate}
+                  {...(draftFromDate ? { value: draftFromDate } : {})}
                   onChange={setDraftFromDate}
                   className="w-full"
-                  locale={undefined}
-                  weekStartsOn={undefined}
-                  showWeekNumber={undefined}
-                  showOutsideDays={undefined}
                   granularity="minute"
                 />
               </div>
@@ -103,13 +99,9 @@ export function TimeRangeCard({
                   To date
                 </Label>
                 <DateTimePicker
-                  value={draftToDate}
+                  {...(draftToDate ? { value: draftToDate } : {})}
                   onChange={setDraftToDate}
                   className="w-full"
-                  locale={undefined}
-                  weekStartsOn={undefined}
-                  showWeekNumber={undefined}
-                  showOutsideDays={undefined}
                   granularity="minute"
                 />
               </div>

@@ -1,5 +1,14 @@
 import React from 'react';
-import type { DashboardStats, DeviceStats, Event, EventsResult, PageStats, ReferrerStats, RealtimeStats } from '@/generated/graphql';
+import type {
+  CountryStats,
+  DashboardStats,
+  DeviceStats,
+  Event,
+  EventsResult,
+  PageStats,
+  ReferrerStats,
+  RealtimeStats,
+} from '@/generated/graphql';
 import { Users, Eye, Clock, TrendingDown } from 'lucide-react';
 import { StatCard } from '@/components/stat-card';
 import { OverviewChartSection } from '@/components/overview-chart-section';
@@ -30,6 +39,12 @@ interface AnalyticsContentProps {
   referrersPage: number;
   referrersPageSize: number;
   onReferrersPageChange: (page: number) => void;
+  countries: CountryStats[];
+  countriesTotal: number;
+  countriesTotalVisitors: number;
+  countriesPage: number;
+  countriesPageSize: number;
+  onCountriesPageChange: (page: number) => void;
   devices: DeviceStats[];
   devicesTotal: number;
   devicesTotalVisitors: number;
@@ -67,6 +82,12 @@ export function AnalyticsContent({
   referrersPage,
   referrersPageSize,
   onReferrersPageChange,
+  countries,
+  countriesTotal,
+  countriesTotalVisitors,
+  countriesPage,
+  countriesPageSize,
+  onCountriesPageChange,
   devices,
   devicesTotal,
   devicesTotalVisitors,
@@ -134,7 +155,15 @@ export function AnalyticsContent({
         />
       </div>
 
-      <CountryCard countries={stats.countries} siteId={siteId} />
+      <CountryCard
+        countries={countries}
+        total={countriesTotal}
+        totalVisitors={countriesTotalVisitors}
+        page={countriesPage}
+        pageSize={countriesPageSize}
+        siteId={siteId}
+        onPageChange={onCountriesPageChange}
+      />
 
       <DevicesCard
         devices={devices}

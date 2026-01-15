@@ -35,7 +35,10 @@ export function isValidDateInput(value: string): boolean {
 export function isValidTimeInput(value: string): boolean {
   if (!value) return false;
   if (!/^\d{2}:\d{2}$/.test(value)) return false;
-  const [hour, minute] = value.split(':').map(Number);
+  const [hourRaw, minuteRaw] = value.split(':');
+  if (hourRaw === undefined || minuteRaw === undefined) return false;
+  const hour = Number(hourRaw);
+  const minute = Number(minuteRaw);
   if (Number.isNaN(hour) || Number.isNaN(minute)) return false;
   return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
 }

@@ -1,10 +1,10 @@
 import React from 'react';
-import { Badge, Card, CardContent, CardHeader, CardTitle, Progress } from '@/components/ui';
+import { Badge, Progress } from '@/components/ui';
 import type { DeviceStats } from '@/generated/graphql';
-import { Link } from '@/router';
-import { addFilterValue } from '@/lib/filter-utils';
 import { Monitor, Smartphone } from 'lucide-react';
-import { PaginationControls } from '@/components/pagination-controls';
+import { BoardCard } from '@/components/board-card';
+import { FilterLink } from '@/components/filter-link';
+import { ListEmptyState } from '@/components/list-empty-state';
 
 interface DevicesCardProps {
   devices: DeviceStats[];
@@ -26,16 +26,12 @@ export function DevicesCard({
   onPageChange,
 }: DevicesCardProps): React.JSX.Element {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Monitor className="h-4 w-4 text-primary" />
-          </div>
-          Device Types
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <BoardCard
+      title="Device Types"
+      icon={Monitor}
+      pagination={{ page, pageSize, total, onPageChange }}
+    >
+      {devices.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {devices.map((deviceStat, index) => {
             const percentage = totalVisitors > 0 ? (deviceStat.visitors / totalVisitors) * 100 : 0;
@@ -43,13 +39,10 @@ export function DevicesCard({
             return (
               <div key={index} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Link
-                    to="/sites/$siteId"
-                    params={{ siteId }}
-                    search={(prev) => ({
-                      ...prev,
-                      device: addFilterValue(prev.device, deviceStat.device),
-                    })}
+                  <FilterLink
+                    siteId={siteId}
+                    filterKey="device"
+                    value={deviceStat.device}
                     className="flex items-center gap-2 hover:text-primary cursor-pointer"
                   >
                     {deviceStat.device === 'desktop' ? (
@@ -58,7 +51,7 @@ export function DevicesCard({
                       <Smartphone className="h-5 w-5 text-primary" />
                     )}
                     <span className="text-sm font-medium capitalize hover:underline">{deviceStat.device}</span>
-                  </Link>
+                  </FilterLink>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">
                       {deviceStat.visitors.toLocaleString()}
@@ -73,17 +66,9 @@ export function DevicesCard({
             );
           })}
         </div>
-        {total > pageSize ? (
-          <div className="mt-4">
-            <PaginationControls
-              page={page}
-              pageSize={pageSize}
-              total={total}
-              onPageChange={onPageChange}
-            />
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+      ) : (
+        <ListEmptyState title="No device data yet" />
+      )}
+    </BoardCard>
   );
 }

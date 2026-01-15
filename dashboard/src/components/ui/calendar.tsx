@@ -41,7 +41,7 @@ function Calendar({
 }: CalendarProps & { yearRange?: number }) {
   const MONTHS = React.useMemo(() => {
     let locale: Pick<Locale, "options" | "localize" | "formatLong"> = enUS;
-    const { options, localize, formatLong } = props.locale || {};
+    const { options, localize, formatLong } = props.locale ?? {};
     if (options && localize && formatLong) {
       locale = {
         options,

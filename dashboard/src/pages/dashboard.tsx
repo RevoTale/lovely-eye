@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { useParams, useSearch } from '@tanstack/react-router';
+import React, { useMemo, useEffect } from 'react';
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useQuery } from '@apollo/client';
 import { DASHBOARD_QUERY, REALTIME_QUERY, SITE_QUERY, EVENTS_QUERY } from '@/graphql';
 import type { DashboardStats, Site, RealtimeStats } from '@/generated/graphql';
@@ -17,6 +17,18 @@ const EVENTS_COUNT_LIMIT = 200;
 const TOP_PAGES_PAGE_SIZE = 5;
 const REFERRERS_PAGE_SIZE = 5;
 const DEVICES_PAGE_SIZE = 6;
+const COUNTRIES_PAGE_SIZE = 6;
+
+type PageValue = string | string[] | undefined;
+
+function parsePage(value: PageValue): number {
+  const raw = Array.isArray(value) ? value[0] : value;
+  const numeric = Number(raw);
+  if (!Number.isFinite(numeric) || numeric < 1) {
+    return 1;
+  }
+  return Math.floor(numeric);
+}
 
 function buildFilters(search: Record<string, string | string[] | undefined>): {
   referrers: string[];
@@ -51,11 +63,13 @@ function buildFilters(search: Record<string, string | string[] | undefined>): {
 export function DashboardPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const search = useSearch({ from: siteDetailRoute.id });
+  const navigate = useNavigate();
   const { preset, fromDate, toDate, fromTime, toTime, dateRange, setPreset, applyCustomRange } = useDateRange();
-  const [eventsPage, setEventsPage] = useState(1);
-  const [topPagesPage, setTopPagesPage] = useState(1);
-  const [referrersPage, setReferrersPage] = useState(1);
-  const [devicesPage, setDevicesPage] = useState(1);
+  const eventsPage = useMemo(() => parsePage(search.eventsPage), [search.eventsPage]);
+  const topPagesPage = useMemo(() => parsePage(search.topPagesPage), [search.topPagesPage]);
+  const referrersPage = useMemo(() => parsePage(search.referrersPage), [search.referrersPage]);
+  const devicesPage = useMemo(() => parsePage(search.devicesPage), [search.devicesPage]);
+  const countriesPage = useMemo(() => parsePage(search.countriesPage), [search.countriesPage]);
 
   const { data: siteData, loading: siteLoading } = useQuery(SITE_QUERY, {
     variables: { id: siteId },
@@ -73,11 +87,32 @@ export function DashboardPage(): React.JSX.Element {
   );
 
   useEffect(() => {
-    setEventsPage(1);
-    setTopPagesPage(1);
-    setReferrersPage(1);
-    setDevicesPage(1);
-  }, [siteId, dateRange?.from, dateRange?.to, filterKey]);
+    void navigate({
+      to: '/sites/$siteId',
+      params: { siteId },
+      search: (prev) => {
+        const keys = new Set(['eventsPage', 'topPagesPage', 'referrersPage', 'devicesPage', 'countriesPage']);
+        return Object.fromEntries(
+          Object.entries(prev).filter(([key]) => !keys.has(key))
+        );
+      },
+    });
+  }, [siteId, dateRange?.from, dateRange?.to, filterKey, navigate]);
+
+  const setPage = (key: string, nextPage: number): void => {
+    void navigate({
+      to: '/sites/$siteId',
+      params: { siteId },
+      search: (prev) => {
+        if (nextPage <= 1) {
+          return Object.fromEntries(
+            Object.entries(prev).filter(([entryKey]) => entryKey !== key)
+          );
+        }
+        return { ...(prev as Record<string, unknown>), [key]: String(nextPage) };
+      },
+    });
+  };
 
   const { data: dashboardData, loading: dashboardLoading } = useQuery(DASHBOARD_QUERY, {
     variables: {
@@ -129,7 +164,9 @@ export function DashboardPage(): React.JSX.Element {
   const topPages = stats?.topPages ?? [];
   const referrersAll = stats?.topReferrers ?? [];
   const devicesAll = stats?.devices ?? [];
+  const countriesAll = stats?.countries ?? [];
   const devicesTotalVisitors = devicesAll.reduce((sum, device) => sum + device.visitors, 0);
+  const countriesTotalVisitors = countriesAll.reduce((sum, country) => sum + country.visitors, 0);
   const topPagesSlice = topPages.slice(
     (topPagesPage - 1) * TOP_PAGES_PAGE_SIZE,
     topPagesPage * TOP_PAGES_PAGE_SIZE
@@ -141,6 +178,10 @@ export function DashboardPage(): React.JSX.Element {
   const devicesSlice = devicesAll.slice(
     (devicesPage - 1) * DEVICES_PAGE_SIZE,
     devicesPage * DEVICES_PAGE_SIZE
+  );
+  const countriesSlice = countriesAll.slice(
+    (countriesPage - 1) * COUNTRIES_PAGE_SIZE,
+    countriesPage * COUNTRIES_PAGE_SIZE
   );
 
   if (!site) {
@@ -173,23 +214,39 @@ export function DashboardPage(): React.JSX.Element {
           eventsCounts={eventsCounts}
           eventsPage={eventsPage}
           eventsPageSize={EVENTS_PAGE_SIZE}
-          onEventsPageChange={setEventsPage}
+          onEventsPageChange={(page) => {
+            setPage('eventsPage', page);
+          }}
           topPages={topPagesSlice}
           topPagesTotal={topPages.length}
           topPagesPage={topPagesPage}
           topPagesPageSize={TOP_PAGES_PAGE_SIZE}
-          onTopPagesPageChange={setTopPagesPage}
+          onTopPagesPageChange={(page) => {
+            setPage('topPagesPage', page);
+          }}
           referrers={referrersSlice}
           referrersTotal={referrersAll.length}
           referrersPage={referrersPage}
           referrersPageSize={REFERRERS_PAGE_SIZE}
-          onReferrersPageChange={setReferrersPage}
+          onReferrersPageChange={(page) => {
+            setPage('referrersPage', page);
+          }}
+          countries={countriesSlice}
+          countriesTotal={countriesAll.length}
+          countriesTotalVisitors={countriesTotalVisitors}
+          countriesPage={countriesPage}
+          countriesPageSize={COUNTRIES_PAGE_SIZE}
+          onCountriesPageChange={(page) => {
+            setPage('countriesPage', page);
+          }}
           devices={devicesSlice}
           devicesTotal={devicesAll.length}
           devicesTotalVisitors={devicesTotalVisitors}
           devicesPage={devicesPage}
           devicesPageSize={DEVICES_PAGE_SIZE}
-          onDevicesPageChange={setDevicesPage}
+          onDevicesPageChange={(page) => {
+            setPage('devicesPage', page);
+          }}
         />
       ) : (
         <DashboardEmptyState />
