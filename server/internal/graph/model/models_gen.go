@@ -14,13 +14,13 @@ type ActivePageStats struct {
 
 type FilterInput struct {
 	// Filter by specific referrer
-	Referrer *string `json:"referrer,omitempty"`
+	Referrer []string `json:"referrer,omitempty"`
 	// Filter by device type (desktop, mobile, tablet)
-	Device *string `json:"device,omitempty"`
+	Device []string `json:"device,omitempty"`
 	// Filter by page path
-	Page *string `json:"page,omitempty"`
+	Page []string `json:"page,omitempty"`
 	// Filter by country (stored country name)
-	Country *string `json:"country,omitempty"`
+	Country []string `json:"country,omitempty"`
 }
 
 type GeoIPStatus struct {

@@ -997,13 +997,13 @@ input DateRangeInput {
 
 input FilterInput {
   """Filter by specific referrer"""
-  referrer: String
+  referrer: [String!]
   """Filter by device type (desktop, mobile, tablet)"""
-  device: String
+  device: [String!]
   """Filter by page path"""
-  page: String
+  page: [String!]
   """Filter by country (stored country name)"""
-  country: String
+  country: [String!]
 }
 
 scalar Time
@@ -5420,28 +5420,28 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 		switch k {
 		case "referrer":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("referrer"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.Referrer = data
 		case "device":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("device"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.Device = data
 		case "page":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.Page = data
 		case "country":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("country"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8210,6 +8210,42 @@ func (ec *executionContext) marshalOSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserver
 		return graphql.Null
 	}
 	return ec._Site(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v any) (*string, error) {

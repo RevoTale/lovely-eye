@@ -307,12 +307,14 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 	var filterOpts services.DashboardFilter
 	if filter != nil {
 		if filter.Referrer != nil {
-			// Normalize "(direct)" display value to empty string for DB filtering
-			referrer := *filter.Referrer
-			if referrer == "(direct)" {
-				referrer = ""
+			referrers := make([]string, 0, len(filter.Referrer))
+			for _, referrer := range filter.Referrer {
+				if referrer == "(direct)" {
+					referrer = ""
+				}
+				referrers = append(referrers, referrer)
 			}
-			filterOpts.Referrer = &referrer
+			filterOpts.Referrer = referrers
 		}
 		if filter.Device != nil {
 			filterOpts.Device = filter.Device

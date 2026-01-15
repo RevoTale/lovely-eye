@@ -11,6 +11,7 @@ import { ReferrersCard } from '@/components/referrers-card';
 import { ActivePagesCard } from '@/components/active-pages-card';
 import { ActiveFilters } from '@/components/active-filters';
 import { CountryCard } from '@/components/country-card';
+import { addFilterValue, normalizeFilterValue } from '@/lib/filter-utils';
 
 function StatCard({
   title,
@@ -76,12 +77,24 @@ export function DashboardPage(): React.JSX.Element {
     skip: !siteId,
   });
 
+  const referrers = normalizeFilterValue(search.referrer);
+  const devices = normalizeFilterValue(search.device);
+  const pages = normalizeFilterValue(search.page);
+  const countries = normalizeFilterValue(search.country);
+  const decodedSearch = {
+    ...search,
+    ...(referrers.length ? { referrer: referrers } : {}),
+    ...(devices.length ? { device: devices } : {}),
+    ...(pages.length ? { page: pages } : {}),
+    ...(countries.length ? { country: countries } : {}),
+  };
+
   // Build filter object from URL parameters
   const filter = {
-    ...(search.referrer && { referrer: search.referrer }),
-    ...(search.device && { device: search.device }),
-    ...(search.page && { page: search.page }),
-    ...(search.country && { country: search.country }),
+    ...(referrers.length ? { referrer: referrers } : {}),
+    ...(devices.length ? { device: devices } : {}),
+    ...(pages.length ? { page: pages } : {}),
+    ...(countries.length ? { country: countries } : {}),
   };
 
   const { data: dashboardData, loading: dashboardLoading } = useQuery(DASHBOARD_QUERY, {
@@ -163,7 +176,7 @@ export function DashboardPage(): React.JSX.Element {
       </div>
 
       {/* Active Filters */}
-      <ActiveFilters siteId={siteId} search={search} />
+      <ActiveFilters siteId={siteId} search={decodedSearch} />
 
       {/* Stats grid */}
       {stats ? (
@@ -297,14 +310,17 @@ export function DashboardPage(): React.JSX.Element {
                     stats.topPages.map((page, index) => (
                       <div key={index}>
                         <div className="flex items-center justify-between mb-1">
-                          <Link
-                            to="/sites/$siteId"
-                            params={{ siteId }}
-                            search={{ page: page.path }}
-                            className="text-sm font-medium truncate max-w-[200px] hover:text-primary hover:underline cursor-pointer"
-                          >
-                            {page.path}
-                          </Link>
+                            <Link
+                              to="/sites/$siteId"
+                              params={{ siteId }}
+                              search={(prev) => ({
+                                ...prev,
+                                page: addFilterValue(prev.page, page.path),
+                              })}
+                              className="text-sm font-medium truncate max-w-[200px] hover:text-primary hover:underline cursor-pointer"
+                            >
+                              {page.path}
+                            </Link>
                           <Badge variant="secondary" className="ml-2">
                             {page.views.toLocaleString()}
                           </Badge>
@@ -350,7 +366,10 @@ export function DashboardPage(): React.JSX.Element {
                         <Link
                           to="/sites/$siteId"
                           params={{ siteId }}
-                          search={{ device: deviceStat.device }}
+                          search={(prev) => ({
+                            ...prev,
+                            device: addFilterValue(prev.device, deviceStat.device),
+                          })}
                           className="flex items-center gap-2 hover:text-primary cursor-pointer"
                         >
                           {deviceStat.device === 'desktop' ? (

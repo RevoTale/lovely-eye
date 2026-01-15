@@ -3,6 +3,7 @@ import { Globe } from 'lucide-react';
 import { Badge, Card, CardContent, CardHeader, CardTitle, Progress } from '@/components/ui';
 import { Link } from '@/router';
 import type { CountryStats } from '@/generated/graphql';
+import { addFilterValue } from '@/lib/filter-utils';
 
 interface CountryCardProps {
   countries: CountryStats[];
@@ -34,7 +35,10 @@ export function CountryCard({ countries, siteId }: CountryCardProps): React.JSX.
                     <Link
                       to="/sites/$siteId"
                       params={{ siteId }}
-                      search={{ country: countryStat.country }}
+                      search={(prev) => ({
+                        ...prev,
+                        country: addFilterValue(prev.country, countryStat.country),
+                      })}
                       className="text-sm font-medium truncate max-w-[200px] hover:text-primary hover:underline cursor-pointer"
                     >
                       {countryStat.country}

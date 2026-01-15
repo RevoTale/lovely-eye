@@ -202,10 +202,10 @@ type DashboardStats struct {
 }
 
 type DashboardFilter struct {
-	Referrer *string
-	Device   *string
-	Page     *string
-	Country  *string
+	Referrer []string
+	Device   []string
+	Page     []string
+	Country  []string
 }
 
 func (s *AnalyticsService) GetDashboardStats(ctx context.Context, siteID int64, from, to time.Time) (*DashboardStats, error) {

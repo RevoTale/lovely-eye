@@ -209,7 +209,7 @@ func TestGetAvgSessionDurationWithFilter_EmptyResult(t *testing.T) {
 			setup: func() {},
 		},
 		{
-			name: "filter matches no sessions",
+			name:     "filter matches no sessions",
 			referrer: stringPtr("nonexistent.com"),
 			setup: func() {
 				// Use raw SQL to insert with referrer field
@@ -228,7 +228,20 @@ func TestGetAvgSessionDurationWithFilter_EmptyResult(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
 
-			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, tt.referrer, tt.device, tt.page, nil)
+			var referrers []string
+			if tt.referrer != nil {
+				referrers = []string{*tt.referrer}
+			}
+			var devices []string
+			if tt.device != nil {
+				devices = []string{*tt.device}
+			}
+			var pages []string
+			if tt.page != nil {
+				pages = []string{*tt.page}
+			}
+
+			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, referrers, devices, pages, nil)
 			fmt.Println(got)
 			if err != nil {
 				t.Errorf("GetAvgSessionDurationWithFilter() error = %v, want nil", err)
@@ -293,7 +306,20 @@ func TestGetAvgSessionDurationWithFilter_WithData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, tt.referrer, tt.device, tt.page, nil)
+			var referrers []string
+			if tt.referrer != nil {
+				referrers = []string{*tt.referrer}
+			}
+			var devices []string
+			if tt.device != nil {
+				devices = []string{*tt.device}
+			}
+			var pages []string
+			if tt.page != nil {
+				pages = []string{*tt.page}
+			}
+
+			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, referrers, devices, pages, nil)
 			if err != nil {
 				t.Errorf("GetAvgSessionDurationWithFilter() error = %v", err)
 			}

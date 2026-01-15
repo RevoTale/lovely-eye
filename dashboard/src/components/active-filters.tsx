@@ -1,12 +1,13 @@
 import React from 'react';
 import { Badge } from '@/components/ui';
 import { Link } from '@/router';
+import { normalizeFilterValue, removeFilterValue, updateFilterSearch } from '@/lib/filter-utils';
 
 interface FilterSearch {
-  referrer?: string;
-  device?: string;
-  page?: string;
-  country?: string;
+  referrer?: string | string[] | undefined;
+  device?: string | string[] | undefined;
+  page?: string | string[] | undefined;
+  country?: string | string[] | undefined;
 }
 
 interface ActiveFiltersProps {
@@ -15,7 +16,11 @@ interface ActiveFiltersProps {
 }
 
 export function ActiveFilters({ siteId, search }: ActiveFiltersProps): React.JSX.Element | null {
-  const hasFilters = Boolean(search.referrer ?? search.device ?? search.page ?? search.country);
+  const referrers = normalizeFilterValue(search.referrer);
+  const devices = normalizeFilterValue(search.device);
+  const pages = normalizeFilterValue(search.page);
+  const countries = normalizeFilterValue(search.country);
+  const hasFilters = Boolean(referrers.length || devices.length || pages.length || countries.length);
   if (!hasFilters) {
     return null;
   }
@@ -23,38 +28,66 @@ export function ActiveFilters({ siteId, search }: ActiveFiltersProps): React.JSX
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <span className="text-sm text-muted-foreground">Filtered by:</span>
-      {search.referrer && (
-        <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
+      {referrers.map((referrer) => (
+        <Link
+          key={`referrer-${referrer}`}
+          to="/sites/$siteId"
+          params={{ siteId }}
+          search={(prev) => ({
+            ...updateFilterSearch(prev, 'referrer', removeFilterValue(prev.referrer, referrer)),
+          })}
+        >
           <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Referrer: {search.referrer}</span>
+            <span className="text-xs">Referrer: {referrer}</span>
             <span className="ml-1 text-xs">×</span>
           </Badge>
         </Link>
-      )}
-      {search.device && (
-        <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
+      ))}
+      {devices.map((device) => (
+        <Link
+          key={`device-${device}`}
+          to="/sites/$siteId"
+          params={{ siteId }}
+          search={(prev) => ({
+            ...updateFilterSearch(prev, 'device', removeFilterValue(prev.device, device)),
+          })}
+        >
           <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Device: {search.device}</span>
+            <span className="text-xs">Device: {device}</span>
             <span className="ml-1 text-xs">×</span>
           </Badge>
         </Link>
-      )}
-      {search.page && (
-        <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
+      ))}
+      {pages.map((page) => (
+        <Link
+          key={`page-${page}`}
+          to="/sites/$siteId"
+          params={{ siteId }}
+          search={(prev) => ({
+            ...updateFilterSearch(prev, 'page', removeFilterValue(prev.page, page)),
+          })}
+        >
           <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Page: {search.page}</span>
+            <span className="text-xs">Page: {page}</span>
             <span className="ml-1 text-xs">×</span>
           </Badge>
         </Link>
-      )}
-      {search.country && (
-        <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
+      ))}
+      {countries.map((country) => (
+        <Link
+          key={`country-${country}`}
+          to="/sites/$siteId"
+          params={{ siteId }}
+          search={(prev) => ({
+            ...updateFilterSearch(prev, 'country', removeFilterValue(prev.country, country)),
+          })}
+        >
           <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Country: {search.country}</span>
+            <span className="text-xs">Country: {country}</span>
             <span className="ml-1 text-xs">×</span>
           </Badge>
         </Link>
-      )}
+      ))}
       <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
         <Badge variant="outline" className="cursor-pointer hover:bg-accent text-xs">
           Clear all

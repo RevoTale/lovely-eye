@@ -143,13 +143,13 @@ input DateRangeInput {
 
 input FilterInput {
   """Filter by specific referrer"""
-  referrer: String
+  referrer: [String!]
   """Filter by device type (desktop, mobile, tablet)"""
-  device: String
+  device: [String!]
   """Filter by page path"""
-  page: String
+  page: [String!]
   """Filter by country (stored country name)"""
-  country: String
+  country: [String!]
 }
 
 scalar Time

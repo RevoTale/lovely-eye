@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, Badge, Progress } from '@/com
 import { Globe, ExternalLink, TrendingUp } from 'lucide-react';
 import type { ReferrerStats } from '@/generated/graphql';
 import { Link } from '@/router';
+import { addFilterValue } from '@/lib/filter-utils';
 
 interface ReferrersCardProps {
   referrers: ReferrerStats[];
@@ -77,7 +78,10 @@ export function ReferrersCard({ referrers, totalVisitors, siteId }: ReferrersCar
                       <Link
                         to="/sites/$siteId"
                         params={{ siteId }}
-                        search={{ referrer: ref.referrer || '(direct)' }}
+                        search={(prev) => ({
+                          ...prev,
+                          referrer: addFilterValue(prev.referrer, ref.referrer || '(direct)'),
+                        })}
                         className="text-sm font-medium truncate hover:text-primary hover:underline cursor-pointer"
                       >
                         {formatReferrer(ref.referrer)}

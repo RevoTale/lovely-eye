@@ -106,13 +106,13 @@ export type EventsResult = {
 
 export type FilterInput = {
   /** Filter by country (stored country name) */
-  country?: InputMaybe<Scalars['String']['input']>;
+  country?: InputMaybe<Array<Scalars['String']['input']>>;
   /** Filter by device type (desktop, mobile, tablet) */
-  device?: InputMaybe<Scalars['String']['input']>;
+  device?: InputMaybe<Array<Scalars['String']['input']>>;
   /** Filter by page path */
-  page?: InputMaybe<Scalars['String']['input']>;
+  page?: InputMaybe<Array<Scalars['String']['input']>>;
   /** Filter by specific referrer */
-  referrer?: InputMaybe<Scalars['String']['input']>;
+  referrer?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type GeoIpStatus = {
