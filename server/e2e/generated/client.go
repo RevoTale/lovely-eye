@@ -295,6 +295,8 @@ type FilterInput struct {
 	Device string `json:"device,omitempty"`
 	// Filter by page path
 	Page string `json:"page,omitempty"`
+	// Filter by country (stored country name)
+	Country string `json:"country,omitempty"`
 }
 
 // GetReferrer returns FilterInput.Referrer, and is useful for accessing the field via an interface.
@@ -305,6 +307,9 @@ func (v *FilterInput) GetDevice() string { return v.Device }
 
 // GetPage returns FilterInput.Page, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetPage() string { return v.Page }
+
+// GetCountry returns FilterInput.Country, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetCountry() string { return v.Country }
 
 type LoginInput struct {
 	Username string `json:"username"`

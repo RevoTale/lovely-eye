@@ -109,6 +109,24 @@ func convertToGraphQLEvents(events []*models.Event, total int) *model.EventsResu
 	return result
 }
 
+func convertToGraphQLGeoIPStatus(status services.GeoIPStatus) *model.GeoIPStatus {
+	var source *string
+	if status.Source != "" {
+		source = &status.Source
+	}
+	var lastError *string
+	if status.LastError != "" {
+		lastError = &status.LastError
+	}
+	return &model.GeoIPStatus{
+		State:     status.State,
+		DbPath:    status.DBPath,
+		Source:    source,
+		LastError: lastError,
+		UpdatedAt: status.UpdatedAt,
+	}
+}
+
 func parseEventProperties(propsJSON string) []*model.EventProperty {
 	if propsJSON == "" {
 		return []*model.EventProperty{}

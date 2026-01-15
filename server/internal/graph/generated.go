@@ -111,15 +111,24 @@ type ComplexityRoot struct {
 		Total  func(childComplexity int) int
 	}
 
+	GeoIPStatus struct {
+		DbPath    func(childComplexity int) int
+		LastError func(childComplexity int) int
+		Source    func(childComplexity int) int
+		State     func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
+	}
+
 	Mutation struct {
-		CreateSite        func(childComplexity int, input model.CreateSiteInput) int
-		DeleteSite        func(childComplexity int, id string) int
-		Login             func(childComplexity int, input model.LoginInput) int
-		Logout            func(childComplexity int) int
-		RefreshToken      func(childComplexity int, refreshToken string) int
-		RegenerateSiteKey func(childComplexity int, id string) int
-		Register          func(childComplexity int, input model.RegisterInput) int
-		UpdateSite        func(childComplexity int, id string, input model.UpdateSiteInput) int
+		CreateSite           func(childComplexity int, input model.CreateSiteInput) int
+		DeleteSite           func(childComplexity int, id string) int
+		Login                func(childComplexity int, input model.LoginInput) int
+		Logout               func(childComplexity int) int
+		RefreshGeoIPDatabase func(childComplexity int) int
+		RefreshToken         func(childComplexity int, refreshToken string) int
+		RegenerateSiteKey    func(childComplexity int, id string) int
+		Register             func(childComplexity int, input model.RegisterInput) int
+		UpdateSite           func(childComplexity int, id string, input model.UpdateSiteInput) int
 	}
 
 	PageStats struct {
@@ -129,12 +138,13 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Dashboard func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) int
-		Events    func(childComplexity int, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) int
-		Me        func(childComplexity int) int
-		Realtime  func(childComplexity int, siteID string) int
-		Site      func(childComplexity int, id string) int
-		Sites     func(childComplexity int) int
+		Dashboard   func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) int
+		Events      func(childComplexity int, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) int
+		GeoIPStatus func(childComplexity int) int
+		Me          func(childComplexity int) int
+		Realtime    func(childComplexity int, siteID string) int
+		Site        func(childComplexity int, id string) int
+		Sites       func(childComplexity int) int
 	}
 
 	RealtimeStats struct {
@@ -148,11 +158,12 @@ type ComplexityRoot struct {
 	}
 
 	Site struct {
-		CreatedAt func(childComplexity int) int
-		Domain    func(childComplexity int) int
-		ID        func(childComplexity int) int
-		Name      func(childComplexity int) int
-		PublicKey func(childComplexity int) int
+		CreatedAt    func(childComplexity int) int
+		Domain       func(childComplexity int) int
+		ID           func(childComplexity int) int
+		Name         func(childComplexity int) int
+		PublicKey    func(childComplexity int) int
+		TrackCountry func(childComplexity int) int
 	}
 
 	TokenPayload struct {
@@ -178,6 +189,7 @@ type MutationResolver interface {
 	UpdateSite(ctx context.Context, id string, input model.UpdateSiteInput) (*model.Site, error)
 	DeleteSite(ctx context.Context, id string) (bool, error)
 	RegenerateSiteKey(ctx context.Context, id string) (*model.Site, error)
+	RefreshGeoIPDatabase(ctx context.Context) (*model.GeoIPStatus, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
@@ -185,6 +197,7 @@ type QueryResolver interface {
 	Site(ctx context.Context, id string) (*model.Site, error)
 	Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) (*model.DashboardStats, error)
 	Realtime(ctx context.Context, siteID string) (*model.RealtimeStats, error)
+	GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, error)
 	Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) (*model.EventsResult, error)
 }
 type RealtimeStatsResolver interface {
@@ -418,6 +431,37 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.EventsResult.Total(childComplexity), true
 
+	case "GeoIPStatus.dbPath":
+		if e.complexity.GeoIPStatus.DbPath == nil {
+			break
+		}
+
+		return e.complexity.GeoIPStatus.DbPath(childComplexity), true
+	case "GeoIPStatus.lastError":
+		if e.complexity.GeoIPStatus.LastError == nil {
+			break
+		}
+
+		return e.complexity.GeoIPStatus.LastError(childComplexity), true
+	case "GeoIPStatus.source":
+		if e.complexity.GeoIPStatus.Source == nil {
+			break
+		}
+
+		return e.complexity.GeoIPStatus.Source(childComplexity), true
+	case "GeoIPStatus.state":
+		if e.complexity.GeoIPStatus.State == nil {
+			break
+		}
+
+		return e.complexity.GeoIPStatus.State(childComplexity), true
+	case "GeoIPStatus.updatedAt":
+		if e.complexity.GeoIPStatus.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.GeoIPStatus.UpdatedAt(childComplexity), true
+
 	case "Mutation.createSite":
 		if e.complexity.Mutation.CreateSite == nil {
 			break
@@ -457,6 +501,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.Logout(childComplexity), true
+	case "Mutation.refreshGeoIPDatabase":
+		if e.complexity.Mutation.RefreshGeoIPDatabase == nil {
+			break
+		}
+
+		return e.complexity.Mutation.RefreshGeoIPDatabase(childComplexity), true
 	case "Mutation.refreshToken":
 		if e.complexity.Mutation.RefreshToken == nil {
 			break
@@ -543,6 +593,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Events(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["limit"].(*int), args["offset"].(*int)), true
+	case "Query.geoIPStatus":
+		if e.complexity.Query.GeoIPStatus == nil {
+			break
+		}
+
+		return e.complexity.Query.GeoIPStatus(childComplexity), true
 	case "Query.me":
 		if e.complexity.Query.Me == nil {
 			break
@@ -634,6 +690,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Site.PublicKey(childComplexity), true
+	case "Site.trackCountry":
+		if e.complexity.Site.TrackCountry == nil {
+			break
+		}
+
+		return e.complexity.Site.TrackCountry(childComplexity), true
 
 	case "TokenPayload.accessToken":
 		if e.complexity.TokenPayload.AccessToken == nil {
@@ -804,6 +866,8 @@ type Site {
   name: String!
   """Used in tracking script"""
   publicKey: String!
+  """Enable country tracking (requires GeoIP database)"""
+  trackCountry: Boolean!
   createdAt: Time!
 }
 
@@ -873,6 +937,14 @@ type RealtimeStats {
   activePages: [ActivePageStats!]!
 }
 
+type GeoIPStatus {
+  state: String!
+  dbPath: String!
+  source: String
+  lastError: String
+  updatedAt: Time
+}
+
 type ActivePageStats {
   path: String!
   """Number of visitors currently viewing this page"""
@@ -915,6 +987,7 @@ input CreateSiteInput {
 
 input UpdateSiteInput {
   name: String!
+  trackCountry: Boolean
 }
 
 input DateRangeInput {
@@ -929,6 +1002,8 @@ input FilterInput {
   device: String
   """Filter by page path"""
   page: String
+  """Filter by country (stored country name)"""
+  country: String
 }
 
 scalar Time
@@ -939,6 +1014,7 @@ type Query {
   site(id: ID!): Site
   dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
   realtime(siteId: ID!): RealtimeStats!
+  geoIPStatus: GeoIPStatus!
   """Get events for a site with pagination"""
   events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!
 }
@@ -956,6 +1032,7 @@ type Mutation {
   deleteSite(id: ID!): Boolean!
   """Invalidates old tracking scripts"""
   regenerateSiteKey(id: ID!): Site!
+  refreshGeoIPDatabase: GeoIPStatus!
 }
 `, BuiltIn: false},
 }
@@ -2208,6 +2285,151 @@ func (ec *executionContext) fieldContext_EventsResult_total(_ context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _GeoIPStatus_state(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GeoIPStatus_state,
+		func(ctx context.Context) (any, error) {
+			return obj.State, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_GeoIPStatus_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GeoIPStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GeoIPStatus_dbPath(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GeoIPStatus_dbPath,
+		func(ctx context.Context) (any, error) {
+			return obj.DbPath, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_GeoIPStatus_dbPath(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GeoIPStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GeoIPStatus_source(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GeoIPStatus_source,
+		func(ctx context.Context) (any, error) {
+			return obj.Source, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_GeoIPStatus_source(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GeoIPStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GeoIPStatus_lastError(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GeoIPStatus_lastError,
+		func(ctx context.Context) (any, error) {
+			return obj.LastError, nil
+		},
+		nil,
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_GeoIPStatus_lastError(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GeoIPStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GeoIPStatus_updatedAt(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GeoIPStatus_updatedAt,
+		func(ctx context.Context) (any, error) {
+			return obj.UpdatedAt, nil
+		},
+		nil,
+		ec.marshalOTime2ᚖtimeᚐTime,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_GeoIPStatus_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GeoIPStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_register(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2407,6 +2629,8 @@ func (ec *executionContext) fieldContext_Mutation_createSite(ctx context.Context
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
 				return ec.fieldContext_Site_publicKey(ctx, field)
+			case "trackCountry":
+				return ec.fieldContext_Site_trackCountry(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -2460,6 +2684,8 @@ func (ec *executionContext) fieldContext_Mutation_updateSite(ctx context.Context
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
 				return ec.fieldContext_Site_publicKey(ctx, field)
+			case "trackCountry":
+				return ec.fieldContext_Site_trackCountry(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -2554,6 +2780,8 @@ func (ec *executionContext) fieldContext_Mutation_regenerateSiteKey(ctx context.
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
 				return ec.fieldContext_Site_publicKey(ctx, field)
+			case "trackCountry":
+				return ec.fieldContext_Site_trackCountry(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -2570,6 +2798,47 @@ func (ec *executionContext) fieldContext_Mutation_regenerateSiteKey(ctx context.
 	if fc.Args, err = ec.field_Mutation_regenerateSiteKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_refreshGeoIPDatabase(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_refreshGeoIPDatabase,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Mutation().RefreshGeoIPDatabase(ctx)
+		},
+		nil,
+		ec.marshalNGeoIPStatus2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_refreshGeoIPDatabase(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "state":
+				return ec.fieldContext_GeoIPStatus_state(ctx, field)
+			case "dbPath":
+				return ec.fieldContext_GeoIPStatus_dbPath(ctx, field)
+			case "source":
+				return ec.fieldContext_GeoIPStatus_source(ctx, field)
+			case "lastError":
+				return ec.fieldContext_GeoIPStatus_lastError(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_GeoIPStatus_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GeoIPStatus", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -2734,6 +3003,8 @@ func (ec *executionContext) fieldContext_Query_sites(_ context.Context, field gr
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
 				return ec.fieldContext_Site_publicKey(ctx, field)
+			case "trackCountry":
+				return ec.fieldContext_Site_trackCountry(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -2776,6 +3047,8 @@ func (ec *executionContext) fieldContext_Query_site(ctx context.Context, field g
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
 				return ec.fieldContext_Site_publicKey(ctx, field)
+			case "trackCountry":
+				return ec.fieldContext_Site_trackCountry(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -2904,6 +3177,47 @@ func (ec *executionContext) fieldContext_Query_realtime(ctx context.Context, fie
 	if fc.Args, err = ec.field_Query_realtime_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_geoIPStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_geoIPStatus,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Query().GeoIPStatus(ctx)
+		},
+		nil,
+		ec.marshalNGeoIPStatus2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_geoIPStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "state":
+				return ec.fieldContext_GeoIPStatus_state(ctx, field)
+			case "dbPath":
+				return ec.fieldContext_GeoIPStatus_dbPath(ctx, field)
+			case "source":
+				return ec.fieldContext_GeoIPStatus_source(ctx, field)
+			case "lastError":
+				return ec.fieldContext_GeoIPStatus_lastError(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_GeoIPStatus_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GeoIPStatus", field.Name)
+		},
 	}
 	return fc, nil
 }
@@ -3301,6 +3615,35 @@ func (ec *executionContext) fieldContext_Site_publicKey(_ context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _Site_trackCountry(ctx context.Context, field graphql.CollectedField, obj *model.Site) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Site_trackCountry,
+		func(ctx context.Context) (any, error) {
+			return obj.TrackCountry, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Site_trackCountry(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Site",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Site_createdAt(ctx context.Context, field graphql.CollectedField, obj *model.Site) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -3536,6 +3879,8 @@ func (ec *executionContext) fieldContext_User_sites(_ context.Context, field gra
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
 				return ec.fieldContext_Site_publicKey(ctx, field)
+			case "trackCountry":
+				return ec.fieldContext_Site_trackCountry(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -5066,7 +5411,7 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"referrer", "device", "page"}
+	fieldsInOrder := [...]string{"referrer", "device", "page", "country"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -5094,6 +5439,13 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 				return it, err
 			}
 			it.Page = data
+		case "country":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("country"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Country = data
 		}
 	}
 
@@ -5175,7 +5527,7 @@ func (ec *executionContext) unmarshalInputUpdateSiteInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name"}
+	fieldsInOrder := [...]string{"name", "trackCountry"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -5189,6 +5541,13 @@ func (ec *executionContext) unmarshalInputUpdateSiteInput(ctx context.Context, o
 				return it, err
 			}
 			it.Name = data
+		case "trackCountry":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("trackCountry"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.TrackCountry = data
 		}
 	}
 
@@ -5708,6 +6067,56 @@ func (ec *executionContext) _EventsResult(ctx context.Context, sel ast.Selection
 	return out
 }
 
+var geoIPStatusImplementors = []string{"GeoIPStatus"}
+
+func (ec *executionContext) _GeoIPStatus(ctx context.Context, sel ast.SelectionSet, obj *model.GeoIPStatus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, geoIPStatusImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GeoIPStatus")
+		case "state":
+			out.Values[i] = ec._GeoIPStatus_state(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "dbPath":
+			out.Values[i] = ec._GeoIPStatus_dbPath(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "source":
+			out.Values[i] = ec._GeoIPStatus_source(ctx, field, obj)
+		case "lastError":
+			out.Values[i] = ec._GeoIPStatus_lastError(ctx, field, obj)
+		case "updatedAt":
+			out.Values[i] = ec._GeoIPStatus_updatedAt(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -5779,6 +6188,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "regenerateSiteKey":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_regenerateSiteKey(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "refreshGeoIPDatabase":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_refreshGeoIPDatabase(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -5966,6 +6382,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_realtime(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "geoIPStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_geoIPStatus(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -6178,6 +6616,11 @@ func (ec *executionContext) _Site(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "publicKey":
 			out.Values[i] = ec._Site_publicKey(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "trackCountry":
+			out.Values[i] = ec._Site_trackCountry(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -7099,6 +7542,20 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 		}
 	}
 	return graphql.WrapContextMarshaler(ctx, res)
+}
+
+func (ec *executionContext) marshalNGeoIPStatus2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus(ctx context.Context, sel ast.SelectionSet, v model.GeoIPStatus) graphql.Marshaler {
+	return ec._GeoIPStatus(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNGeoIPStatus2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus(ctx context.Context, sel ast.SelectionSet, v *model.GeoIPStatus) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._GeoIPStatus(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v any) (string, error) {

@@ -228,7 +228,7 @@ func TestGetAvgSessionDurationWithFilter_EmptyResult(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
 
-			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, tt.referrer, tt.device, tt.page)
+			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, tt.referrer, tt.device, tt.page, nil)
 			fmt.Println(got)
 			if err != nil {
 				t.Errorf("GetAvgSessionDurationWithFilter() error = %v, want nil", err)
@@ -293,7 +293,7 @@ func TestGetAvgSessionDurationWithFilter_WithData(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, tt.referrer, tt.device, tt.page)
+			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, tt.referrer, tt.device, tt.page, nil)
 			if err != nil {
 				t.Errorf("GetAvgSessionDurationWithFilter() error = %v", err)
 			}

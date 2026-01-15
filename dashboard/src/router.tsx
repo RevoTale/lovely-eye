@@ -70,18 +70,21 @@ const siteDetailRoute = createRoute({
     referrer?: string;
     device?: string;
     page?: string;
+    country?: string;
   } => {
     const result: {
       view?: string;
       referrer?: string;
       device?: string;
       page?: string;
+      country?: string;
     } = {};
 
     if (search.view) result.view = search.view as string;
     if (search.referrer) result.referrer = search.referrer as string;
     if (search.device) result.device = search.device as string;
     if (search.page) result.page = search.page as string;
+    if (search.country) result.country = search.country as string;
 
     return result;
   },

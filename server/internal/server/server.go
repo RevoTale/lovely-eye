@@ -20,7 +20,6 @@ import (
 	"github.com/uptrace/bun"
 )
 
-
 // Server holds all server dependencies.
 type Server struct {
 	DB               *bun.DB
@@ -75,7 +74,11 @@ func New(cfg *config.Config) (*Server, error) {
 	})
 
 	// Initialize GeoIP service (optional - can work without GeoIP database)
-	geoIPService, err := services.NewGeoIPService(cfg.GeoIPDBPath)
+	geoIPService, err := services.NewGeoIPService(services.GeoIPConfig{
+		DBPath:            cfg.GeoIPDBPath,
+		DownloadURL:       cfg.GeoIPDownloadURL,
+		MaxMindLicenseKey: cfg.GeoIPMaxMindLicenseKey,
+	})
 	if err != nil {
 		// Log warning but continue - analytics will work without geolocation
 		fmt.Printf("Warning: Failed to initialize GeoIP service: %v. Country detection will be disabled.\n", err)
@@ -84,6 +87,9 @@ func New(cfg *config.Config) (*Server, error) {
 	// Initialize other services
 	siteService := services.NewSiteService(siteRepo)
 	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo, geoIPService)
+	if err := analyticsService.SyncGeoIPRequirement(context.Background()); err != nil {
+		fmt.Printf("Warning: GeoIP database sync failed: %v\n", err)
+	}
 
 	// Create initial admin from env vars if configured
 	if err := authService.CreateInitialAdmin(context.Background(), cfg.Auth.InitialAdminUsername, cfg.Auth.InitialAdminPassword); err != nil {

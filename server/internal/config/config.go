@@ -11,11 +11,13 @@ import (
 )
 
 type Config struct {
-	Server      ServerConfig
-	Database    DatabaseConfig
-	Auth        AuthConfig
-	GeoIPDBPath string // Optional: path to GeoLite2-Country.mmdb for IP geolocation
-	TrackerJS   []byte // Optional: for testing, to avoid loading from file
+	Server                 ServerConfig
+	Database               DatabaseConfig
+	Auth                   AuthConfig
+	GeoIPDBPath            string // Optional: path to GeoLite2-Country.mmdb for IP geolocation
+	GeoIPDownloadURL       string // Optional: custom GeoIP download URL (mmdb or tar.gz)
+	GeoIPMaxMindLicenseKey string // Optional: MaxMind license key for GeoLite2 download
+	TrackerJS              []byte // Optional: for testing, to avoid loading from file
 }
 
 type ServerConfig struct {
@@ -45,6 +47,11 @@ type AuthConfig struct {
 
 func Load() *Config {
 	basePath := getEnv("BASE_PATH", "/")
+	downloadURL := getEnv("GEOIP_DOWNLOAD_URL", "")
+	maxMindKey := getEnv("GEOIP_MAXMIND_LICENSE_KEY", "")
+	if downloadURL == "" && maxMindKey == "" {
+		downloadURL = "https://download.db-ip.com/free/dbip-country-lite.mmdb.gz"
+	}
 	// Normalize base path
 	if basePath != "/" {
 		basePath = "/" + strings.Trim(basePath, "/")
@@ -72,7 +79,9 @@ func Load() *Config {
 			InitialAdminUsername: getEnv("INITIAL_ADMIN_USERNAME", ""),
 			InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
 		},
-		GeoIPDBPath: getEnv("GEOIP_DB_PATH", ""),
+		GeoIPDBPath:            getEnv("GEOIP_DB_PATH", "/data/GeoLite2-Country.mmdb"),
+		GeoIPDownloadURL:       downloadURL,
+		GeoIPMaxMindLicenseKey: maxMindKey,
 	}
 }
 

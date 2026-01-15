@@ -9,6 +9,8 @@ import type { DashboardStats, Site, RealtimeStats } from '@/generated/graphql';
 import { siteDetailRoute, Link } from '@/router';
 import { ReferrersCard } from '@/components/referrers-card';
 import { ActivePagesCard } from '@/components/active-pages-card';
+import { ActiveFilters } from '@/components/active-filters';
+import { CountryCard } from '@/components/country-card';
 
 function StatCard({
   title,
@@ -79,6 +81,7 @@ export function DashboardPage(): React.JSX.Element {
     ...(search.referrer && { referrer: search.referrer }),
     ...(search.device && { device: search.device }),
     ...(search.page && { page: search.page }),
+    ...(search.country && { country: search.country }),
   };
 
   const { data: dashboardData, loading: dashboardLoading } = useQuery(DASHBOARD_QUERY, {
@@ -160,40 +163,7 @@ export function DashboardPage(): React.JSX.Element {
       </div>
 
       {/* Active Filters */}
-      {(search.referrer ?? search.device ?? search.page) && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm text-muted-foreground">Filtered by:</span>
-          {search.referrer && (
-            <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
-              <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-                <span className="text-xs">Referrer: {search.referrer}</span>
-                <span className="ml-1 text-xs">×</span>
-              </Badge>
-            </Link>
-          )}
-          {search.device && (
-            <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
-              <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-                <span className="text-xs">Device: {search.device}</span>
-                <span className="ml-1 text-xs">×</span>
-              </Badge>
-            </Link>
-          )}
-          {search.page && (
-            <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
-              <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-                <span className="text-xs">Page: {search.page}</span>
-                <span className="ml-1 text-xs">×</span>
-              </Badge>
-            </Link>
-          )}
-          <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
-            <Badge variant="outline" className="cursor-pointer hover:bg-accent text-xs">
-              Clear all
-            </Badge>
-          </Link>
-        </div>
-      )}
+      <ActiveFilters siteId={siteId} search={search} />
 
       {/* Stats grid */}
       {stats ? (
@@ -355,6 +325,8 @@ export function DashboardPage(): React.JSX.Element {
               siteId={siteId}
             />
           </div>
+
+          <CountryCard countries={stats.countries} siteId={siteId} />
 
           {/* Device breakdown */}
           <Card className="hover:shadow-md transition-shadow">

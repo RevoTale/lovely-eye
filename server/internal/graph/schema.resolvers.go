@@ -111,11 +111,12 @@ func (r *mutationResolver) CreateSite(ctx context.Context, input model.CreateSit
 	}
 
 	return &model.Site{
-		ID:        strconv.FormatInt(site.ID, 10),
-		Domain:    site.Domain,
-		Name:      site.Name,
-		PublicKey: site.PublicKey,
-		CreatedAt: site.CreatedAt,
+		ID:           strconv.FormatInt(site.ID, 10),
+		Domain:       site.Domain,
+		Name:         site.Name,
+		PublicKey:    site.PublicKey,
+		TrackCountry: site.TrackCountry,
+		CreatedAt:    site.CreatedAt,
 	}, nil
 }
 
@@ -131,17 +132,22 @@ func (r *mutationResolver) UpdateSite(ctx context.Context, id string, input mode
 		return nil, errors.New("invalid site ID")
 	}
 
-	site, err := r.SiteService.Update(ctx, siteID, claims.UserID, input.Name)
+	site, err := r.SiteService.Update(ctx, siteID, claims.UserID, services.UpdateSiteInput{
+		Name:         input.Name,
+		TrackCountry: input.TrackCountry,
+	})
 	if err != nil {
 		return nil, err
 	}
+	_ = r.AnalyticsService.SyncGeoIPRequirement(ctx)
 
 	return &model.Site{
-		ID:        strconv.FormatInt(site.ID, 10),
-		Domain:    site.Domain,
-		Name:      site.Name,
-		PublicKey: site.PublicKey,
-		CreatedAt: site.CreatedAt,
+		ID:           strconv.FormatInt(site.ID, 10),
+		Domain:       site.Domain,
+		Name:         site.Name,
+		PublicKey:    site.PublicKey,
+		TrackCountry: site.TrackCountry,
+		CreatedAt:    site.CreatedAt,
 	}, nil
 }
 
@@ -182,12 +188,24 @@ func (r *mutationResolver) RegenerateSiteKey(ctx context.Context, id string) (*m
 	}
 
 	return &model.Site{
-		ID:        strconv.FormatInt(site.ID, 10),
-		Domain:    site.Domain,
-		Name:      site.Name,
-		PublicKey: site.PublicKey,
-		CreatedAt: site.CreatedAt,
+		ID:           strconv.FormatInt(site.ID, 10),
+		Domain:       site.Domain,
+		Name:         site.Name,
+		PublicKey:    site.PublicKey,
+		TrackCountry: site.TrackCountry,
+		CreatedAt:    site.CreatedAt,
 	}, nil
+}
+
+// RefreshGeoIPDatabase is the resolver for the refreshGeoIPDatabase field.
+func (r *mutationResolver) RefreshGeoIPDatabase(ctx context.Context) (*model.GeoIPStatus, error) {
+	claims := auth.GetUserFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized")
+	}
+
+	status, _ := r.AnalyticsService.RefreshGeoIPDatabase(ctx)
+	return convertToGraphQLGeoIPStatus(status), nil
 }
 
 // Me is the resolver for the me field.
@@ -203,9 +221,9 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	}
 
 	return &model.User{
-		ID:       strconv.FormatInt(user.ID, 10),
-		Username: user.Username,
-		Role:     user.Role,
+		ID:        strconv.FormatInt(user.ID, 10),
+		Username:  user.Username,
+		Role:      user.Role,
 		CreatedAt: time.Now(),
 	}, nil
 }
@@ -225,11 +243,12 @@ func (r *queryResolver) Sites(ctx context.Context) ([]*model.Site, error) {
 	var result []*model.Site
 	for _, site := range sites {
 		result = append(result, &model.Site{
-			ID:        strconv.FormatInt(site.ID, 10),
-			Domain:    site.Domain,
-			Name:      site.Name,
-			PublicKey: site.PublicKey,
-			CreatedAt: site.CreatedAt,
+			ID:           strconv.FormatInt(site.ID, 10),
+			Domain:       site.Domain,
+			Name:         site.Name,
+			PublicKey:    site.PublicKey,
+			TrackCountry: site.TrackCountry,
+			CreatedAt:    site.CreatedAt,
 		})
 	}
 
@@ -254,11 +273,12 @@ func (r *queryResolver) Site(ctx context.Context, id string) (*model.Site, error
 	}
 
 	return &model.Site{
-		ID:        strconv.FormatInt(site.ID, 10),
-		Domain:    site.Domain,
-		Name:      site.Name,
-		PublicKey: site.PublicKey,
-		CreatedAt: site.CreatedAt,
+		ID:           strconv.FormatInt(site.ID, 10),
+		Domain:       site.Domain,
+		Name:         site.Name,
+		PublicKey:    site.PublicKey,
+		TrackCountry: site.TrackCountry,
+		CreatedAt:    site.CreatedAt,
 	}, nil
 }
 
@@ -300,6 +320,9 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 		if filter.Page != nil {
 			filterOpts.Page = filter.Page
 		}
+		if filter.Country != nil {
+			filterOpts.Country = filter.Country
+		}
 	}
 
 	stats, err := r.AnalyticsService.GetDashboardStatsWithFilter(ctx, id, from, to, filterOpts)
@@ -337,6 +360,17 @@ func (r *queryResolver) Realtime(ctx context.Context, siteID string) (*model.Rea
 		Visitors: visitors,
 		SiteID:   id,
 	}, nil
+}
+
+// GeoIPStatus is the resolver for the geoIPStatus field.
+func (r *queryResolver) GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, error) {
+	claims := auth.GetUserFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized")
+	}
+
+	status := r.AnalyticsService.GeoIPStatus()
+	return convertToGraphQLGeoIPStatus(status), nil
 }
 
 // Events is the resolver for the events field.
@@ -409,5 +443,3 @@ func (r *Resolver) RealtimeStats() RealtimeStatsResolver { return &realtimeStats
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type realtimeStatsResolver struct{ *Resolver }
-
-// !!! WARNING !!!

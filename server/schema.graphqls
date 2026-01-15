@@ -12,6 +12,8 @@ type Site {
   name: String!
   """Used in tracking script"""
   publicKey: String!
+  """Enable country tracking (requires GeoIP database)"""
+  trackCountry: Boolean!
   createdAt: Time!
 }
 
@@ -81,6 +83,14 @@ type RealtimeStats {
   activePages: [ActivePageStats!]!
 }
 
+type GeoIPStatus {
+  state: String!
+  dbPath: String!
+  source: String
+  lastError: String
+  updatedAt: Time
+}
+
 type ActivePageStats {
   path: String!
   """Number of visitors currently viewing this page"""
@@ -123,6 +133,7 @@ input CreateSiteInput {
 
 input UpdateSiteInput {
   name: String!
+  trackCountry: Boolean
 }
 
 input DateRangeInput {
@@ -137,6 +148,8 @@ input FilterInput {
   device: String
   """Filter by page path"""
   page: String
+  """Filter by country (stored country name)"""
+  country: String
 }
 
 scalar Time
@@ -147,6 +160,7 @@ type Query {
   site(id: ID!): Site
   dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
   realtime(siteId: ID!): RealtimeStats!
+  geoIPStatus: GeoIPStatus!
   """Get events for a site with pagination"""
   events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!
 }
@@ -164,4 +178,5 @@ type Mutation {
   deleteSite(id: ID!): Boolean!
   """Invalidates old tracking scripts"""
   regenerateSiteKey(id: ID!): Site!
+  refreshGeoIPDatabase: GeoIPStatus!
 }

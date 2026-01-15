@@ -26,8 +26,12 @@ services:
       - "8080:8080"
     environment:
       - JWT_SECRET=your-secret-key-min-32-chars
+      # Optional: enable country stats with a MaxMind license key (auto-downloads to /data)
+      - GEOIP_MAXMIND_LICENSE_KEY=your-maxmind-license-key
     volumes:
       - lovely-eye-data:/app/data
+      # Optional: mount /data once for both SQLite and GeoIP
+      - ./data:/data
     restart: unless-stopped
 
 volumes:
@@ -46,10 +50,15 @@ services:
       - DB_DRIVER=postgres
       - DB_DSN=postgres://lovely:lovely@postgres:5432/lovely_eye?sslmode=disable
       - JWT_SECRET=your-secret-key-min-32-chars
+      # Optional: enable country stats with a MaxMind license key (auto-downloads to /data)
+      - GEOIP_MAXMIND_LICENSE_KEY=your-maxmind-license-key
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
+    volumes:
+      # Optional: mount /data once for GeoIP files
+      - ./data:/data
 
   postgres:
     image: postgres:18.1-alpine
@@ -92,7 +101,11 @@ Server starts at http://localhost:8080. The first registered user becomes admin.
 | `JWT_SECRET` | (random) | JWT signing key (min 32 chars, required for production) |
 | `SECURE_COOKIES` | `true` | Use secure cookies (requires HTTPS). Set to `false` for local dev |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
-| `GEOIP_DB_PATH` | - | Path to GeoLite2-Country.mmdb for country stats (optional) |
+| `GEOIP_DB_PATH` | `/data/GeoLite2-Country.mmdb` | Path to GeoLite2-Country.mmdb for country stats |
+| `GEOIP_DOWNLOAD_URL` | `https://download.db-ip.com/free/dbip-country-lite-YYYY-MM.mmdb.gz` | Custom GeoIP download URL (mmdb, gz, or tar.gz). DB-IP URLs will try the current and previous 2 monthly filenames automatically. |
+| `GEOIP_MAXMIND_LICENSE_KEY` | - | MaxMind license key for GeoLite2 auto-download |
+
+Country tracking downloads the GeoLite2 database on demand when at least one site enables it. If the download fails, the dashboard will show the error in site settings.
 
 ## Authentication
 

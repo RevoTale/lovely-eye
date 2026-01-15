@@ -38,6 +38,7 @@ export const SITE_QUERY = gql`
       domain
       name
       publicKey
+      trackCountry
       createdAt
     }
   }
@@ -143,7 +144,32 @@ export const UPDATE_SITE_MUTATION = gql`
       domain
       name
       publicKey
+      trackCountry
       createdAt
+    }
+  }
+`;
+
+export const GEOIP_STATUS_QUERY = gql`
+  query GeoIPStatus {
+    geoIPStatus {
+      state
+      dbPath
+      source
+      lastError
+      updatedAt
+    }
+  }
+`;
+
+export const REFRESH_GEOIP_MUTATION = gql`
+  mutation RefreshGeoIPDatabase {
+    refreshGeoIPDatabase {
+      state
+      dbPath
+      source
+      lastError
+      updatedAt
     }
   }
 `;

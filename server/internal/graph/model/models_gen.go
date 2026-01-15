@@ -2,6 +2,10 @@
 
 package model
 
+import (
+	"time"
+)
+
 type ActivePageStats struct {
 	Path string `json:"path"`
 	// Number of visitors currently viewing this page
@@ -15,6 +19,16 @@ type FilterInput struct {
 	Device *string `json:"device,omitempty"`
 	// Filter by page path
 	Page *string `json:"page,omitempty"`
+	// Filter by country (stored country name)
+	Country *string `json:"country,omitempty"`
+}
+
+type GeoIPStatus struct {
+	State     string     `json:"state"`
+	DbPath    string     `json:"dbPath"`
+	Source    *string    `json:"source,omitempty"`
+	LastError *string    `json:"lastError,omitempty"`
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 }
 
 type Mutation struct {

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery } from '@apollo/client';
-import { CREATE_SITE_MUTATION, SITE_QUERY, SITES_QUERY, DELETE_SITE_MUTATION, REGENERATE_SITE_KEY_MUTATION } from '@/graphql';
+import { CREATE_SITE_MUTATION, SITE_QUERY, SITES_QUERY, DELETE_SITE_MUTATION, REGENERATE_SITE_KEY_MUTATION, UPDATE_SITE_MUTATION, GEOIP_STATUS_QUERY, REFRESH_GEOIP_MUTATION } from '@/graphql';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton } from '@/components/ui';
 import { Globe, ArrowLeft, Save, Trash2, RefreshCw, Copy, CheckCircle2, AlertCircle } from 'lucide-react';
 import { siteDetailRoute } from '@/router';
+import { CountryTrackingCard } from '@/components/country-tracking-card';
 import type { Site } from '@/generated/graphql';
 
 export function SiteFormPage(): React.JSX.Element {
@@ -17,6 +18,7 @@ export function SiteFormPage(): React.JSX.Element {
   const [domain, setDomain] = useState('');
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+  const [trackCountry, setTrackCountry] = useState(false);
 
   // Queries and mutations
   const { data: siteData, loading: siteLoading } = useQuery(SITE_QUERY, {
@@ -27,8 +29,14 @@ export function SiteFormPage(): React.JSX.Element {
         const site = data.site as Site;
         setName(site.name);
         setDomain(site.domain);
+        setTrackCountry(site.trackCountry);
       }
     },
+  });
+
+  const { data: geoIPData } = useQuery(GEOIP_STATUS_QUERY, {
+    skip: isNew,
+    pollInterval: 5000,
   });
 
   const [createSite, { loading: creating }] = useMutation(CREATE_SITE_MUTATION, {
@@ -59,7 +67,20 @@ export function SiteFormPage(): React.JSX.Element {
     },
   });
 
+  const [updateSite, { loading: updating }] = useMutation(UPDATE_SITE_MUTATION, {
+    onError: (err) => {
+      setError(err.message);
+    },
+  });
+
+  const [refreshGeoIP, { loading: refreshingGeoIP }] = useMutation(REFRESH_GEOIP_MUTATION, {
+    onError: (err) => {
+      setError(err.message);
+    },
+  });
+
   const site = siteData?.site as Site | undefined;
+  const geoIPStatus = geoIPData?.geoIPStatus;
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -121,6 +142,31 @@ export function SiteFormPage(): React.JSX.Element {
     await regenerateKey({
       variables: { id: site.id },
     });
+  };
+
+  const handleCountryTrackingChange = async (enabled: boolean): Promise<void> => {
+    if (!site) return;
+    setError('');
+    const previous = trackCountry;
+    setTrackCountry(enabled);
+    try {
+      await updateSite({
+        variables: {
+          id: site.id,
+          input: {
+            name: name.trim(),
+            trackCountry: enabled,
+          },
+        },
+      });
+    } catch {
+      setTrackCountry(previous);
+    }
+  };
+
+  const handleRefreshGeoIP = async (): Promise<void> => {
+    setError('');
+    await refreshGeoIP();
   };
 
   const handleCopyKey = async (): Promise<void> => {
@@ -373,6 +419,19 @@ export function SiteFormPage(): React.JSX.Element {
               </div>
             </CardContent>
           </Card>
+
+          <CountryTrackingCard
+            trackCountry={trackCountry}
+            updating={updating}
+            refreshing={refreshingGeoIP}
+            geoIPStatus={geoIPStatus}
+            onToggle={(enabled) => {
+              void handleCountryTrackingChange(enabled);
+            }}
+            onRetry={() => {
+              void handleRefreshGeoIP();
+            }}
+          />
 
           <Card className="border-destructive/50">
             <CardHeader>

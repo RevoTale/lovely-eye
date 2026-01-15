@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	ErrSiteNotFound    = errors.New("site not found")
-	ErrSiteExists      = errors.New("site with this domain already exists")
-	ErrNotAuthorized   = errors.New("not authorized to access this site")
+	ErrSiteNotFound  = errors.New("site not found")
+	ErrSiteExists    = errors.New("site with this domain already exists")
+	ErrNotAuthorized = errors.New("not authorized to access this site")
 )
 
 type SiteService struct {
@@ -29,6 +29,11 @@ type CreateSiteInput struct {
 	Domain string
 	Name   string
 	UserID int64
+}
+
+type UpdateSiteInput struct {
+	Name         string
+	TrackCountry *bool
 }
 
 func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*models.Site, error) {
@@ -90,9 +95,9 @@ func (s *SiteService) GetUserSites(ctx context.Context, userID int64) ([]*models
 	return s.siteRepo.GetByUserID(ctx, userID)
 }
 
-func (s *SiteService) Update(ctx context.Context, id, userID int64, name string) (*models.Site, error) {
+func (s *SiteService) Update(ctx context.Context, id, userID int64, input UpdateSiteInput) (*models.Site, error) {
 	// Validate site name
-	validatedName, err := utils.ValidateSiteName(name)
+	validatedName, err := utils.ValidateSiteName(input.Name)
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +112,9 @@ func (s *SiteService) Update(ctx context.Context, id, userID int64, name string)
 	}
 
 	site.Name = validatedName
+	if input.TrackCountry != nil {
+		site.TrackCountry = *input.TrackCountry
+	}
 	if err := s.siteRepo.Update(ctx, site); err != nil {
 		return nil, err
 	}

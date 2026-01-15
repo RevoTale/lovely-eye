@@ -53,6 +53,15 @@ func (r *SiteRepository) GetByUserID(ctx context.Context, userID int64) ([]*mode
 	return sites, err
 }
 
+func (r *SiteRepository) AnyTrackCountry(ctx context.Context) (bool, error) {
+	var exists bool
+	err := r.db.NewSelect().
+		Model((*models.Site)(nil)).
+		ColumnExpr("EXISTS (SELECT 1 FROM sites WHERE track_country = true)").
+		Scan(ctx, &exists)
+	return exists, err
+}
+
 func (r *SiteRepository) Update(ctx context.Context, site *models.Site) error {
 	_, err := r.db.NewUpdate().Model(site).WherePK().Exec(ctx)
 	return err

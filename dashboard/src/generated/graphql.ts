@@ -105,12 +105,23 @@ export type EventsResult = {
 };
 
 export type FilterInput = {
+  /** Filter by country (stored country name) */
+  country?: InputMaybe<Scalars['String']['input']>;
   /** Filter by device type (desktop, mobile, tablet) */
   device?: InputMaybe<Scalars['String']['input']>;
   /** Filter by page path */
   page?: InputMaybe<Scalars['String']['input']>;
   /** Filter by specific referrer */
   referrer?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type GeoIpStatus = {
+  __typename: 'GeoIPStatus';
+  dbPath: Scalars['String']['output'];
+  lastError: Maybe<Scalars['String']['output']>;
+  source: Maybe<Scalars['String']['output']>;
+  state: Scalars['String']['output'];
+  updatedAt: Maybe<Scalars['Time']['output']>;
 };
 
 export type LoginInput = {
@@ -126,6 +137,7 @@ export type Mutation = {
   login: AuthPayload;
   /** Clears auth cookies */
   logout: Scalars['Boolean']['output'];
+  refreshGeoIPDatabase: GeoIpStatus;
   refreshToken: TokenPayload;
   /** Invalidates old tracking scripts */
   regenerateSiteKey: Site;
@@ -182,6 +194,7 @@ export type Query = {
   dashboard: DashboardStats;
   /** Get events for a site with pagination */
   events: EventsResult;
+  geoIPStatus: GeoIpStatus;
   me: Maybe<User>;
   realtime: RealtimeStats;
   site: Maybe<Site>;
@@ -240,6 +253,8 @@ export type Site = {
   name: Scalars['String']['output'];
   /** Used in tracking script */
   publicKey: Scalars['String']['output'];
+  /** Enable country tracking (requires GeoIP database) */
+  trackCountry: Scalars['Boolean']['output'];
 };
 
 export type TokenPayload = {
@@ -250,6 +265,7 @@ export type TokenPayload = {
 
 export type UpdateSiteInput = {
   name: Scalars['String']['input'];
+  trackCountry?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type User = {
@@ -276,7 +292,7 @@ export type SiteQueryVariables = Exact<{
 }>;
 
 
-export type SiteQuery = { __typename: 'Query', site: { __typename: 'Site', id: string, domain: string, name: string, publicKey: string, createdAt: string } | null };
+export type SiteQuery = { __typename: 'Query', site: { __typename: 'Site', id: string, domain: string, name: string, publicKey: string, trackCountry: boolean, createdAt: string } | null };
 
 export type DashboardQueryVariables = Exact<{
   siteId: Scalars['ID']['input'];
@@ -326,7 +342,17 @@ export type UpdateSiteMutationVariables = Exact<{
 }>;
 
 
-export type UpdateSiteMutation = { __typename: 'Mutation', updateSite: { __typename: 'Site', id: string, domain: string, name: string, publicKey: string, createdAt: string } };
+export type UpdateSiteMutation = { __typename: 'Mutation', updateSite: { __typename: 'Site', id: string, domain: string, name: string, publicKey: string, trackCountry: boolean, createdAt: string } };
+
+export type GeoIpStatusQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GeoIpStatusQuery = { __typename: 'Query', geoIPStatus: { __typename: 'GeoIPStatus', state: string, dbPath: string, source: string | null, lastError: string | null, updatedAt: string | null } };
+
+export type RefreshGeoIpDatabaseMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type RefreshGeoIpDatabaseMutation = { __typename: 'Mutation', refreshGeoIPDatabase: { __typename: 'GeoIPStatus', state: string, dbPath: string, source: string | null, lastError: string | null, updatedAt: string | null } };
 
 export type DeleteSiteMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -448,6 +474,7 @@ export const SiteDocument = gql`
     domain
     name
     publicKey
+    trackCountry
     createdAt
   }
 }
@@ -759,6 +786,7 @@ export const UpdateSiteDocument = gql`
     domain
     name
     publicKey
+    trackCountry
     createdAt
   }
 }
@@ -790,6 +818,88 @@ export function useUpdateSiteMutation(baseOptions?: Apollo.MutationHookOptions<U
 export type UpdateSiteMutationHookResult = ReturnType<typeof useUpdateSiteMutation>;
 export type UpdateSiteMutationResult = Apollo.MutationResult<UpdateSiteMutation>;
 export type UpdateSiteMutationOptions = Apollo.BaseMutationOptions<UpdateSiteMutation, UpdateSiteMutationVariables>;
+export const GeoIpStatusDocument = gql`
+    query GeoIPStatus {
+  geoIPStatus {
+    state
+    dbPath
+    source
+    lastError
+    updatedAt
+  }
+}
+    `;
+
+/**
+ * __useGeoIpStatusQuery__
+ *
+ * To run a query within a React component, call `useGeoIpStatusQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGeoIpStatusQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGeoIpStatusQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGeoIpStatusQuery(baseOptions?: Apollo.QueryHookOptions<GeoIpStatusQuery, GeoIpStatusQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GeoIpStatusQuery, GeoIpStatusQueryVariables>(GeoIpStatusDocument, options);
+      }
+export function useGeoIpStatusLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GeoIpStatusQuery, GeoIpStatusQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GeoIpStatusQuery, GeoIpStatusQueryVariables>(GeoIpStatusDocument, options);
+        }
+// @ts-ignore
+export function useGeoIpStatusSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GeoIpStatusQuery, GeoIpStatusQueryVariables>): Apollo.UseSuspenseQueryResult<GeoIpStatusQuery, GeoIpStatusQueryVariables>;
+export function useGeoIpStatusSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GeoIpStatusQuery, GeoIpStatusQueryVariables>): Apollo.UseSuspenseQueryResult<GeoIpStatusQuery | undefined, GeoIpStatusQueryVariables>;
+export function useGeoIpStatusSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GeoIpStatusQuery, GeoIpStatusQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GeoIpStatusQuery, GeoIpStatusQueryVariables>(GeoIpStatusDocument, options);
+        }
+export type GeoIpStatusQueryHookResult = ReturnType<typeof useGeoIpStatusQuery>;
+export type GeoIpStatusLazyQueryHookResult = ReturnType<typeof useGeoIpStatusLazyQuery>;
+export type GeoIpStatusSuspenseQueryHookResult = ReturnType<typeof useGeoIpStatusSuspenseQuery>;
+export type GeoIpStatusQueryResult = Apollo.QueryResult<GeoIpStatusQuery, GeoIpStatusQueryVariables>;
+export const RefreshGeoIpDatabaseDocument = gql`
+    mutation RefreshGeoIPDatabase {
+  refreshGeoIPDatabase {
+    state
+    dbPath
+    source
+    lastError
+    updatedAt
+  }
+}
+    `;
+export type RefreshGeoIpDatabaseMutationFn = Apollo.MutationFunction<RefreshGeoIpDatabaseMutation, RefreshGeoIpDatabaseMutationVariables>;
+
+/**
+ * __useRefreshGeoIpDatabaseMutation__
+ *
+ * To run a mutation, you first call `useRefreshGeoIpDatabaseMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRefreshGeoIpDatabaseMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [refreshGeoIpDatabaseMutation, { data, loading, error }] = useRefreshGeoIpDatabaseMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useRefreshGeoIpDatabaseMutation(baseOptions?: Apollo.MutationHookOptions<RefreshGeoIpDatabaseMutation, RefreshGeoIpDatabaseMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RefreshGeoIpDatabaseMutation, RefreshGeoIpDatabaseMutationVariables>(RefreshGeoIpDatabaseDocument, options);
+      }
+export type RefreshGeoIpDatabaseMutationHookResult = ReturnType<typeof useRefreshGeoIpDatabaseMutation>;
+export type RefreshGeoIpDatabaseMutationResult = Apollo.MutationResult<RefreshGeoIpDatabaseMutation>;
+export type RefreshGeoIpDatabaseMutationOptions = Apollo.BaseMutationOptions<RefreshGeoIpDatabaseMutation, RefreshGeoIpDatabaseMutationVariables>;
 export const DeleteSiteDocument = gql`
     mutation DeleteSite($id: ID!) {
   deleteSite(id: $id)

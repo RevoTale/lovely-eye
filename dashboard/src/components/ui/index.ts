@@ -28,6 +28,7 @@ export {
 } from './dropdown-menu';
 export { Avatar, AvatarFallback, AvatarImage } from './avatar';
 export { Badge, badgeVariants } from './badge';
+export { Checkbox } from './checkbox';
 export { Skeleton } from './skeleton';
 export { Separator } from './separator';
 export { Progress } from './progress';
