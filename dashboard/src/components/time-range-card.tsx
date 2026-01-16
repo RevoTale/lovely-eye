@@ -60,10 +60,10 @@ export function TimeRangeCard({
         <div className="space-y-2">
           <label className="text-xs text-muted-foreground">Quick presets</label>
           <div className="flex flex-wrap items-center gap-3">
-            <Tabs value={preset} onValueChange={(value) => {
+            <Tabs value={preset}  onValueChange={(value) => {
               onPresetChange(value as DatePreset);
             }}>
-              <TabsList>
+              <TabsList className='h-auto flex flex-wrap max-w-full'>
                 <TabsTrigger value="all">All time</TabsTrigger>
                 <TabsTrigger value="7d">7d</TabsTrigger>
                 <TabsTrigger value="30d">30d</TabsTrigger>
