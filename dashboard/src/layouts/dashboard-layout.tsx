@@ -45,7 +45,7 @@ export function DashboardLayout(): React.JSX.Element {
               className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <LayoutDashboard className="h-4 w-4" />
-              Sites
+              <span className='hidden sm:inline-block'>Sites</span>
             </Link>
           </nav>
 
