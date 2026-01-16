@@ -3,6 +3,7 @@ import { Button, Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsT
 import type { DatePreset } from '@/lib/date-range';
 import { formatDateInput, isValidDateInput, isValidTimeInput, normalizeTimeInput } from '@/lib/date-range';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
+import { from } from '@apollo/client';
 
 interface TimeRangeCardProps {
   preset: DatePreset;
@@ -13,7 +14,11 @@ interface TimeRangeCardProps {
   onPresetChange: (preset: DatePreset) => void;
   onApplyRange: (range: { fromDate: string; toDate: string; fromTime: string; toTime: string }) => boolean;
 }
-
+  const parseDraft = (dateValue: string, timeValue: string): Date | undefined => {
+      if (!isValidDateInput(dateValue) || !isValidTimeInput(timeValue)) return undefined;
+      const candidate = new Date(`${dateValue}T${timeValue}:00`);
+      return Number.isNaN(candidate.getTime()) ? undefined : candidate;
+    };
 export function TimeRangeCard({
   preset,
   fromDate,
@@ -29,20 +34,13 @@ export function TimeRangeCard({
   const [draftFromDate, setDraftFromDate] = useState<Date | undefined>(undefined);
   const [draftToDate, setDraftToDate] = useState<Date | undefined>(undefined);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const [justApplied, setJustApplied] = useState(false);
-
   useEffect(() => {
-    const parseDraft = (dateValue: string, timeValue: string): Date | undefined => {
-      if (!isValidDateInput(dateValue) || !isValidTimeInput(timeValue)) return undefined;
-      const candidate = new Date(`${dateValue}T${timeValue}:00`);
-      return Number.isNaN(candidate.getTime()) ? undefined : candidate;
-    };
+  
     setDraftFromDate(parseDraft(fromDate, fromTime));
     setDraftToDate(parseDraft(toDate, toTime));
     setSubmitAttempted(false);
-    setJustApplied(false);
   }, [fromDate, fromTime, preset, toDate, toTime]);
-
+ const applied = parseDraft(fromDate,fromTime)?.toDateString() === draftFromDate?.toDateString()  && parseDraft(toDate, toTime)?.toDateString() === draftToDate?.toDateString() 
   const showRange = Boolean(fromDate && toDate);
   const draftHasValidInputs = Boolean(draftFromDate && draftToDate);
   const draftRangeValid = useMemo(() => {
@@ -124,12 +122,12 @@ export function TimeRangeCard({
                   });
                   if (applied) {
                     setSubmitAttempted(false);
-                    setJustApplied(true);
+
                   }
                 }}
-                disabled={!canApply}
+                disabled={!canApply || applied}
               >
-                {justApplied ? 'Applied' : 'Apply range'}
+                {applied ? 'Applied' : 'Apply range'}
               </Button>
             </div>
           </div>
