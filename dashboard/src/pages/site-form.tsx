@@ -1,10 +1,10 @@
 /* eslint-disable max-lines -- no time to fix */
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery } from '@apollo/client';
 import { CREATE_SITE_MUTATION, SITE_QUERY, SITES_QUERY, DELETE_SITE_MUTATION, REGENERATE_SITE_KEY_MUTATION, UPDATE_SITE_MUTATION, GEOIP_STATUS_QUERY, REFRESH_GEOIP_MUTATION, EVENT_DEFINITIONS_QUERY, UPSERT_EVENT_DEFINITION_MUTATION, DELETE_EVENT_DEFINITION_MUTATION } from '@/graphql';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton } from '@/components/ui';
-import { Globe, ArrowLeft, Save, Trash2, RefreshCw, Copy, CheckCircle2, AlertCircle, Plus, X } from 'lucide-react';
+import { Globe, ArrowLeft, Save, Trash2, RefreshCw, Copy, CheckCircle2, AlertCircle, Plus, X, Loader2 } from 'lucide-react';
 import { siteDetailRoute } from '@/router';
 import { CountryTrackingCard } from '@/components/country-tracking-card';
 import { EventDefinitionsCard } from '@/components/event-definitions-card';
@@ -105,6 +105,21 @@ export function SiteFormPage(): React.JSX.Element {
     .replace(/\/.*$/, '')
     .toLowerCase()
     .trim();
+  const getNormalizedDomains = (values: string[]): string[] => {
+    const normalized = values
+      .map((domainValue) => normalizeDomainInput(domainValue))
+      .filter((domainValue) => domainValue.length > 0);
+    return Array.from(new Set(normalized));
+  };
+
+  const hasDomainChanges = useMemo(() => {
+    if (!site) return false;
+    const currentDomains = getNormalizedDomains(domains.map((entry) => entry.value));
+    const savedDomains = getNormalizedDomains(site.domains);
+    if (currentDomains.length !== savedDomains.length) return true;
+    const savedSet = new Set(savedDomains);
+    return currentDomains.some((domainValue) => !savedSet.has(domainValue));
+  }, [domains, site]);
 
   const getValidatedDomains = (): string[] | null => {
     const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
@@ -264,15 +279,11 @@ export function SiteFormPage(): React.JSX.Element {
     const basePath = window.__ENV__?.BASE_PATH ?? '';
     const trackerUrl = `${window.location.origin}${basePath}/tracker.js`;
 
-    return `<script>
-  (function() {
-    var script = document.createElement('script');
-    script.src = '${trackerUrl}';
-    script.setAttribute('data-site-key', '${site.publicKey}');
-    script.async = true;
-    document.head.appendChild(script);
-  })();
-</script>`;
+    return `<script
+  defer
+  src="${trackerUrl}"
+  data-site-key="${site.publicKey}"
+></script>`;
   };
 
   if (siteLoading) {
@@ -438,10 +449,19 @@ export function SiteFormPage(): React.JSX.Element {
                   onClick={() => {
                     void handleDomainsSave();
                   }}
-                  disabled={updating}
+                  disabled={updating || !hasDomainChanges}
                 >
-                  <Save className="h-4 w-4 mr-2" />
-                  {updating ? 'Saving...' : 'Save Domains'}
+                  {updating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Domains
+                    </>
+                  )}
                 </Button>
               </div>
             )}
@@ -494,7 +514,7 @@ export function SiteFormPage(): React.JSX.Element {
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Keep this key secure. Use regenerate if compromised.
+                  Used by the tracker to associate events with this site.
                 </p>
               </div>
 
