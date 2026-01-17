@@ -8,11 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
 	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/repository"
+	"github.com/lovely-eye/server/pkg/utils"
 	"github.com/mileusna/useragent"
 )
 
@@ -48,6 +50,8 @@ type CollectInput struct {
 	ScreenWidth int    `json:"screen_width"`
 	UserAgent   string `json:"-"` // From header
 	IP          string `json:"-"` // From request
+	Origin      string `json:"-"` // From header
+	Referer     string `json:"-"` // From header
 	UTMSource   string `json:"utm_source"`
 	UTMMedium   string `json:"utm_medium"`
 	UTMCampaign string `json:"utm_campaign"`
@@ -61,6 +65,8 @@ type EventInput struct {
 	Properties string `json:"properties"` // JSON string
 	UserAgent  string `json:"-"`
 	IP         string `json:"-"`
+	Origin     string `json:"-"`
+	Referer    string `json:"-"`
 }
 
 // CollectPageView records a page view and manages sessions
@@ -73,6 +79,9 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 	site, err := s.siteRepo.GetByPublicKey(ctx, input.SiteKey)
 	if err != nil {
 		return err
+	}
+	if !isAllowedDomain(input.Origin, input.Referer, site.Domains) {
+		return nil
 	}
 
 	// Generate anonymous visitor ID with daily salt rotation for privacy
@@ -176,6 +185,9 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 	site, err := s.siteRepo.GetByPublicKey(ctx, input.SiteKey)
 	if err != nil {
 		return err
+	}
+	if !isAllowedDomain(input.Origin, input.Referer, site.Domains) {
+		return nil
 	}
 
 	if s.eventDefinitionRepo == nil {
@@ -525,4 +537,45 @@ func categorizeScreenSize(width int) string {
 	default:
 		return "xl"
 	}
+}
+
+func isAllowedDomain(origin, referer string, domains []*models.SiteDomain) bool {
+	host := hostFromHeader(origin)
+	if host == "" {
+		host = hostFromHeader(referer)
+	}
+	if host == "" {
+		return false
+	}
+
+	for _, domain := range domains {
+		if domain != nil && domain.Domain == host {
+			return true
+		}
+	}
+
+	return false
+}
+
+func hostFromHeader(raw string) string {
+	if raw == "" {
+		return ""
+	}
+
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+
+	host := parsed.Hostname()
+	if host == "" {
+		return ""
+	}
+
+	normalized, err := utils.ValidateDomain(host)
+	if err != nil {
+		return ""
+	}
+
+	return normalized
 }

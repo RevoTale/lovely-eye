@@ -60,6 +60,8 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 		ScreenWidth: req.ScreenWidth,
 		UserAgent:   r.UserAgent(),
 		IP:          getClientIP(r),
+		Origin:      r.Header.Get("Origin"),
+		Referer:     r.Header.Get("Referer"),
 		UTMSource:   req.UTMSource,
 		UTMMedium:   req.UTMMedium,
 		UTMCampaign: req.UTMCampaign,
@@ -103,6 +105,8 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 		Properties: req.Properties,
 		UserAgent:  r.UserAgent(),
 		IP:         getClientIP(r),
+		Origin:     r.Header.Get("Origin"),
+		Referer:    r.Header.Get("Referer"),
 	})
 
 	if err != nil {

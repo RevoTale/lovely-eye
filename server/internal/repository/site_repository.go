@@ -37,7 +37,13 @@ func (r *SiteRepository) GetByID(ctx context.Context, id int64) (*models.Site, e
 
 func (r *SiteRepository) GetByPublicKey(ctx context.Context, publicKey string) (*models.Site, error) {
 	site := new(models.Site)
-	err := r.db.NewSelect().Model(site).Where("public_key = ?", publicKey).Scan(ctx)
+	err := r.db.NewSelect().
+		Model(site).
+		Where("public_key = ?", publicKey).
+		Relation("Domains", func(q *bun.SelectQuery) *bun.SelectQuery {
+			return q.Order("position ASC")
+		}).
+		Scan(ctx)
 	if err != nil {
 		return nil, err
 	}
