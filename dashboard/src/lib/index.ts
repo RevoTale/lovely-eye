@@ -1,2 +1,2 @@
-export { apolloClient } from './apollo';
+export { createApolloClient } from './apollo';
 export { cn } from './utils';

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet } from '@tanstack/react-router';
 import { useAuth } from '@/hooks';
 import { Link, useNavigate } from '@/router';
@@ -19,7 +19,7 @@ import { Logo } from '@/components/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 export function DashboardLayout(): React.JSX.Element {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -27,6 +27,12 @@ export function DashboardLayout(): React.JSX.Element {
       void navigate({ to: '/login' });
     });
   };
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      void navigate({ to: '/login' });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const initials = user?.username.slice(0, 2).toUpperCase() ?? 'U';
 

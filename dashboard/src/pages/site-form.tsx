@@ -10,6 +10,20 @@ import { CountryTrackingCard } from '@/components/country-tracking-card';
 import { EventDefinitionsCard } from '@/components/event-definitions-card';
 import type { EventDefinitionInput, Site } from '@/generated/graphql';
 
+const normalizeDomainInput = (value: string): string => value
+  .replace(/^https?:\/\//, '')
+  .replace(/^www\./, '')
+  .replace(/\/.*$/, '')
+  .toLowerCase()
+  .trim();
+
+const getNormalizedDomains = (values: string[]): string[] => {
+  const normalized = values
+    .map((domainValue) => normalizeDomainInput(domainValue))
+    .filter((domainValue) => domainValue.length > 0);
+  return Array.from(new Set(normalized));
+};
+
 export function SiteFormPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const navigate = useNavigate();
@@ -17,10 +31,11 @@ export function SiteFormPage(): React.JSX.Element {
 
   const [name, setName] = useState('');
   const nextDomainId = useRef(1);
-  const createDomainEntry = (value = ''): { id: string; value: string } => ({
-    id: String(nextDomainId.current++),
-    value,
-  });
+  const createDomainEntry = (value = ''): { id: string; value: string } => {
+    const nextId = String(nextDomainId.current);
+    nextDomainId.current += 1;
+    return { id: nextId, value };
+  };
   const [domains, setDomains] = useState<Array<{ id: string; value: string }>>([createDomainEntry()]);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
@@ -98,19 +113,6 @@ export function SiteFormPage(): React.JSX.Element {
   const site = siteData?.site as Site | undefined;
   const geoIPStatus = geoIPData?.geoIPStatus;
   const eventDefinitions = eventDefinitionsData?.eventDefinitions ?? [];
-
-  const normalizeDomainInput = (value: string): string => value
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '')
-    .replace(/\/.*$/, '')
-    .toLowerCase()
-    .trim();
-  const getNormalizedDomains = (values: string[]): string[] => {
-    const normalized = values
-      .map((domainValue) => normalizeDomainInput(domainValue))
-      .filter((domainValue) => domainValue.length > 0);
-    return Array.from(new Set(normalized));
-  };
 
   const hasDomainChanges = useMemo(() => {
     if (!site) return false;

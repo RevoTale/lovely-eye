@@ -1,6 +1,7 @@
 import { ApolloProvider } from '@apollo/client';
 import { RouterProvider } from '@tanstack/react-router';
-import { apolloClient } from '@/lib/apollo';
+import { useMemo, useRef } from 'react';
+import { createApolloClient } from '@/lib/apollo';
 import { AuthProvider, useAuth } from '@/hooks';
 import { router } from '@/router';
 
@@ -10,9 +11,14 @@ function InnerApp(): React.JSX.Element {
 }
 
 export function App(): React.JSX.Element {
+  const authErrorHandlerRef = useRef<(() => void) | null>(null);
+  const apolloClient = useMemo(() => createApolloClient(() => {
+    authErrorHandlerRef.current?.();
+  }), []);
+
   return (
     <ApolloProvider client={apolloClient}>
-      <AuthProvider>
+      <AuthProvider authErrorHandlerRef={authErrorHandlerRef}>
         <InnerApp />
       </AuthProvider>
     </ApolloProvider>
