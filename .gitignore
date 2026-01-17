@@ -37,3 +37,4 @@ server/e2e/dashboard
 server/vendor
 server/data
 server/bin
+.devcontainer/docker-compose.override.yml

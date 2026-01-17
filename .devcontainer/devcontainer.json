@@ -1,6 +1,10 @@
 {
     "name": "Lovely Eye analytics",
-    "dockerComposeFile": "docker-compose.yml",
+    "initializeCommand": "test -f .devcontainer/docker-compose.override.yml || cp .devcontainer/docker-compose.override.empty.yml .devcontainer/docker-compose.override.yml",
+    "dockerComposeFile": [
+        "docker-compose.yml",
+        "docker-compose.override.yml"
+    ],
     "service": "app",
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
     "features": {
