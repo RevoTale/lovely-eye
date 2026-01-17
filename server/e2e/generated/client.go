@@ -11,9 +11,10 @@ import (
 
 // CreateSiteCreateSite includes the requested fields of the GraphQL type Site.
 type CreateSiteCreateSite struct {
-	Id     string `json:"id"`
-	Domain string `json:"domain"`
-	Name   string `json:"name"`
+	Id string `json:"id"`
+	// All tracked domains (includes primary)
+	Domains []string `json:"domains"`
+	Name    string   `json:"name"`
 	// Used in tracking script
 	PublicKey string `json:"publicKey"`
 }
@@ -21,8 +22,8 @@ type CreateSiteCreateSite struct {
 // GetId returns CreateSiteCreateSite.Id, and is useful for accessing the field via an interface.
 func (v *CreateSiteCreateSite) GetId() string { return v.Id }
 
-// GetDomain returns CreateSiteCreateSite.Domain, and is useful for accessing the field via an interface.
-func (v *CreateSiteCreateSite) GetDomain() string { return v.Domain }
+// GetDomains returns CreateSiteCreateSite.Domains, and is useful for accessing the field via an interface.
+func (v *CreateSiteCreateSite) GetDomains() []string { return v.Domains }
 
 // GetName returns CreateSiteCreateSite.Name, and is useful for accessing the field via an interface.
 func (v *CreateSiteCreateSite) GetName() string { return v.Name }
@@ -31,12 +32,12 @@ func (v *CreateSiteCreateSite) GetName() string { return v.Name }
 func (v *CreateSiteCreateSite) GetPublicKey() string { return v.PublicKey }
 
 type CreateSiteInput struct {
-	Domain string `json:"domain"`
-	Name   string `json:"name"`
+	Domains []string `json:"domains"`
+	Name    string   `json:"name"`
 }
 
-// GetDomain returns CreateSiteInput.Domain, and is useful for accessing the field via an interface.
-func (v *CreateSiteInput) GetDomain() string { return v.Domain }
+// GetDomains returns CreateSiteInput.Domains, and is useful for accessing the field via an interface.
+func (v *CreateSiteInput) GetDomains() []string { return v.Domains }
 
 // GetName returns CreateSiteInput.Name, and is useful for accessing the field via an interface.
 func (v *CreateSiteInput) GetName() string { return v.Name }
@@ -502,9 +503,10 @@ func (v *SiteResponse) GetSite() SiteSite { return v.Site }
 
 // SiteSite includes the requested fields of the GraphQL type Site.
 type SiteSite struct {
-	Id     string `json:"id"`
-	Domain string `json:"domain"`
-	Name   string `json:"name"`
+	Id string `json:"id"`
+	// All tracked domains (includes primary)
+	Domains []string `json:"domains"`
+	Name    string   `json:"name"`
 	// Used in tracking script
 	PublicKey string `json:"publicKey"`
 }
@@ -512,8 +514,8 @@ type SiteSite struct {
 // GetId returns SiteSite.Id, and is useful for accessing the field via an interface.
 func (v *SiteSite) GetId() string { return v.Id }
 
-// GetDomain returns SiteSite.Domain, and is useful for accessing the field via an interface.
-func (v *SiteSite) GetDomain() string { return v.Domain }
+// GetDomains returns SiteSite.Domains, and is useful for accessing the field via an interface.
+func (v *SiteSite) GetDomains() []string { return v.Domains }
 
 // GetName returns SiteSite.Name, and is useful for accessing the field via an interface.
 func (v *SiteSite) GetName() string { return v.Name }
@@ -531,9 +533,10 @@ func (v *SitesResponse) GetSites() []SitesSitesSite { return v.Sites }
 
 // SitesSitesSite includes the requested fields of the GraphQL type Site.
 type SitesSitesSite struct {
-	Id     string `json:"id"`
-	Domain string `json:"domain"`
-	Name   string `json:"name"`
+	Id string `json:"id"`
+	// All tracked domains (includes primary)
+	Domains []string `json:"domains"`
+	Name    string   `json:"name"`
 	// Used in tracking script
 	PublicKey string `json:"publicKey"`
 }
@@ -541,8 +544,8 @@ type SitesSitesSite struct {
 // GetId returns SitesSitesSite.Id, and is useful for accessing the field via an interface.
 func (v *SitesSitesSite) GetId() string { return v.Id }
 
-// GetDomain returns SitesSitesSite.Domain, and is useful for accessing the field via an interface.
-func (v *SitesSitesSite) GetDomain() string { return v.Domain }
+// GetDomains returns SitesSitesSite.Domains, and is useful for accessing the field via an interface.
+func (v *SitesSitesSite) GetDomains() []string { return v.Domains }
 
 // GetName returns SitesSitesSite.Name, and is useful for accessing the field via an interface.
 func (v *SitesSitesSite) GetName() string { return v.Name }
@@ -713,7 +716,7 @@ const CreateSite_Operation = `
 mutation CreateSite ($input: CreateSiteInput!) {
 	createSite(input: $input) {
 		id
-		domain
+		domains
 		name
 		publicKey
 	}
@@ -1071,7 +1074,7 @@ const Site_Operation = `
 query Site ($id: ID!) {
 	site(id: $id) {
 		id
-		domain
+		domains
 		name
 		publicKey
 	}
@@ -1108,7 +1111,7 @@ const Sites_Operation = `
 query Sites {
 	sites {
 		id
-		domain
+		domains
 		name
 		publicKey
 	}

@@ -55,12 +55,20 @@ func createTestSite(t *testing.T, db *bun.DB) *models.Site {
 
 	site := &models.Site{
 		UserID:    user.ID,
-		Domain:    "test.com",
 		Name:      "Test Site",
 		PublicKey: "test-key",
 	}
 	if _, err := db.NewInsert().Model(site).Exec(ctx); err != nil {
 		t.Fatalf("failed to insert site: %v", err)
+	}
+
+	siteDomain := &models.SiteDomain{
+		SiteID:   site.ID,
+		Domain:   "test.com",
+		Position: 0,
+	}
+	if _, err := db.NewInsert().Model(siteDomain).Exec(ctx); err != nil {
+		t.Fatalf("failed to insert site domain: %v", err)
 	}
 
 	return site

@@ -9,7 +9,7 @@ export const ME_QUERY = gql`
       createdAt
       sites {
         id
-        domain
+        domains
         name
         publicKey
         createdAt
@@ -22,7 +22,7 @@ export const SITES_QUERY = gql`
   query Sites {
     sites {
       id
-      domain
+      domains
       name
       publicKey
       createdAt
@@ -34,7 +34,7 @@ export const SITE_QUERY = gql`
   query Site($id: ID!) {
     site(id: $id) {
       id
-      domain
+      domains
       name
       publicKey
       trackCountry
@@ -146,7 +146,7 @@ export const CREATE_SITE_MUTATION = gql`
   mutation CreateSite($input: CreateSiteInput!) {
     createSite(input: $input) {
       id
-      domain
+      domains
       name
       publicKey
       createdAt
@@ -158,7 +158,7 @@ export const UPDATE_SITE_MUTATION = gql`
   mutation UpdateSite($id: ID!, $input: UpdateSiteInput!) {
     updateSite(id: $id, input: $input) {
       id
-      domain
+      domains
       name
       publicKey
       trackCountry
@@ -243,7 +243,7 @@ export const REGENERATE_SITE_KEY_MUTATION = gql`
   mutation RegenerateSiteKey($id: ID!) {
     regenerateSiteKey(id: $id) {
       id
-      domain
+      domains
       name
       publicKey
       createdAt

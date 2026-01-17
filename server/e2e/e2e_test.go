@@ -217,8 +217,8 @@ func TestStatsCollection(t *testing.T) {
 	client := ts.authenticatedClient(ctx, t, "admin", "password")
 
 	siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
-		Domain: "example.com",
-		Name:   "Example Site",
+		Domains: []string{"example.com"},
+		Name:    "Example Site",
 	})
 	require.NoError(t, err)
 
@@ -293,8 +293,8 @@ func TestDashboardAuthorization(t *testing.T) {
 	authedClient := ts.authenticatedClient(ctx, t, "admin", "password")
 
 	siteResp, err := operations.CreateSite(ctx, authedClient, operations.CreateSiteInput{
-		Domain: "example.com",
-		Name:   "Example Site",
+		Domains: []string{"example.com"},
+		Name:    "Example Site",
 	})
 	require.NoError(t, err)
 
@@ -346,11 +346,11 @@ func TestSiteManagement(t *testing.T) {
 
 	t.Run("create site", func(t *testing.T) {
 		resp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
-			Domain: "mysite.com",
-			Name:   "My Site",
+			Domains: []string{"mysite.com"},
+			Name:    "My Site",
 		})
 		require.NoError(t, err)
-		require.Equal(t, "mysite.com", resp.CreateSite.Domain)
+		require.Equal(t, []string{"mysite.com"}, resp.CreateSite.Domains)
 		require.NotEmpty(t, resp.CreateSite.PublicKey)
 	})
 
@@ -362,8 +362,8 @@ func TestSiteManagement(t *testing.T) {
 
 	t.Run("unauthenticated cannot create site", func(t *testing.T) {
 		_, err := operations.CreateSite(ctx, ts.graphqlClient(), operations.CreateSiteInput{
-			Domain: "other.com",
-			Name:   "Other",
+			Domains: []string{"other.com"},
+			Name:    "Other",
 		})
 		require.Error(t, err)
 	})
@@ -382,8 +382,8 @@ func TestEventPropertiesValidation(t *testing.T) {
 	client := ts.authenticatedClient(ctx, t, "admin", "password")
 
 	siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
-		Domain: "events-test.com",
-		Name:   "Events Test Site",
+		Domains: []string{"events-test.com"},
+		Name:    "Events Test Site",
 	})
 	require.NoError(t, err)
 
@@ -602,8 +602,8 @@ func TestEventPropertiesStored(t *testing.T) {
 	client := ts.authenticatedClient(ctx, t, "admin", "password")
 
 	siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
-		Domain: "events-storage-test.com",
-		Name:   "Events Storage Test",
+		Domains: []string{"events-storage-test.com"},
+		Name:    "Events Storage Test",
 	})
 	require.NoError(t, err)
 

@@ -27,7 +27,6 @@ type Site struct {
 
 	ID           int64     `bun:"id,pk,autoincrement" json:"id"`
 	UserID       int64     `bun:"user_id,notnull" json:"user_id"`
-	Domain       string    `bun:"domain,unique,notnull" json:"domain"`
 	Name         string    `bun:"name,notnull" json:"name"`
 	PublicKey    string    `bun:"public_key,unique,notnull" json:"public_key"` // Used in tracking script
 	TrackCountry bool      `bun:"track_country,notnull,default:false" json:"track_country"`
@@ -35,10 +34,25 @@ type Site struct {
 	UpdatedAt    time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
 
 	User             *User              `bun:"rel:belongs-to,join:user_id=id" json:"user,omitempty"`
+	Domains          []*SiteDomain      `bun:"rel:has-many,join:id=site_id" json:"domains,omitempty"`
 	PageViews        []*PageView        `bun:"rel:has-many,join:id=site_id" json:"page_views,omitempty"`
 	Events           []*Event           `bun:"rel:has-many,join:id=site_id" json:"events,omitempty"`
 	Sessions         []*Session         `bun:"rel:has-many,join:id=site_id" json:"sessions,omitempty"`
 	EventDefinitions []*EventDefinition `bun:"rel:has-many,join:id=site_id" json:"event_definitions,omitempty"`
+}
+
+// SiteDomain represents an allowed domain for a site
+type SiteDomain struct {
+	bun.BaseModel `bun:"table:site_domains,alias:sd"`
+
+	ID        int64     `bun:"id,pk,autoincrement" json:"id"`
+	SiteID    int64     `bun:"site_id,notnull" json:"site_id"`
+	Domain    string    `bun:"domain,unique,notnull" json:"domain"`
+	Position  int       `bun:"position,notnull,default:0" json:"position"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+
+	Site *Site `bun:"rel:belongs-to,join:site_id=id" json:"site,omitempty"`
 }
 
 // Session represents a visitor session
@@ -65,6 +79,7 @@ type Session struct {
 	PageViews   int       `bun:"page_views,default:0" json:"page_views"`
 	Duration    int       `bun:"duration,default:0" json:"duration"` // seconds
 	IsBounce    bool      `bun:"is_bounce,default:true" json:"is_bounce"`
+	EventOnly   bool      `bun:"event_only,notnull,default:false" json:"event_only"`
 
 	Site *Site `bun:"rel:belongs-to,join:site_id=id" json:"site,omitempty"`
 }
@@ -122,14 +137,14 @@ type EventDefinition struct {
 type EventDefinitionField struct {
 	bun.BaseModel `bun:"table:event_definition_fields,alias:edf"`
 
-	ID                 int64     `bun:"id,pk,autoincrement" json:"id"`
-	EventDefinitionID  int64     `bun:"event_definition_id,notnull" json:"event_definition_id"`
-	Key                string    `bun:"key,notnull" json:"key"`
-	Type               string    `bun:"type,notnull" json:"type"`
-	Required           bool      `bun:"required,notnull,default:false" json:"required"`
-	MaxLength          int       `bun:"max_length,notnull,default:500" json:"max_length"`
-	CreatedAt          time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
-	UpdatedAt          time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+	ID                int64     `bun:"id,pk,autoincrement" json:"id"`
+	EventDefinitionID int64     `bun:"event_definition_id,notnull" json:"event_definition_id"`
+	Key               string    `bun:"key,notnull" json:"key"`
+	Type              string    `bun:"type,notnull" json:"type"`
+	Required          bool      `bun:"required,notnull,default:false" json:"required"`
+	MaxLength         int       `bun:"max_length,notnull,default:500" json:"max_length"`
+	CreatedAt         time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt         time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
 
 	EventDefinition *EventDefinition `bun:"rel:belongs-to,join:event_definition_id=id" json:"event_definition,omitempty"`
 }

@@ -106,8 +106,8 @@ func TestAuthFlowWithCookies(t *testing.T) {
 	// STEP 4: Test authenticated mutation works
 	t.Log("\nSTEP 4: Test authenticated mutation works")
 	createSiteMutation := `{
-		"query": "mutation CreateSite($input: CreateSiteInput!) { createSite(input: $input) { id domain } }",
-		"variables": {"input": {"domain": "example.com", "name": "Example Site"}}
+		"query": "mutation CreateSite($input: CreateSiteInput!) { createSite(input: $input) { id domains } }",
+		"variables": {"input": {"domains": ["example.com"], "name": "Example Site"}}
 	}`
 
 	req2, err := http.NewRequest(http.MethodPost, ts.httpServer.URL+"/graphql", bytes.NewBufferString(createSiteMutation))

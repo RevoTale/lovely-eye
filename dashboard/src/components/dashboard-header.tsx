@@ -11,11 +11,14 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ site, siteId, realtime }: DashboardHeaderProps): React.JSX.Element {
+  const domainList = site.domains.length ? site.domains : [''];
+  const domainLabel = domainList.join(' · ');
+
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
         <h1 className="text-3xl font-bold tracking-tight break-words">{site.name}</h1>
-        <p className="text-muted-foreground mt-1 break-all">{site.domain}</p>
+        <p className="text-muted-foreground mt-1 break-all">{domainLabel}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Link to="/sites/$siteId" params={{ siteId }} search={{ view: 'settings' }}>

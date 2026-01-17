@@ -2,7 +2,7 @@
 mutation CreateSite($input: CreateSiteInput!) {
   createSite(input: $input) {
     id
-    domain
+    domains
     name
     publicKey
   }
@@ -12,7 +12,7 @@ mutation CreateSite($input: CreateSiteInput!) {
 query Sites {
   sites {
     id
-    domain
+    domains
     name
     publicKey
   }
@@ -22,7 +22,7 @@ query Sites {
 query Site($id: ID!) {
   site(id: $id) {
     id
-    domain
+    domains
     name
     publicKey
   }

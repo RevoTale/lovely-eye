@@ -3,7 +3,6 @@ import { Button, Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsT
 import type { DatePreset } from '@/lib/date-range';
 import { formatDateInput, isValidDateInput, isValidTimeInput, normalizeTimeInput } from '@/lib/date-range';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
-import { from } from '@apollo/client';
 
 interface TimeRangeCardProps {
   preset: DatePreset;

@@ -8,7 +8,8 @@ type User {
 
 type Site {
   id: ID!
-  domain: String!
+  """All tracked domains (includes primary)"""
+  domains: [String!]!
   name: String!
   """Used in tracking script"""
   publicKey: String!
@@ -74,6 +75,12 @@ type DailyStats {
   visitors: Int!
   pageViews: Int!
   sessions: Int!
+}
+
+type Session {
+  id: ID!
+  """True when created from an event without a page view; flipped to false after a page view arrives."""
+  eventOnly: Boolean!
 }
 
 type RealtimeStats {
@@ -149,13 +156,15 @@ input LoginInput {
 }
 
 input CreateSiteInput {
-  domain: String!
+  domains: [String!]!
   name: String!
 }
 
 input UpdateSiteInput {
   name: String!
   trackCountry: Boolean
+  """Full list of tracked domains (includes primary)"""
+  domains: [String!]
 }
 
 input DateRangeInput {

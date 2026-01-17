@@ -97,8 +97,13 @@ export function SitesPage(): React.JSX.Element {
                   <CardTitle className="mt-4 group-hover:text-primary transition-colors">
                     {site.name}
                   </CardTitle>
-                  <CardDescription className="flex items-center gap-1">
-                    {site.domain}
+                  <CardDescription className="flex items-center gap-2">
+                    <span>{site.domains[0] ?? ''}</span>
+                    {site.domains.length > 1 ? (
+                      <span className="text-xs text-muted-foreground">
+                        +{site.domains.length - 1} more
+                      </span>
+                    ) : null}
                     <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </CardDescription>
                 </CardHeader>

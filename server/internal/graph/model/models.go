@@ -12,7 +12,7 @@ type User struct {
 
 type Site struct {
 	ID           string    `json:"id"`
-	Domain       string    `json:"domain"`
+	Domains      []string  `json:"domains"`
 	Name         string    `json:"name"`
 	PublicKey    string    `json:"publicKey"`
 	TrackCountry bool      `json:"trackCountry"`
@@ -93,13 +93,14 @@ type LoginInput struct {
 }
 
 type CreateSiteInput struct {
-	Domain string `json:"domain"`
-	Name   string `json:"name"`
+	Domains []string `json:"domains"`
+	Name    string   `json:"name"`
 }
 
 type UpdateSiteInput struct {
-	Name         string `json:"name"`
-	TrackCountry *bool  `json:"trackCountry,omitempty"`
+	Name         string   `json:"name"`
+	TrackCountry *bool    `json:"trackCountry,omitempty"`
+	Domains      []string `json:"domains,omitempty"`
 }
 
 type DateRangeInput struct {

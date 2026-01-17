@@ -121,6 +121,7 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 			PageViews:   1,
 			IsBounce:    true,
 			Country:     country,
+			EventOnly:   false,
 		}
 		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
 			return err
@@ -131,6 +132,9 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		session.ExitPage = input.Path
 		session.PageViews++
 		session.IsBounce = false
+		if session.EventOnly {
+			session.EventOnly = false
+		}
 		session.Duration = int(time.Since(session.StartedAt).Seconds())
 		// Update country if not set
 		if session.Country == "" && country != "" {
@@ -197,17 +201,58 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 	visitorID := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
 
 	// Try to find existing session
-	sessionTimeout := time.Now().Add(-30 * time.Minute)
+	now := time.Now()
+	sessionTimeout := now.Add(-30 * time.Minute)
 	session, _ := s.analyticsRepo.GetSessionByVisitor(ctx, site.ID, visitorID, sessionTimeout)
 
-	var sessionID int64
-	if session != nil {
-		sessionID = session.ID
+	if session == nil {
+		ua := useragent.Parse(input.UserAgent)
+		device := categorizeDevice(ua)
+		browser := ua.Name
+		if browser == "" {
+			browser = "Other"
+		}
+		os := ua.OS
+		if os == "" {
+			os = "Other"
+		}
+
+		country := ""
+		if site.TrackCountry && s.geoIPService != nil {
+			country = s.geoIPService.GetCountryName(input.IP)
+		}
+
+		session = &models.Session{
+			SiteID:     site.ID,
+			VisitorID:  visitorID,
+			StartedAt:  now,
+			LastSeenAt: now,
+			EntryPage:  input.Path,
+			ExitPage:   input.Path,
+			Device:     device,
+			Browser:    browser,
+			OS:         os,
+			Country:    country,
+			IsBounce:   true,
+			EventOnly:  true,
+		}
+		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
+			return err
+		}
+	} else {
+		session.LastSeenAt = now
+		if input.Path != "" {
+			session.ExitPage = input.Path
+		}
+		session.Duration = int(now.Sub(session.StartedAt).Seconds())
+		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
+			return err
+		}
 	}
 
 	event := &models.Event{
 		SiteID:     site.ID,
-		SessionID:  sessionID,
+		SessionID:  session.ID,
 		VisitorID:  visitorID,
 		Name:       input.Name,
 		Path:       input.Path,

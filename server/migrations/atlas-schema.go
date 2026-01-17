@@ -36,6 +36,7 @@ func main() {
 	stmts, err := bunschema.New(d).Load(
 		&models.User{},
 		&models.Site{},
+		&models.SiteDomain{},
 		&models.Session{},
 		&models.PageView{},
 		&models.Event{},

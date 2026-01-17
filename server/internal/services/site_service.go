@@ -26,18 +26,19 @@ func NewSiteService(siteRepo *repository.SiteRepository) *SiteService {
 }
 
 type CreateSiteInput struct {
-	Domain string
-	Name   string
-	UserID int64
+	Domains []string
+	Name    string
+	UserID  int64
 }
 
 type UpdateSiteInput struct {
 	Name         string
 	TrackCountry *bool
+	Domains      []string
 }
 
 func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*models.Site, error) {
-	normalizedDomain, err := utils.ValidateDomain(input.Domain)
+	normalizedDomains, err := normalizeDomains(input.Domains)
 	if err != nil {
 		return nil, err
 	}
@@ -47,9 +48,11 @@ func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*model
 		return nil, err
 	}
 
-	existing, _ := s.siteRepo.GetByDomain(ctx, normalizedDomain)
-	if existing != nil {
-		return nil, ErrSiteExists
+	for _, domain := range normalizedDomains {
+		existing, _ := s.siteRepo.GetByDomain(ctx, domain)
+		if existing != nil {
+			return nil, ErrSiteExists
+		}
 	}
 
 	publicKey, err := generatePublicKey()
@@ -59,15 +62,15 @@ func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*model
 
 	site := &models.Site{
 		UserID:    input.UserID,
-		Domain:    normalizedDomain,
 		Name:      validatedName,
 		PublicKey: publicKey,
 	}
 
-	if err := s.siteRepo.Create(ctx, site); err != nil {
+	if err := s.siteRepo.CreateWithDomains(ctx, site, normalizedDomains); err != nil {
 		return nil, err
 	}
 
+	site.Domains = buildSiteDomains(site.ID, normalizedDomains)
 	return site, nil
 }
 
@@ -111,10 +114,30 @@ func (s *SiteService) Update(ctx context.Context, id, userID int64, input Update
 	if input.TrackCountry != nil {
 		site.TrackCountry = *input.TrackCountry
 	}
-	if err := s.siteRepo.Update(ctx, site); err != nil {
+
+	if input.Domains == nil {
+		if err := s.siteRepo.Update(ctx, site); err != nil {
+			return nil, err
+		}
+		return site, nil
+	}
+
+	normalizedDomains, err := normalizeDomains(input.Domains)
+	if err != nil {
 		return nil, err
 	}
 
+	for _, domain := range normalizedDomains {
+		existing, _ := s.siteRepo.GetByDomain(ctx, domain)
+		if existing != nil && existing.ID != site.ID {
+			return nil, ErrSiteExists
+		}
+	}
+
+	if err := s.siteRepo.UpdateWithDomains(ctx, site, normalizedDomains); err != nil {
+		return nil, err
+	}
+	site.Domains = buildSiteDomains(site.ID, normalizedDomains)
 	return site, nil
 }
 
@@ -160,4 +183,38 @@ func generatePublicKey() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func normalizeDomains(domains []string) ([]string, error) {
+	normalized := make([]string, 0, len(domains))
+	seen := make(map[string]struct{}, len(domains))
+	for _, domain := range domains {
+		normalizedDomain, err := utils.ValidateDomain(domain)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := seen[normalizedDomain]; ok {
+			continue
+		}
+		seen[normalizedDomain] = struct{}{}
+		normalized = append(normalized, normalizedDomain)
+	}
+
+	if len(normalized) == 0 {
+		return nil, utils.ErrInvalidDomain
+	}
+
+	return normalized, nil
+}
+
+func buildSiteDomains(siteID int64, domains []string) []*models.SiteDomain {
+	result := make([]*models.SiteDomain, 0, len(domains))
+	for index, domain := range domains {
+		result = append(result, &models.SiteDomain{
+			SiteID:   siteID,
+			Domain:   domain,
+			Position: index,
+		})
+	}
+	return result
 }

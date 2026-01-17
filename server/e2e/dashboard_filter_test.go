@@ -40,8 +40,8 @@ func TestDashboardFiltering(t *testing.T) {
 	require.NoError(t, err)
 
 	siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
-		Domain: "filter-test.com",
-		Name:   "Filter Test Site",
+		Domains: []string{"filter-test.com"},
+		Name:    "Filter Test Site",
 	})
 	require.NoError(t, err)
 

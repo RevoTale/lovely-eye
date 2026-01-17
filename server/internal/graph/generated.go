@@ -178,7 +178,7 @@ type ComplexityRoot struct {
 
 	Site struct {
 		CreatedAt    func(childComplexity int) int
-		Domain       func(childComplexity int) int
+		Domains      func(childComplexity int) int
 		ID           func(childComplexity int) int
 		Name         func(childComplexity int) int
 		PublicKey    func(childComplexity int) int
@@ -783,12 +783,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Site.CreatedAt(childComplexity), true
-	case "Site.domain":
-		if e.complexity.Site.Domain == nil {
+	case "Site.domains":
+		if e.complexity.Site.Domains == nil {
 			break
 		}
 
-		return e.complexity.Site.Domain(childComplexity), true
+		return e.complexity.Site.Domains(childComplexity), true
 	case "Site.id":
 		if e.complexity.Site.ID == nil {
 			break
@@ -981,7 +981,8 @@ var sources = []*ast.Source{
 
 type Site {
   id: ID!
-  domain: String!
+  """All tracked domains (includes primary)"""
+  domains: [String!]!
   name: String!
   """Used in tracking script"""
   publicKey: String!
@@ -1122,13 +1123,15 @@ input LoginInput {
 }
 
 input CreateSiteInput {
-  domain: String!
+  domains: [String!]!
   name: String!
 }
 
 input UpdateSiteInput {
   name: String!
   trackCountry: Boolean
+  """Full list of tracked domains (includes primary)"""
+  domains: [String!]
 }
 
 input DateRangeInput {
@@ -3125,8 +3128,8 @@ func (ec *executionContext) fieldContext_Mutation_createSite(ctx context.Context
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Site_id(ctx, field)
-			case "domain":
-				return ec.fieldContext_Site_domain(ctx, field)
+			case "domains":
+				return ec.fieldContext_Site_domains(ctx, field)
 			case "name":
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
@@ -3180,8 +3183,8 @@ func (ec *executionContext) fieldContext_Mutation_updateSite(ctx context.Context
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Site_id(ctx, field)
-			case "domain":
-				return ec.fieldContext_Site_domain(ctx, field)
+			case "domains":
+				return ec.fieldContext_Site_domains(ctx, field)
 			case "name":
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
@@ -3276,8 +3279,8 @@ func (ec *executionContext) fieldContext_Mutation_regenerateSiteKey(ctx context.
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Site_id(ctx, field)
-			case "domain":
-				return ec.fieldContext_Site_domain(ctx, field)
+			case "domains":
+				return ec.fieldContext_Site_domains(ctx, field)
 			case "name":
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
@@ -3593,8 +3596,8 @@ func (ec *executionContext) fieldContext_Query_sites(_ context.Context, field gr
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Site_id(ctx, field)
-			case "domain":
-				return ec.fieldContext_Site_domain(ctx, field)
+			case "domains":
+				return ec.fieldContext_Site_domains(ctx, field)
 			case "name":
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
@@ -3637,8 +3640,8 @@ func (ec *executionContext) fieldContext_Query_site(ctx context.Context, field g
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Site_id(ctx, field)
-			case "domain":
-				return ec.fieldContext_Site_domain(ctx, field)
+			case "domains":
+				return ec.fieldContext_Site_domains(ctx, field)
 			case "name":
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
@@ -4177,23 +4180,23 @@ func (ec *executionContext) fieldContext_Site_id(_ context.Context, field graphq
 	return fc, nil
 }
 
-func (ec *executionContext) _Site_domain(ctx context.Context, field graphql.CollectedField, obj *model.Site) (ret graphql.Marshaler) {
+func (ec *executionContext) _Site_domains(ctx context.Context, field graphql.CollectedField, obj *model.Site) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
-		ec.fieldContext_Site_domain,
+		ec.fieldContext_Site_domains,
 		func(ctx context.Context) (any, error) {
-			return obj.Domain, nil
+			return obj.Domains, nil
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalNString2ᚕstringᚄ,
 		true,
 		true,
 	)
 }
 
-func (ec *executionContext) fieldContext_Site_domain(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Site_domains(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Site",
 		Field:      field,
@@ -4522,8 +4525,8 @@ func (ec *executionContext) fieldContext_User_sites(_ context.Context, field gra
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_Site_id(ctx, field)
-			case "domain":
-				return ec.fieldContext_Site_domain(ctx, field)
+			case "domains":
+				return ec.fieldContext_Site_domains(ctx, field)
 			case "name":
 				return ec.fieldContext_Site_name(ctx, field)
 			case "publicKey":
@@ -5992,20 +5995,20 @@ func (ec *executionContext) unmarshalInputCreateSiteInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"domain", "name"}
+	fieldsInOrder := [...]string{"domains", "name"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "domain":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("domain"))
-			data, err := ec.unmarshalNString2string(ctx, v)
+		case "domains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("domains"))
+			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
-			it.Domain = data
+			it.Domains = data
 		case "name":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
 			data, err := ec.unmarshalNString2string(ctx, v)
@@ -6258,7 +6261,7 @@ func (ec *executionContext) unmarshalInputUpdateSiteInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "trackCountry"}
+	fieldsInOrder := [...]string{"name", "trackCountry", "domains"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -6279,6 +6282,13 @@ func (ec *executionContext) unmarshalInputUpdateSiteInput(ctx context.Context, o
 				return it, err
 			}
 			it.TrackCountry = data
+		case "domains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("domains"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Domains = data
 		}
 	}
 
@@ -7489,8 +7499,8 @@ func (ec *executionContext) _Site(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "domain":
-			out.Values[i] = ec._Site_domain(ctx, field, obj)
+		case "domains":
+			out.Values[i] = ec._Site_domains(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -8833,6 +8843,36 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
+	}
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNTime2timeᚐTime(ctx context.Context, v any) (time.Time, error) {

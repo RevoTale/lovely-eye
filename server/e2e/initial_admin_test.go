@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
 // Those tests created by AI because I am tired
 // TestInitialAdminFromConfig tests the INITIAL_ADMIN_USERNAME and INITIAL_ADMIN_PASSWORD
 // configuration feature that allows creating an initial admin user on first startup.
@@ -194,12 +195,12 @@ func TestInitialAdminAuthentication(t *testing.T) {
 
 	t.Run("can create sites", func(t *testing.T) {
 		siteResp, err := operations.CreateSite(ctx, client, operations.CreateSiteInput{
-			Domain: "example.com",
-			Name:   "Example Site",
+			Domains: []string{"example.com"},
+			Name:    "Example Site",
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "example.com", siteResp.CreateSite.Domain)
+		assert.Equal(t, []string{"example.com"}, siteResp.CreateSite.Domains)
 		assert.NotEmpty(t, siteResp.CreateSite.PublicKey)
 	})
 

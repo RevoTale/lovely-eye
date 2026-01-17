@@ -43,7 +43,7 @@ export type CountryStats = {
 };
 
 export type CreateSiteInput = {
-  domain: Scalars['String']['input'];
+  domains: Array<Scalars['String']['input']>;
   name: Scalars['String']['input'];
 };
 
@@ -304,7 +304,8 @@ export type RegisterInput = {
 export type Site = {
   __typename: 'Site';
   createdAt: Scalars['Time']['output'];
-  domain: Scalars['String']['output'];
+  /** All tracked domains (includes primary) */
+  domains: Array<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
   /** Used in tracking script */
@@ -320,6 +321,8 @@ export type TokenPayload = {
 };
 
 export type UpdateSiteInput = {
+  /** Full list of tracked domains (includes primary) */
+  domains?: InputMaybe<Array<Scalars['String']['input']>>;
   name: Scalars['String']['input'];
   trackCountry?: InputMaybe<Scalars['Boolean']['input']>;
 };
@@ -336,19 +339,19 @@ export type User = {
 export type MeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MeQuery = { __typename: 'Query', me: { __typename: 'User', id: string, username: string, role: string, createdAt: string, sites: Array<{ __typename: 'Site', id: string, domain: string, name: string, publicKey: string, createdAt: string }> | null } | null };
+export type MeQuery = { __typename: 'Query', me: { __typename: 'User', id: string, username: string, role: string, createdAt: string, sites: Array<{ __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, createdAt: string }> | null } | null };
 
 export type SitesQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type SitesQuery = { __typename: 'Query', sites: Array<{ __typename: 'Site', id: string, domain: string, name: string, publicKey: string, createdAt: string }> };
+export type SitesQuery = { __typename: 'Query', sites: Array<{ __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, createdAt: string }> };
 
 export type SiteQueryVariables = Exact<{
   id: Scalars['ID']['input'];
 }>;
 
 
-export type SiteQuery = { __typename: 'Query', site: { __typename: 'Site', id: string, domain: string, name: string, publicKey: string, trackCountry: boolean, createdAt: string } | null };
+export type SiteQuery = { __typename: 'Query', site: { __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, trackCountry: boolean, createdAt: string } | null };
 
 export type DashboardQueryVariables = Exact<{
   siteId: Scalars['ID']['input'];
@@ -400,7 +403,7 @@ export type CreateSiteMutationVariables = Exact<{
 }>;
 
 
-export type CreateSiteMutation = { __typename: 'Mutation', createSite: { __typename: 'Site', id: string, domain: string, name: string, publicKey: string, createdAt: string } };
+export type CreateSiteMutation = { __typename: 'Mutation', createSite: { __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, createdAt: string } };
 
 export type UpdateSiteMutationVariables = Exact<{
   id: Scalars['ID']['input'];
@@ -408,7 +411,7 @@ export type UpdateSiteMutationVariables = Exact<{
 }>;
 
 
-export type UpdateSiteMutation = { __typename: 'Mutation', updateSite: { __typename: 'Site', id: string, domain: string, name: string, publicKey: string, trackCountry: boolean, createdAt: string } };
+export type UpdateSiteMutation = { __typename: 'Mutation', updateSite: { __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, trackCountry: boolean, createdAt: string } };
 
 export type EventDefinitionsQueryVariables = Exact<{
   siteId: Scalars['ID']['input'];
@@ -455,7 +458,7 @@ export type RegenerateSiteKeyMutationVariables = Exact<{
 }>;
 
 
-export type RegenerateSiteKeyMutation = { __typename: 'Mutation', regenerateSiteKey: { __typename: 'Site', id: string, domain: string, name: string, publicKey: string, createdAt: string } };
+export type RegenerateSiteKeyMutation = { __typename: 'Mutation', regenerateSiteKey: { __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, createdAt: string } };
 
 
 export const MeDocument = gql`
@@ -467,7 +470,7 @@ export const MeDocument = gql`
     createdAt
     sites {
       id
-      domain
+      domains
       name
       publicKey
       createdAt
@@ -514,7 +517,7 @@ export const SitesDocument = gql`
     query Sites {
   sites {
     id
-    domain
+    domains
     name
     publicKey
     createdAt
@@ -560,7 +563,7 @@ export const SiteDocument = gql`
     query Site($id: ID!) {
   site(id: $id) {
     id
-    domain
+    domains
     name
     publicKey
     trackCountry
@@ -891,7 +894,7 @@ export const CreateSiteDocument = gql`
     mutation CreateSite($input: CreateSiteInput!) {
   createSite(input: $input) {
     id
-    domain
+    domains
     name
     publicKey
     createdAt
@@ -928,7 +931,7 @@ export const UpdateSiteDocument = gql`
     mutation UpdateSite($id: ID!, $input: UpdateSiteInput!) {
   updateSite(id: $id, input: $input) {
     id
-    domain
+    domains
     name
     publicKey
     trackCountry
@@ -1209,7 +1212,7 @@ export const RegenerateSiteKeyDocument = gql`
     mutation RegenerateSiteKey($id: ID!) {
   regenerateSiteKey(id: $id) {
     id
-    domain
+    domains
     name
     publicKey
     createdAt

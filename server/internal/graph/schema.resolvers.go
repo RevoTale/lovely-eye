@@ -104,22 +104,15 @@ func (r *mutationResolver) CreateSite(ctx context.Context, input model.CreateSit
 	}
 
 	site, err := r.SiteService.Create(ctx, services.CreateSiteInput{
-		Domain: input.Domain,
-		Name:   input.Name,
-		UserID: claims.UserID,
+		Domains: input.Domains,
+		Name:    input.Name,
+		UserID:  claims.UserID,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return &model.Site{
-		ID:           strconv.FormatInt(site.ID, 10),
-		Domain:       site.Domain,
-		Name:         site.Name,
-		PublicKey:    site.PublicKey,
-		TrackCountry: site.TrackCountry,
-		CreatedAt:    site.CreatedAt,
-	}, nil
+	return buildGraphQLSite(site), nil
 }
 
 // UpdateSite is the resolver for the updateSite field.
@@ -137,20 +130,14 @@ func (r *mutationResolver) UpdateSite(ctx context.Context, id string, input mode
 	site, err := r.SiteService.Update(ctx, siteID, claims.UserID, services.UpdateSiteInput{
 		Name:         input.Name,
 		TrackCountry: input.TrackCountry,
+		Domains:      input.Domains,
 	})
 	if err != nil {
 		return nil, err
 	}
 	_ = r.AnalyticsService.SyncGeoIPRequirement(ctx)
 
-	return &model.Site{
-		ID:           strconv.FormatInt(site.ID, 10),
-		Domain:       site.Domain,
-		Name:         site.Name,
-		PublicKey:    site.PublicKey,
-		TrackCountry: site.TrackCountry,
-		CreatedAt:    site.CreatedAt,
-	}, nil
+	return buildGraphQLSite(site), nil
 }
 
 // DeleteSite is the resolver for the deleteSite field.
@@ -189,14 +176,7 @@ func (r *mutationResolver) RegenerateSiteKey(ctx context.Context, id string) (*m
 		return nil, err
 	}
 
-	return &model.Site{
-		ID:           strconv.FormatInt(site.ID, 10),
-		Domain:       site.Domain,
-		Name:         site.Name,
-		PublicKey:    site.PublicKey,
-		TrackCountry: site.TrackCountry,
-		CreatedAt:    site.CreatedAt,
-	}, nil
+	return buildGraphQLSite(site), nil
 }
 
 // RefreshGeoIPDatabase is the resolver for the refreshGeoIPDatabase field.
@@ -307,14 +287,7 @@ func (r *queryResolver) Sites(ctx context.Context) ([]*model.Site, error) {
 
 	var result []*model.Site
 	for _, site := range sites {
-		result = append(result, &model.Site{
-			ID:           strconv.FormatInt(site.ID, 10),
-			Domain:       site.Domain,
-			Name:         site.Name,
-			PublicKey:    site.PublicKey,
-			TrackCountry: site.TrackCountry,
-			CreatedAt:    site.CreatedAt,
-		})
+		result = append(result, buildGraphQLSite(site))
 	}
 
 	return result, nil
@@ -337,14 +310,7 @@ func (r *queryResolver) Site(ctx context.Context, id string) (*model.Site, error
 		return nil, err
 	}
 
-	return &model.Site{
-		ID:           strconv.FormatInt(site.ID, 10),
-		Domain:       site.Domain,
-		Name:         site.Name,
-		PublicKey:    site.PublicKey,
-		TrackCountry: site.TrackCountry,
-		CreatedAt:    site.CreatedAt,
-	}, nil
+	return buildGraphQLSite(site), nil
 }
 
 // Dashboard is the resolver for the dashboard field.
