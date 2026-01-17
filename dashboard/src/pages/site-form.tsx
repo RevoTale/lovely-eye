@@ -288,23 +288,6 @@ export function SiteFormPage(): React.JSX.Element {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Site Name</Label>
-              <Input
-                id="name"
-                placeholder="My Awesome Website"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                }}
-                disabled={!isNew}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                A friendly name to identify your site
-              </p>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="domain">Domain</Label>
               <Input
                 id="domain"
@@ -319,12 +302,32 @@ export function SiteFormPage(): React.JSX.Element {
                     .toLowerCase()
                     .trim();
                   setDomain(truncated);
+                  if (isNew && (name.trim() === '' || name.trim() === domain)) {
+                    setName(truncated);
+                  }
                 }}
                 disabled={!isNew}
                 required
               />
               <p className="text-xs text-muted-foreground">
                 Your website domain (without https://)
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="name">Site Name</Label>
+              <Input
+                id="name"
+                placeholder="My Awesome Website"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                }}
+                disabled={!isNew}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                A friendly name to identify your site
               </p>
             </div>
 
