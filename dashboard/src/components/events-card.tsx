@@ -34,19 +34,19 @@ export function EventsCard({
             {events.map((event) => (
               <div key={event.id} className="border rounded-md p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium">{event.name}</p>
-                    <p className="text-xs text-muted-foreground">{event.path || '/'}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{event.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{event.path || '/'}</p>
                   </div>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xs text-muted-foreground shrink-0">
                     {new Date(event.createdAt).toLocaleString()}
                   </span>
                 </div>
                 {event.properties.length > 0 ? (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {event.properties.map((property) => (
-                      <Badge key={`${event.id}-${property.key}`} variant="outline">
-                        {property.key}: {property.value}
+                      <Badge key={`${event.id}-${property.key}`} variant="outline" className="max-w-full">
+                        <span className="break-all">{property.key}: {property.value}</span>
                       </Badge>
                     ))}
                   </div>

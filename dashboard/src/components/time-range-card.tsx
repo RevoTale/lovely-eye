@@ -79,7 +79,7 @@ export function TimeRangeCard({
           ) : null}
         </div>
         <div className={`overflow-hidden transition-all duration-200 ${isCustom ? 'max-h-[420px] opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="mt-4 space-y-4 rounded-lg border bg-muted/30 p-4">
+          <div className="mt-4 max-w-3xl space-y-4 rounded-lg border bg-muted/30 p-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-3">
                 <Label htmlFor="date-from" className="px-1">

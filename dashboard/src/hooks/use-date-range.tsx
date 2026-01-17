@@ -100,21 +100,29 @@ export function useDateRange(): DateRangeState {
 
   const setPreset = (value: DatePreset): void => {
     if (value === 'custom') {
-      const candidate = buildDateRange(fromDate, toDate, fromTime, toTime);
-      if (!candidate) {
-        return;
-      }
-      setState((prev) => ({ ...prev, preset: 'custom' }));
+      const fallbackDates = presetToDates(defaultPreset, new Date());
+      const nextFromDate = isValidDateInput(fromDate) ? fromDate : fallbackDates.fromDate;
+      const nextToDate = isValidDateInput(toDate) ? toDate : fallbackDates.toDate;
+      const nextFromTime = isValidTimeInput(fromTime) ? fromTime : '00:00';
+      const nextToTime = isValidTimeInput(toTime) ? toTime : '23:59';
+      setState((prev) => ({
+        ...prev,
+        preset: 'custom',
+        fromDate: nextFromDate,
+        toDate: nextToDate,
+        fromTime: nextFromTime,
+        toTime: nextToTime,
+      }));
       void navigate({
         to: '/sites/$siteId',
         params: { siteId },
         search: (prev) => ({
           ...prev,
           preset: 'custom',
-          from: fromDate,
-          to: toDate,
-          fromTime,
-          toTime,
+          from: nextFromDate,
+          to: nextToDate,
+          fromTime: nextFromTime,
+          toTime: nextToTime,
         }),
       });
       return;

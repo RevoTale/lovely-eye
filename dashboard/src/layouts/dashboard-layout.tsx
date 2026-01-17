@@ -33,26 +33,25 @@ export function DashboardLayout(): React.JSX.Element {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-        <div className="container flex h-16 items-center">
-          <Link to="/" className="flex items-center gap-2 mr-8">
+        <div className="container flex items-center gap-2 py-1.5 sm:gap-2 sm:py-2 sm:h-16">
+          <Link to="/" className="flex items-center gap-1.5 mr-0 sm:gap-2 sm:mr-8">
             <Logo size={32} />
-            <span className="font-bold text-lg">Lovely Eye</span>
+            <span className="font-bold text-lg hidden sm:inline">Lovely Eye</span>
           </Link>
 
-          <nav className="flex items-center gap-6 flex-1">
-            <Link
-              to="/"
-              className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              <span className='hidden sm:inline-block'>Sites</span>
-            </Link>
-          </nav>
-
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 ml-auto sm:gap-2">
             <ThemeToggle />
+            <nav className="flex items-center gap-2 sm:gap-3">
+              <Link
+                to="/"
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="hidden xs:inline-block">Sites</span>
+              </Link>
+            </nav>
 
-            <Separator orientation="vertical" className="h-6 mx-2" />
+            <Separator orientation="vertical" className="h-5 mx-1.5 sm:h-6 sm:mx-2" />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

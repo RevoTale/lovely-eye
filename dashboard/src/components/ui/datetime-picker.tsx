@@ -644,17 +644,21 @@ const DateTimePicker = React.forwardRef<
           >
             <CalendarIcon className="mr-2 h-4 w-4" />
             {value ? (
-              format(
-                value,
-                hourCycle === 24
-                  ? initHourFormat.hour24
-                  : initHourFormat.hour12,
-                {
-                  locale: loc,
-                },
-              )
+              <span className="scroll-fade-right block flex-1 w-0 whitespace-nowrap overflow-x-auto">
+                {format(
+                  value,
+                  hourCycle === 24
+                    ? initHourFormat.hour24
+                    : initHourFormat.hour12,
+                  {
+                    locale: loc,
+                  },
+                )}
+              </span>
             ) : (
-              <span>{placeholder}</span>
+              <span className="scroll-fade-right block flex-1 w-0 whitespace-nowrap overflow-x-auto">
+                {placeholder}
+              </span>
             )}
           </Button>
         </PopoverTrigger>
