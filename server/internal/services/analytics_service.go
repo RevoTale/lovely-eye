@@ -80,7 +80,7 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 	if err != nil {
 		return err
 	}
-	if !isAllowedDomain(input.Origin, input.Referer, site.Domains) {
+	if !IsAllowedDomain(input.Origin, input.Referer, site.Domains) {
 		return nil
 	}
 
@@ -186,7 +186,7 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 	if err != nil {
 		return err
 	}
-	if !isAllowedDomain(input.Origin, input.Referer, site.Domains) {
+	if !IsAllowedDomain(input.Origin, input.Referer, site.Domains) {
 		return nil
 	}
 
@@ -539,7 +539,7 @@ func categorizeScreenSize(width int) string {
 	}
 }
 
-func isAllowedDomain(origin, referer string, domains []*models.SiteDomain) bool {
+func IsAllowedDomain(origin, referer string, domains []*models.SiteDomain) bool {
 	host := hostFromHeader(origin)
 	if host == "" {
 		host = hostFromHeader(referer)

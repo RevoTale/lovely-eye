@@ -2,10 +2,20 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 )
+
+func isAnalyticsPath(path string) bool {
+	return strings.HasSuffix(path, "/api/collect") || strings.HasSuffix(path, "/api/event")
+}
 
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isAnalyticsPath(r.URL.Path) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		origin := r.Header.Get("Origin")
 		if origin != "" {
 			// Allow requests from the same origin or any origin in development

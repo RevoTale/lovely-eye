@@ -46,7 +46,7 @@
   }
 
   function send(endpoint, data) {
-    var url = apiUrl + endpoint;
+    var url = apiUrl + endpoint + '?site_key=' + encodeURIComponent(siteKey);
 
     // Use sendBeacon if available for reliability
     if (navigator.sendBeacon) {

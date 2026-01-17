@@ -41,6 +41,11 @@ type eventRequest struct {
 
 // Collect handles page view tracking (public endpoint)
 func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		h.handleAnalyticsPreflight(w, r)
+		return
+	}
+
 	var req collectRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
@@ -49,6 +54,11 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 
 	if req.SiteKey == "" || req.Path == "" {
 		respondError(w, http.StatusBadRequest, "site_key and path are required")
+		return
+	}
+
+	if !h.applyAnalyticsCORS(w, r, req.SiteKey) {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -78,6 +88,11 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 
 // Event handles custom event tracking (public endpoint)
 func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodOptions {
+		h.handleAnalyticsPreflight(w, r)
+		return
+	}
+
 	var req eventRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respondError(w, http.StatusBadRequest, "Invalid request body")
@@ -86,6 +101,11 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 
 	if req.SiteKey == "" || req.Name == "" {
 		respondError(w, http.StatusBadRequest, "site_key and name are required")
+		return
+	}
+
+	if !h.applyAnalyticsCORS(w, r, req.SiteKey) {
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -115,6 +135,48 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AnalyticsHandler) handleAnalyticsPreflight(w http.ResponseWriter, r *http.Request) {
+	siteKey := r.URL.Query().Get("site_key")
+	if siteKey == "" {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	if !h.applyAnalyticsCORS(w, r, siteKey) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Max-Age", "3600")
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AnalyticsHandler) applyAnalyticsCORS(w http.ResponseWriter, r *http.Request, siteKey string) bool {
+	site, err := h.siteService.GetByPublicKey(r.Context(), siteKey)
+	if err != nil {
+		return false
+	}
+
+	origin := r.Header.Get("Origin")
+	referer := r.Header.Get("Referer")
+	if !services.IsAllowedDomain(origin, referer, site.Domains) {
+		return false
+	}
+
+	if origin == "" {
+		return true
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Vary", "Origin")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Max-Age", "3600")
+	return true
 }
 
 func respondJSON(w http.ResponseWriter, status int, data interface{}) {
