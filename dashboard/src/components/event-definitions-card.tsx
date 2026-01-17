@@ -34,6 +34,7 @@ export function EventDefinitionsCard({
   const [draftFields, setDraftFields] = useState<EventDefinitionFieldInput[]>([]);
   const [originalName, setOriginalName] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [showSnippet, setShowSnippet] = useState(false);
   const [error, setError] = useState('');
 
   const sortedDefinitions = useMemo(
@@ -46,6 +47,7 @@ export function EventDefinitionsCard({
     setDraftFields([]);
     setOriginalName(null);
     setEditorOpen(false);
+    setShowSnippet(false);
     setError('');
   };
 
@@ -61,8 +63,34 @@ export function EventDefinitionsCard({
     );
     setOriginalName(definition.name);
     setEditorOpen(true);
+    setShowSnippet(false);
     setError('');
   };
+
+  const eventSnippet = useMemo(() => {
+    const eventName = draftName.trim() || 'event_name';
+    const fieldEntries = draftFields.map((field, index) => {
+      const key = field.key.trim() || `field_${index + 1}`;
+      switch (field.type) {
+        case 'NUMBER':
+          return `${key}: 42`;
+        case 'BOOLEAN':
+          return `${key}: true`;
+        default:
+          if (field.maxLength && field.maxLength > 0) {
+            if (field.maxLength <= 20) {
+              return `${key}: '${'a'.repeat(field.maxLength)}'`;
+            }
+            return `${key}: 'a'.repeat(${field.maxLength})`;
+          }
+          return `${key}: 'example'`;
+      }
+    });
+    const properties = fieldEntries.length > 0
+      ? `{\n  ${fieldEntries.join(',\n  ')}\n}`
+      : '{}';
+    return `window.lovelyEye?.track('${eventName}', ${properties});`;
+  }, [draftFields, draftName]);
 
   const handleAddField = (): void => {
     setDraftFields((prev) => [
@@ -275,6 +303,26 @@ export function EventDefinitionsCard({
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setShowSnippet((prev) => !prev);
+                }}
+              >
+                {showSnippet ? 'Hide snippet' : 'Show snippet'}
+              </Button>
+              <div
+                className={`overflow-hidden rounded-md border bg-background transition-[max-height,opacity] duration-300 ease-out ${showSnippet ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'}`}
+              >
+                <pre className="p-3 text-xs">
+                  <code>{eventSnippet}</code>
+                </pre>
+              </div>
             </div>
 
             <div className="flex gap-3">
