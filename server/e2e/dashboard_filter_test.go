@@ -84,6 +84,7 @@ func TestDashboardFiltering(t *testing.T) {
 
 		req, _ := http.NewRequest("POST", ts.httpServer.URL+"/api/collect", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Origin", "https://filter-test.com")
 		// Append index to user agent to create different visitor IDs
 		// This simulates different visitors to avoid deduplication
 		req.Header.Set("User-Agent", data.userAgent+" TestVisitor/"+string(rune('A'+i)))

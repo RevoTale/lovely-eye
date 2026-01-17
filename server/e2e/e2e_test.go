@@ -72,6 +72,18 @@ func newTestHTTPServer(handler http.Handler) *httptest.Server {
 	return httptest.NewServer(handler)
 }
 
+func postJSONWithOrigin(client *http.Client, url string, body []byte, origin string) (*http.Response, error) {
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if origin != "" {
+		req.Header.Set("Origin", origin)
+	}
+	return client.Do(req)
+}
+
 func (ts *testServer) graphqlClient() graphql.Client {
 	return graphql.NewClient(ts.httpServer.URL+"/graphql", ts.httpServer.Client())
 }
@@ -234,10 +246,11 @@ func TestStatsCollection(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/collect",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://example.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -253,10 +266,11 @@ func TestStatsCollection(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://example.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -426,10 +440,11 @@ func TestEventPropertiesValidation(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://events-test.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -445,10 +460,11 @@ func TestEventPropertiesValidation(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://events-test.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -464,10 +480,11 @@ func TestEventPropertiesValidation(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://events-test.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -483,10 +500,11 @@ func TestEventPropertiesValidation(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://events-test.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -502,10 +520,11 @@ func TestEventPropertiesValidation(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://events-test.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -521,10 +540,11 @@ func TestEventPropertiesValidation(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://events-test.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -540,10 +560,11 @@ func TestEventPropertiesValidation(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://events-test.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -559,10 +580,11 @@ func TestEventPropertiesValidation(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://events-test.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -578,10 +600,11 @@ func TestEventPropertiesValidation(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://events-test.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -659,10 +682,11 @@ func TestEventPropertiesStored(t *testing.T) {
 		}
 		body, _ := json.Marshal(payload)
 
-		resp, err := ts.httpServer.Client().Post(
+		resp, err := postJSONWithOrigin(
+			ts.httpServer.Client(),
 			ts.httpServer.URL+"/api/event",
-			"application/json",
-			bytes.NewReader(body),
+			body,
+			"https://events-storage-test.com",
 		)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -716,10 +740,11 @@ func TestEventPropertiesStored(t *testing.T) {
 			}
 			body, _ := json.Marshal(payload)
 
-			resp, err := ts.httpServer.Client().Post(
+			resp, err := postJSONWithOrigin(
+				ts.httpServer.Client(),
 				ts.httpServer.URL+"/api/event",
-				"application/json",
-				bytes.NewReader(body),
+				body,
+				"https://events-storage-test.com",
 			)
 			require.NoError(t, err)
 			resp.Body.Close()
