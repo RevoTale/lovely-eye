@@ -8,6 +8,9 @@ import { ErrorLink } from '@apollo/client/link/error';
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { getGraphQLUrl } from '@/config';
 
+const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
+
 const httpLink = new HttpLink({
   uri: getGraphQLUrl(),
   credentials: 'include',
@@ -19,7 +22,7 @@ export const createApolloClient = (onAuthError?: AuthErrorHandler): ApolloClient
   const errorLink = new ErrorLink(({ error }) => {
     const hasAuthNetworkError =
       ServerError.is(error) &&
-      (error.statusCode === 401 || error.statusCode === 403);
+      (error.statusCode === HTTP_UNAUTHORIZED || error.statusCode === HTTP_FORBIDDEN);
     const hasAuthGraphQLError =
       CombinedGraphQLErrors.is(error) &&
       error.errors.some((graphQLError) => {

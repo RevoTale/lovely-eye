@@ -14,6 +14,9 @@ interface TimeRangeCardProps {
   onApplyRange: (range: { fromDate: string; toDate: string; fromTime: string; toTime: string }) => boolean;
 }
 
+const EMPTY_STRING = '';
+const PAD_LENGTH = 2;
+
 const parseDraft = (dateValue: string, timeValue: string): Date | undefined => {
   if (!isValidDateInput(dateValue) || !isValidTimeInput(timeValue)) return undefined;
   const candidate = new Date(`${dateValue}T${timeValue}:00`);
@@ -49,16 +52,20 @@ export function TimeRangeCard({
     setSubmitAttempted(false);
   }
 
-  const applied = propFromDate?.toDateString() === draftFromDate?.toDateString() && propToDate?.toDateString() === draftToDate?.toDateString();
-  const showRange = Boolean(fromDate && toDate);
-  const draftHasValidInputs = Boolean(draftFromDate && draftToDate);
+  const applied =
+    propFromDate?.toDateString() === draftFromDate?.toDateString() &&
+    propToDate?.toDateString() === draftToDate?.toDateString();
+  const showRange = fromDate !== EMPTY_STRING && toDate !== EMPTY_STRING;
+  const draftHasValidInputs = draftFromDate !== undefined && draftToDate !== undefined;
   const draftRangeValid = useMemo(() => {
-    if (!draftHasValidInputs) return false;
-    const from = draftFromDate ?? new Date();
-    const to = draftToDate ?? new Date();
-    return from <= to;
-  }, [draftFromDate, draftHasValidInputs, draftToDate]);
+    if (draftFromDate === undefined || draftToDate === undefined) return false;
+    return draftFromDate.getTime() <= draftToDate.getTime();
+  }, [draftFromDate, draftToDate]);
   const canApply = draftHasValidInputs && draftRangeValid;
+  const getDraftDates = (): { from: Date; to: Date } | null => {
+    if (draftFromDate === undefined || draftToDate === undefined) return null;
+    return { from: draftFromDate, to: draftToDate };
+  };
 
   return (
     <Card>
@@ -97,7 +104,7 @@ export function TimeRangeCard({
                   From date
                 </Label>
                 <DateTimePicker
-                  {...(draftFromDate ? { value: draftFromDate } : {})}
+                  {...(draftFromDate === undefined ? {} : { value: draftFromDate })}
                   onChange={setDraftFromDate}
                   className="w-full"
                   granularity="minute"
@@ -108,7 +115,7 @@ export function TimeRangeCard({
                   To date
                 </Label>
                 <DateTimePicker
-                  {...(draftToDate ? { value: draftToDate } : {})}
+                  {...(draftToDate === undefined ? {} : { value: draftToDate })}
                   onChange={setDraftToDate}
                   className="w-full"
                   granularity="minute"
@@ -124,12 +131,14 @@ export function TimeRangeCard({
                 onClick={() => {
                   setSubmitAttempted(true);
                   if (!canApply) return;
-                  if (!draftFromDate || !draftToDate) return;
+                  const draftDates = getDraftDates();
+                  if (draftDates === null) return;
+                  const { from: fromDateValue, to: toDateValue } = draftDates;
                   const didApply = onApplyRange({
-                    fromDate: formatDateInput(draftFromDate),
-                    toDate: formatDateInput(draftToDate),
-                    fromTime: `${String(draftFromDate.getHours()).padStart(2, '0')}:${String(draftFromDate.getMinutes()).padStart(2, '0')}`,
-                    toTime: `${String(draftToDate.getHours()).padStart(2, '0')}:${String(draftToDate.getMinutes()).padStart(2, '0')}`,
+                    fromDate: formatDateInput(fromDateValue),
+                    toDate: formatDateInput(toDateValue),
+                    fromTime: `${String(fromDateValue.getHours()).padStart(PAD_LENGTH, '0')}:${String(fromDateValue.getMinutes()).padStart(PAD_LENGTH, '0')}`,
+                    toTime: `${String(toDateValue.getHours()).padStart(PAD_LENGTH, '0')}:${String(toDateValue.getMinutes()).padStart(PAD_LENGTH, '0')}`,
                   });
                   if (didApply) {
                     setSubmitAttempted(false);

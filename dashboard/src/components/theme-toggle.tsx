@@ -15,13 +15,15 @@ export function ThemeToggle(): React.JSX.Element {
   });
 
   React.useEffect(() => {
-    const root = window.document.documentElement;
+    const { document } = window;
+    const { documentElement } = document;
+    const root = documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
+  const toggleTheme = (): void => {
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 

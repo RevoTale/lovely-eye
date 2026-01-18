@@ -12,7 +12,7 @@ export function LoginPage(): React.JSX.Element {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -28,6 +28,8 @@ export function LoginPage(): React.JSX.Element {
         setIsLoading(false);
       });
   };
+
+  const hasError = error !== null && error !== '';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
@@ -46,7 +48,7 @@ export function LoginPage(): React.JSX.Element {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error ? (
+            {hasError ? (
               <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
                 {error}
               </div>

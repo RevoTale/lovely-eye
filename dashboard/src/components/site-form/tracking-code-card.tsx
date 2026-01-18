@@ -6,15 +6,23 @@ interface TrackingCodeCardProps {
   publicKey: string;
   trackingScript: string;
   regenerating: boolean;
-  onRegenerateKey: () => void;
+  confirmingRegenerate: boolean;
+  onRegenerateRequest: () => void;
+  onConfirmRegenerate: () => void;
+  onCancelRegenerate: () => void;
   onViewAnalytics: () => void;
 }
+
+const COPY_RESET_DELAY_MS = 2000;
 
 export function TrackingCodeCard({
   publicKey,
   trackingScript,
   regenerating,
-  onRegenerateKey,
+  confirmingRegenerate,
+  onRegenerateRequest,
+  onConfirmRegenerate,
+  onCancelRegenerate,
   onViewAnalytics,
 }: TrackingCodeCardProps): React.JSX.Element {
   const [copied, setCopied] = React.useState(false);
@@ -24,7 +32,7 @@ export function TrackingCodeCard({
     setCopied(true);
     setTimeout(() => {
       setCopied(false);
-    }, 2000);
+    }, COPY_RESET_DELAY_MS);
   };
 
   return (
@@ -58,15 +66,39 @@ export function TrackingCodeCard({
                 <Copy className="h-4 w-4" />
               )}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onRegenerateKey}
-              disabled={regenerating}
-            >
-              <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
-            </Button>
+            {confirmingRegenerate ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onConfirmRegenerate}
+                  disabled={regenerating}
+                >
+                  <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
+                  Confirm
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onCancelRegenerate}
+                  disabled={regenerating}
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onRegenerateRequest}
+                disabled={regenerating}
+              >
+                <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
             Used by the tracker to associate events with this site.

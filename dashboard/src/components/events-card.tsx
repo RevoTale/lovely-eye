@@ -11,6 +11,10 @@ interface EventsCardProps {
   onPageChange: (page: number) => void;
 }
 
+const EMPTY_COUNT = 0;
+const FALLBACK_PATH = '/';
+const EMPTY_STRING = '';
+
 export function EventsCard({
   events,
   total,
@@ -27,7 +31,7 @@ export function EventsCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {events.length === 0 ? (
+        {events.length === EMPTY_COUNT ? (
           <p className="text-sm text-muted-foreground text-center py-6">No events recorded yet.</p>
         ) : (
           <div className="space-y-4">
@@ -36,13 +40,15 @@ export function EventsCard({
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{event.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{event.path || '/'}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {event.path === EMPTY_STRING ? FALLBACK_PATH : event.path}
+                    </p>
                   </div>
                   <span className="text-xs text-muted-foreground shrink-0">
                     {new Date(event.createdAt).toLocaleString()}
                   </span>
                 </div>
-                {event.properties.length > 0 ? (
+                {event.properties.length > EMPTY_COUNT ? (
                   <div className="flex flex-wrap gap-2 mt-2">
                     {event.properties.map((property) => (
                       <Badge key={`${event.id}-${property.key}`} variant="outline" className="max-w-full">

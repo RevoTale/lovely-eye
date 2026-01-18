@@ -34,7 +34,7 @@ export function EventsSection({
     );
   }
 
-  if (!eventsResult) {
+  if (eventsResult === undefined) {
     return null;
   }
 

@@ -51,9 +51,9 @@ export function AuthProvider({ children, authErrorHandlerRef }: AuthProviderProp
   }, [client, refetch]);
 
   useEffect(() => {
-    if (authErrorHandlerRef && 'current' in authErrorHandlerRef) {
-      const ref = authErrorHandlerRef;
-      ref.current = handleAuthError;
+    if (authErrorHandlerRef !== undefined) {
+      const nextRef = authErrorHandlerRef;
+      nextRef.current = handleAuthError;
     }
   }, [authErrorHandlerRef, handleAuthError]);
 
@@ -90,7 +90,7 @@ export function AuthProvider({ children, authErrorHandlerRef }: AuthProviderProp
 
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === null) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

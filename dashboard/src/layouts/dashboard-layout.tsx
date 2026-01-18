@@ -18,11 +18,15 @@ import { LogOut, LayoutDashboard } from 'lucide-react';
 import { Logo } from '@/components/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 
+const LOGO_SIZE = 32;
+const USERNAME_INITIALS_START = 0;
+const USERNAME_INITIALS_END = 2;
+
 export function DashboardLayout(): React.JSX.Element {
   const { user, logout, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     void logout().then(() => {
       void navigate({ to: '/login' });
     });
@@ -34,14 +38,15 @@ export function DashboardLayout(): React.JSX.Element {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  const initials = user?.username.slice(0, 2).toUpperCase() ?? 'U';
+  const initials =
+    user?.username.slice(USERNAME_INITIALS_START, USERNAME_INITIALS_END).toUpperCase() ?? 'U';
 
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
         <div className="container flex items-center gap-2 py-1.5 sm:gap-2 sm:py-2 sm:h-16">
           <Link to="/" className="flex items-center gap-1.5 mr-0 sm:gap-2 sm:mr-8">
-            <Logo size={32} />
+            <Logo size={LOGO_SIZE} />
             <span className="font-bold text-lg hidden sm:inline">Lovely Eye</span>
           </Link>
 

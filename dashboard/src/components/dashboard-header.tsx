@@ -11,8 +11,10 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ site, siteId, realtime }: DashboardHeaderProps): React.JSX.Element {
-  const domainList = site.domains.length ? site.domains : [''];
+  const EMPTY_COUNT = 0;
+  const domainList = site.domains.length > EMPTY_COUNT ? site.domains : [''];
   const domainLabel = domainList.join(' · ');
+  const hasRealtime = realtime !== undefined;
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -27,7 +29,7 @@ export function DashboardHeader({ site, siteId, realtime }: DashboardHeaderProps
             <span>Settings</span>
           </Badge>
         </Link>
-        {realtime ? (
+        {hasRealtime ? (
           <Badge variant="outline" className="flex items-center gap-2 px-3 py-2">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>

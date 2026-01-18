@@ -31,11 +31,24 @@ export function TrafficBlockingCard({
   onUpdateBlockedIPs,
   onUpdateBlockedCountries,
 }: TrafficBlockingCardProps): React.JSX.Element {
-  const maxIPs = 500;
-  const maxCountries = 250;
-  const [blockedIPs, setBlockedIPs] = React.useState<BlockedIPEntry[]>(() => {
-    return initialBlockedIPs.map((ip, index) => ({ id: String(index + 1), value: ip }));
-  });
+  const EMPTY_COUNT = 0;
+  const EMPTY_STRING = '';
+  const FIRST_INDEX = 0;
+  const ID_OFFSET = 1;
+  const IPV4_PARTS_COUNT = 4;
+  const IPV4_MAX_VALUE = 255;
+  const MAX_COUNTRY_MATCHES = 8;
+  const MAX_COUNTRIES = 250;
+  const MAX_IPS = 500;
+  const SEARCH_MIN_LENGTH = 2;
+  const SEARCH_SINGLE_MATCH_COUNT = 1;
+
+  const buildBlockedIPEntries = (values: string[]): BlockedIPEntry[] =>
+    values.map((ip, index) => ({ id: String(index + ID_OFFSET), value: ip }));
+
+  const [blockedIPs, setBlockedIPs] = React.useState<BlockedIPEntry[]>(() =>
+    buildBlockedIPEntries(initialBlockedIPs)
+  );
   const [blockedCountries, setBlockedCountries] = React.useState<string[]>(initialBlockedCountries);
   const [blockedCountryNames, setBlockedCountryNames] = React.useState<Record<string, string>>({});
   const [countrySearch, setCountrySearch] = React.useState('');
@@ -45,7 +58,7 @@ export function TrafficBlockingCard({
   const [newIPError, setNewIPError] = React.useState('');
 
   React.useEffect(() => {
-    setBlockedIPs(initialBlockedIPs.map((ip, index) => ({ id: String(index + 1), value: ip })));
+    setBlockedIPs(buildBlockedIPEntries(initialBlockedIPs));
     setBlockedCountries(initialBlockedCountries);
     setCountrySearch('');
     setIpActionError('');
@@ -55,42 +68,46 @@ export function TrafficBlockingCard({
   }, [initialBlockedCountries, initialBlockedIPs, siteId]);
 
   const trimmedCountrySearch = countrySearch.trim();
-  const shouldSearchCountries = geoIPReady && trimmedCountrySearch.length >= 2;
+  const shouldSearchCountries = geoIPReady && trimmedCountrySearch.length >= SEARCH_MIN_LENGTH;
   const { data: geoIPCountriesData, loading: geoIPCountriesLoading } = useQuery(GeoIpCountriesDocument, {
     variables: { search: trimmedCountrySearch },
     skip: !shouldSearchCountries,
   });
 
   const geoIPCountries = React.useMemo(() => geoIPCountriesData?.geoIPCountries ?? [], [geoIPCountriesData]);
-  const blockedIPCount = React.useMemo(() => getNormalizedBlockedIPs(blockedIPs.map((entry) => entry.value)).length, [blockedIPs]);
-  const normalizedBlockedCountries = React.useMemo(() => normalizeCountryCodesPreserveOrder(blockedCountries), [blockedCountries]);
-  const blockedCountryCount = normalizedBlockedCountries.length;
-  const countryNameLookup = React.useMemo(() => {
-    return new Map(geoIPCountries.map((country) => [country.code, country.name] as const));
-  }, [geoIPCountries]);
+  const blockedIPCount = React.useMemo(
+    () => getNormalizedBlockedIPs(blockedIPs.map(({ value }) => value)).length,
+    [blockedIPs]
+  );
+  const normalizedBlockedCountries = React.useMemo(
+    () => normalizeCountryCodesPreserveOrder(blockedCountries),
+    [blockedCountries]
+  );
+  const { length: blockedCountryCount } = normalizedBlockedCountries;
+  const countryNameLookup = React.useMemo(
+    () => new Map(geoIPCountries.map((country) => [country.code, country.name] as const)),
+    [geoIPCountries]
+  );
   const isUpdating = savingBlockedIPs || savingBlockedCountries;
 
   const availableCountries = React.useMemo(() => {
     const selected = new Set(normalizedBlockedCountries);
     return geoIPCountries.filter((country) => !selected.has(country.code));
   }, [geoIPCountries, normalizedBlockedCountries]);
-  const matchingCountries = React.useMemo(() => {
-    if (!shouldSearchCountries) {
-      return [];
-    }
-    return availableCountries;
-  }, [availableCountries, shouldSearchCountries]);
+  const matchingCountries = React.useMemo(
+    () => (shouldSearchCountries ? availableCountries : []),
+    [availableCountries, shouldSearchCountries]
+  );
 
   React.useEffect(() => {
-    if (geoIPCountries.length === 0) {
+    if (geoIPCountries.length === EMPTY_COUNT) {
       return;
     }
     setBlockedCountryNames((prev) => {
       const next = { ...prev };
       for (const country of geoIPCountries) {
-        const code = country.code;
-        const name = country.name;
-        if (code && name && next[code] === undefined) {
+        const { code, name } = country;
+        if (code !== EMPTY_STRING && name !== EMPTY_STRING && next[code] === undefined) {
           next[code] = name;
         }
       }
@@ -100,7 +117,7 @@ export function TrafficBlockingCard({
 
   const buildNextBlockedCountries = (code: string): string[] => {
     const trimmed = code.trim();
-    if (!trimmed) return blockedCountries;
+    if (trimmed === EMPTY_STRING) return blockedCountries;
     const normalized = trimmed.toUpperCase();
     const existing = new Set(blockedCountries.map((value) => value.trim().toUpperCase()));
     if (existing.has(normalized)) {
@@ -115,7 +132,7 @@ export function TrafficBlockingCard({
     if (next.length === blockedCountries.length) {
       return;
     }
-    if (next.length > maxCountries) {
+    if (next.length > MAX_COUNTRIES) {
       setCountryActionError('Blocked country list can include up to 250 entries');
       return;
     }
@@ -143,23 +160,23 @@ export function TrafficBlockingCard({
   };
 
   const isValidIP = (value: string): boolean => {
-    if (!value) return false;
+    if (value === EMPTY_STRING) return false;
     if (value.includes(':')) {
-      return /^([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}$/i.test(value);
+      return /^(?:[0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}$/iv.test(value);
     }
     const parts = value.split('.');
-    if (parts.length !== 4) return false;
+    if (parts.length !== IPV4_PARTS_COUNT) return false;
     return parts.every((part) => {
-      if (!/^\d{1,3}$/.test(part)) return false;
+      if (!/^\d{1,3}$/v.test(part)) return false;
       const num = Number(part);
-      return num >= 0 && num <= 255;
+      return num >= EMPTY_COUNT && num <= IPV4_MAX_VALUE;
     });
   };
 
   const handleAddIP = async (): Promise<void> => {
     if (savingBlockedIPs) return;
     const trimmed = normalizeIPInput(newIPValue);
-    if (!trimmed) {
+    if (trimmed === EMPTY_STRING) {
       setNewIPError('Enter a valid IP before saving.');
       return;
     }
@@ -167,13 +184,13 @@ export function TrafficBlockingCard({
       setNewIPError('Enter a valid IP address.');
       return;
     }
-    const existing = getNormalizedBlockedIPs(blockedIPs.map((item) => item.value));
+    const existing = getNormalizedBlockedIPs(blockedIPs.map(({ value }) => value));
     if (existing.includes(trimmed)) {
       setNewIPError('That IP is already blocked.');
       return;
     }
     const next = [...existing, trimmed];
-    if (next.length > maxIPs) {
+    if (next.length > MAX_IPS) {
       setNewIPError('Blocked IP list can include up to 500 entries');
       return;
     }
@@ -190,14 +207,14 @@ export function TrafficBlockingCard({
   const handleRemoveBlockedIP = async (value: string): Promise<void> => {
     if (savingBlockedIPs) return;
     const normalized = value.trim();
-    if (!normalized) return;
-    const next = blockedIPs.filter((item) => item.value.trim() !== normalized);
+    if (normalized === EMPTY_STRING) return;
+    const next = blockedIPs.filter(({ value: blockedValue }) => blockedValue.trim() !== normalized);
     if (next.length === blockedIPs.length) {
       return;
     }
     setIpActionError('');
     try {
-      await onUpdateBlockedIPs(getNormalizedBlockedIPs(next.map((item) => item.value)));
+      await onUpdateBlockedIPs(getNormalizedBlockedIPs(next.map(({ value: blockedValue }) => blockedValue)));
     } catch (err) {
       setIpActionError(err instanceof Error ? err.message : 'Failed to remove blocked IP');
     }
@@ -210,10 +227,13 @@ export function TrafficBlockingCard({
     const exactMatch = matchingCountries.find(
       (country) => country.code.toLowerCase() === query || country.name.toLowerCase() === query,
     );
-    const singleMatch = matchingCountries.length === 1 ? matchingCountries[0] : undefined;
+    const singleMatch =
+      matchingCountries.length === SEARCH_SINGLE_MATCH_COUNT
+        ? matchingCountries[FIRST_INDEX]
+        : undefined;
     const target = exactMatch ?? singleMatch;
-    if (target?.code) {
-      const code = target.code;
+    if (target?.code !== undefined && target.code !== EMPTY_STRING) {
+      const { code } = target;
       void (async () => {
         await handleAddBlockedCountry(code);
         setCountrySearch('');
@@ -240,11 +260,11 @@ export function TrafficBlockingCard({
           <div className="flex items-center justify-between">
             <Label>Blocked IPs</Label>
             <span className="text-xs text-muted-foreground">
-              {blockedIPCount}/{maxIPs}
+              {blockedIPCount}/{MAX_IPS}
             </span>
           </div>
           <div className="space-y-2">
-            {blockedIPs.length === 0 ? (
+            {blockedIPs.length === EMPTY_COUNT ? (
               <span className="text-xs text-muted-foreground">
                 No blocked IPs yet.
               </span>
@@ -276,9 +296,11 @@ export function TrafficBlockingCard({
                   placeholder="203.0.113.10"
                   value={newIPValue}
                   onChange={(e) => {
-                    setNewIPValue(normalizeIPInput(e.target.value));
-                    if (newIPError) {
-                      setNewIPError('');
+                    const { currentTarget } = e;
+                    const { value } = currentTarget;
+                    setNewIPValue(normalizeIPInput(value));
+                    if (newIPError !== EMPTY_STRING) {
+                      setNewIPError(EMPTY_STRING);
                     }
                   }}
                   disabled={savingBlockedIPs}
@@ -289,7 +311,7 @@ export function TrafficBlockingCard({
                   onClick={() => {
                     void handleAddIP();
                   }}
-                  disabled={savingBlockedIPs || blockedIPCount >= maxIPs}
+                  disabled={savingBlockedIPs || blockedIPCount >= MAX_IPS}
                 >
                   {savingBlockedIPs ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -298,9 +320,9 @@ export function TrafficBlockingCard({
                   )}
                 </Button>
               </div>
-              {newIPError ? (
+              {newIPError === EMPTY_STRING ? null : (
                 <span className="text-xs text-destructive">{newIPError}</span>
-              ) : null}
+              )}
             </div>
           </div>
           {savingBlockedIPs ? (
@@ -308,31 +330,32 @@ export function TrafficBlockingCard({
               Updating blocked IPs...
             </p>
           ) : null}
-          {ipActionError ? (
+          {ipActionError === EMPTY_STRING ? null : (
             <p className="text-xs text-destructive">
               {ipActionError}
             </p>
-          ) : null}
+          )}
         </div>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <Label>Blocked Countries</Label>
             <span className="text-xs text-muted-foreground">
-              {blockedCountryCount}/{maxCountries}
+              {blockedCountryCount}/{MAX_COUNTRIES}
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {blockedCountries.length === 0 ? (
+            {blockedCountries.length === EMPTY_COUNT ? (
               <span className="text-xs text-muted-foreground">
                 No blocked countries yet.
               </span>
             ) : (
               blockedCountries.map((code) => {
                 const normalizedCode = code.trim().toUpperCase();
-                const displayName = countryNameLookup.get(normalizedCode)
-                  ?? blockedCountryNames[normalizedCode]
-                  ?? code;
+                const displayName =
+                  countryNameLookup.get(normalizedCode) ??
+                  blockedCountryNames[normalizedCode] ??
+                  code;
                 const showCode = displayName.trim().toUpperCase() !== normalizedCode;
                 return (
                   <Badge key={code} variant="secondary" className="flex items-center gap-2">
@@ -368,12 +391,16 @@ export function TrafficBlockingCard({
               placeholder="Start typing a country name or code"
               value={countrySearch}
               onChange={(e) => {
-                setCountrySearch(e.target.value);
+                const { currentTarget } = e;
+                const { value } = currentTarget;
+                setCountrySearch(value);
               }}
               onKeyDown={handleCountrySearchKeyDown}
               disabled={!geoIPReady}
             />
-            {geoIPReady && trimmedCountrySearch.length > 0 && trimmedCountrySearch.length < 2 ? (
+            {geoIPReady &&
+            trimmedCountrySearch.length > EMPTY_COUNT &&
+            trimmedCountrySearch.length < SEARCH_MIN_LENGTH ? (
               <p className="text-xs text-muted-foreground">
                 Type at least 2 characters to search.
               </p>
@@ -383,15 +410,16 @@ export function TrafficBlockingCard({
           <div className="rounded-lg border bg-muted/30 p-2 space-y-1">
             {geoIPCountriesLoading ? (
               <p className="text-xs text-muted-foreground">Searching...</p>
-            ) : matchingCountries.length === 0 ? (
+            ) : matchingCountries.length === EMPTY_COUNT ? (
               <p className="text-xs text-muted-foreground">
-                {trimmedCountrySearch.length >= 2 ? `No matches for "${trimmedCountrySearch}".` : 'Search results will appear here.'}
+                {trimmedCountrySearch.length >= SEARCH_MIN_LENGTH
+                  ? `No matches for "${trimmedCountrySearch}".`
+                  : 'Search results will appear here.'}
               </p>
             ) : (
-              matchingCountries.slice(0, 8).map((country) => {
-                const countryCode = country.code;
-                const countryName = country.name;
-                if (!countryCode) return null;
+              matchingCountries.slice(FIRST_INDEX, MAX_COUNTRY_MATCHES).map((country) => {
+                const { code: countryCode, name: countryName } = country;
+                if (countryCode === EMPTY_STRING) return null;
                 return (
                   <button
                     key={countryCode}
@@ -413,21 +441,21 @@ export function TrafficBlockingCard({
             )}
           </div>
 
-          {!geoIPReady ? (
+          {geoIPReady ? null : (
             <p className="text-xs text-muted-foreground">
               GeoIP database is not ready. Download it to manage country blocking.
             </p>
-          ) : null}
+          )}
           {savingBlockedCountries ? (
             <p className="text-xs text-muted-foreground">
               Updating blocked countries...
             </p>
           ) : null}
-          {countryActionError ? (
+          {countryActionError === EMPTY_STRING ? null : (
             <p className="text-xs text-destructive">
               {countryActionError}
             </p>
-          ) : null}
+          )}
         </div>
       </CardContent>
     </Card>

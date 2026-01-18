@@ -16,6 +16,10 @@ interface DevicesCardProps {
   onPageChange: (page: number) => void;
 }
 
+const EMPTY_COUNT = 0;
+const PERCENT_MULTIPLIER = 100;
+const PERCENT_PRECISION = 1;
+
 export function DevicesCard({
   devices,
   total,
@@ -31,10 +35,13 @@ export function DevicesCard({
       icon={Monitor}
       pagination={{ page, pageSize, total, onPageChange }}
     >
-      {devices.length > 0 ? (
+      {devices.length > EMPTY_COUNT ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {devices.map((deviceStat, index) => {
-            const percentage = totalVisitors > 0 ? (deviceStat.visitors / totalVisitors) * 100 : 0;
+            const percentage =
+              totalVisitors > EMPTY_COUNT
+                ? (deviceStat.visitors / totalVisitors) * PERCENT_MULTIPLIER
+                : EMPTY_COUNT;
 
             return (
               <div key={index} className="space-y-2">
@@ -57,7 +64,7 @@ export function DevicesCard({
                       {deviceStat.visitors.toLocaleString()}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
-                      {percentage.toFixed(1)}%
+                      {percentage.toFixed(PERCENT_PRECISION)}%
                     </span>
                   </div>
                 </div>

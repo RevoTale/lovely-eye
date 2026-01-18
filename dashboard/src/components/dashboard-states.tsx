@@ -1,6 +1,8 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
 
+const STAT_PLACEHOLDER_COUNT = 4;
+
 export function DashboardLoading(): React.JSX.Element {
   return (
     <div className="space-y-6">
@@ -9,7 +11,7 @@ export function DashboardLoading(): React.JSX.Element {
         <Skeleton className="h-4 w-48" />
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => (
+        {Array.from({ length: STAT_PLACEHOLDER_COUNT }, (_, i) => (
           <Card key={i}>
             <CardHeader>
               <Skeleton className="h-4 w-24" />

@@ -15,12 +15,18 @@ interface ActiveFiltersProps {
   search: FilterSearch;
 }
 
+const EMPTY_COUNT = 0;
+
 export function ActiveFilters({ siteId, search }: ActiveFiltersProps): React.JSX.Element | null {
   const referrers = normalizeFilterValue(search.referrer);
   const devices = normalizeFilterValue(search.device);
   const pages = normalizeFilterValue(search.page);
   const countries = normalizeFilterValue(search.country);
-  const hasFilters = Boolean(referrers.length || devices.length || pages.length || countries.length);
+  const hasFilters =
+    referrers.length > EMPTY_COUNT ||
+    devices.length > EMPTY_COUNT ||
+    pages.length > EMPTY_COUNT ||
+    countries.length > EMPTY_COUNT;
   if (!hasFilters) {
     return null;
   }

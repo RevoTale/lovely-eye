@@ -33,7 +33,9 @@ export function CountryTrackingSection({
   }, [initialTrackCountry, siteId]);
 
   const handleToggle = async (enabled: boolean): Promise<void> => {
-    if (!siteId || !siteName) return;
+    if (siteId === undefined || siteId === '' || siteName === undefined || siteName === '') {
+      return;
+    }
     const previous = trackCountry;
     setTrackCountry(enabled);
     setActionError('');
@@ -54,7 +56,7 @@ export function CountryTrackingSection({
   };
 
   const handleRetry = async (): Promise<void> => {
-    if (!siteId) return;
+    if (siteId === undefined || siteId === '') return;
     setActionError('');
     try {
       await refreshGeoIP();
@@ -79,11 +81,11 @@ export function CountryTrackingSection({
           void handleRetry();
         }}
       />
-      {actionError ? (
+      {actionError === '' ? null : (
         <p className="text-xs text-destructive">
           {actionError}
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

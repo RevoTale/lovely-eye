@@ -3,6 +3,11 @@ import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Chec
 import type { EventDefinition, EventDefinitionInput, EventDefinitionFieldInput, EventFieldType } from '@/gql/graphql';
 
 const DEFAULT_MAX_LENGTH = 500;
+const EMPTY_COUNT = 0;
+const EXAMPLE_NUMBER = 42;
+const FIRST_INDEX_OFFSET = 1;
+const INLINE_EXAMPLE_MAX = 20;
+const MIN_FIELD_LENGTH = 1;
 
 interface EventFieldTypeOption {
   label: string;
@@ -40,6 +45,9 @@ export function EventDefinitionsCard({
   const [editorOpen, setEditorOpen] = useState(false);
   const [showSnippet, setShowSnippet] = useState(false);
   const [error, setError] = useState('');
+  const [pendingDeleteName, setPendingDeleteName] = useState<string | null>(null);
+
+  const hasOriginalName = originalName !== null && originalName !== '';
 
   const sortedDefinitions = useMemo(
     () => [...definitions].sort((a, b) => a.name.localeCompare(b.name)),
@@ -72,17 +80,19 @@ export function EventDefinitionsCard({
   };
 
   const eventSnippet = useMemo(() => {
-    const eventName = draftName.trim() || 'event_name';
+    const trimmedEventName = draftName.trim();
+    const eventName = trimmedEventName === '' ? 'event_name' : trimmedEventName;
     const fieldEntries = draftFields.map((field, index) => {
-      const key = field.key.trim() || `field_${index + 1}`;
+      const trimmedKey = field.key.trim();
+      const key = trimmedKey === '' ? `field_${index + FIRST_INDEX_OFFSET}` : trimmedKey;
       switch (field.type) {
         case 'NUMBER':
-          return `${key}: 42`;
+          return `${key}: ${EXAMPLE_NUMBER}`;
         case 'BOOLEAN':
           return `${key}: true`;
         default:
-          if (field.maxLength && field.maxLength > 0) {
-            if (field.maxLength <= 20) {
+          if (field.maxLength !== null && field.maxLength !== undefined && field.maxLength > EMPTY_COUNT) {
+            if (field.maxLength <= INLINE_EXAMPLE_MAX) {
               return `${key}: '${'a'.repeat(field.maxLength)}'`;
             }
             return `${key}: 'a'.repeat(${field.maxLength})`;
@@ -90,7 +100,7 @@ export function EventDefinitionsCard({
           return `${key}: 'example'`;
       }
     });
-    const properties = fieldEntries.length > 0
+    const properties = fieldEntries.length > EMPTY_COUNT
       ? `{\n  ${fieldEntries.join(',\n  ')}\n}`
       : '{}';
     return `window.lovelyEye?.track('${eventName}', ${properties});`;
@@ -105,7 +115,7 @@ export function EventDefinitionsCard({
 
   const handleSave = async (): Promise<void> => {
     const trimmedName = draftName.trim();
-    if (!trimmedName) {
+    if (trimmedName === '') {
       setError('Event name is required.');
       return;
     }
@@ -136,7 +146,7 @@ export function EventDefinitionsCard({
         name: trimmedName,
         fields: normalizedFields,
       });
-      if (originalName && originalName !== trimmedName) {
+      if (originalName !== null && originalName !== trimmedName) {
         await onDelete(originalName);
       }
       resetDraft();
@@ -146,9 +156,6 @@ export function EventDefinitionsCard({
   };
 
   const handleDelete = async (eventName: string): Promise<void> => {
-    if (!window.confirm(`Delete event definition "${eventName}"?`)) {
-      return;
-    }
     try {
       await onDelete(eventName);
       if (originalName === eventName) {
@@ -156,6 +163,8 @@ export function EventDefinitionsCard({
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete event definition.');
+    } finally {
+      setPendingDeleteName(null);
     }
   };
 
@@ -190,7 +199,7 @@ export function EventDefinitionsCard({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h4 className="text-sm font-medium">
-                  {originalName ? `Editing: ${originalName}` : 'New event name'}
+                  {hasOriginalName ? `Editing: ${originalName}` : 'New event name'}
                 </h4>
                 <p className="text-xs text-muted-foreground">
                   Events not listed here will be ignored.
@@ -201,9 +210,9 @@ export function EventDefinitionsCard({
               </Button>
             </div>
 
-            {error ? (
+            {error === '' ? null : (
               <div className="text-sm text-destructive">{error}</div>
-            ) : null}
+            )}
 
             <div className="space-y-3">
               <Label htmlFor="event-name">Event Name</Label>
@@ -225,7 +234,7 @@ export function EventDefinitionsCard({
                 </Button>
               </div>
 
-              {draftFields.length === 0 ? (
+              {draftFields.length === EMPTY_COUNT ? (
                 <p className="text-xs text-muted-foreground">
                   No fields defined. Events will be stored without metadata.
                 </p>
@@ -237,7 +246,8 @@ export function EventDefinitionsCard({
                         placeholder="error_code"
                         value={field.key}
                         onChange={(e) => {
-                          const value = e.target.value;
+                          const { currentTarget } = e;
+                          const { value } = currentTarget;
                           setDraftFields((prev) =>
                             prev.map((item, idx) => (idx === index ? { ...item, key: value } : item))
                           );
@@ -248,7 +258,8 @@ export function EventDefinitionsCard({
                         value={field.type}
                         className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         onChange={(e) => {
-                          const value = e.target.value;
+                          const { currentTarget } = e;
+                          const { value } = currentTarget;
                           if (isEventFieldType(value)) {
                             setDraftFields((prev) =>
                               prev.map((item, idx) => (idx === index ? { ...item, type: value } : item))
@@ -265,14 +276,21 @@ export function EventDefinitionsCard({
 
                       <Input
                         type="number"
-                        min={1}
+                        min={MIN_FIELD_LENGTH}
                         placeholder="Max length"
                         value={field.maxLength ?? DEFAULT_MAX_LENGTH}
                         onChange={(e) => {
-                          const value = Number(e.target.value);
+                          const { currentTarget } = e;
+                          const { value } = currentTarget;
+                          const parsed = Number(value);
                           setDraftFields((prev) =>
                             prev.map((item, idx) =>
-                              idx === index ? { ...item, maxLength: Number.isNaN(value) ? DEFAULT_MAX_LENGTH : value } : item
+                              idx === index
+                                ? {
+                                    ...item,
+                                    maxLength: Number.isNaN(parsed) ? DEFAULT_MAX_LENGTH : parsed,
+                                  }
+                                : item
                             )
                           );
                         }}
@@ -339,7 +357,7 @@ export function EventDefinitionsCard({
                 }}
                 disabled={saving}
               >
-                {saving ? 'Saving...' : originalName ? 'Update Definition' : 'Save Definition'}
+                {saving ? 'Saving...' : hasOriginalName ? 'Update Definition' : 'Save Definition'}
               </Button>
               <Button type="button" variant="outline" onClick={resetDraft} disabled={saving}>
                 Cancel
@@ -354,7 +372,7 @@ export function EventDefinitionsCard({
 
         <div className="border-t pt-4 space-y-3">
           <h4 className="text-sm font-medium">Existing definitions</h4>
-          {sortedDefinitions.length === 0 ? (
+          {sortedDefinitions.length === EMPTY_COUNT ? (
             <p className="text-xs text-muted-foreground">No event definitions yet.</p>
           ) : (
             <div className="space-y-2">
@@ -363,7 +381,8 @@ export function EventDefinitionsCard({
                   <div>
                     <p className="text-sm font-medium">{definition.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {definition.fields.length} field{definition.fields.length === 1 ? '' : 's'}
+                      {definition.fields.length} field
+                      {definition.fields.length === MIN_FIELD_LENGTH ? '' : 's'}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -372,22 +391,50 @@ export function EventDefinitionsCard({
                       variant="outline"
                       size="sm"
                       onClick={() => {
+                        setPendingDeleteName(null);
                         startEdit(definition);
                       }}
                     >
                       Edit
                     </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        void handleDelete(definition.name);
-                      }}
-                      disabled={deleting}
-                    >
-                      Delete
-                    </Button>
+                    {pendingDeleteName === definition.name ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            void handleDelete(definition.name);
+                          }}
+                          disabled={deleting}
+                        >
+                          Confirm delete
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setPendingDeleteName(null);
+                          }}
+                          disabled={deleting}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => {
+                          setPendingDeleteName(definition.name);
+                        }}
+                        disabled={deleting}
+                      >
+                        Delete
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}

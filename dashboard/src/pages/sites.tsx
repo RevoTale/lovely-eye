@@ -7,6 +7,11 @@ import { Plus, Globe, ExternalLink, TrendingUp } from 'lucide-react';
 
 type SiteListItem = SitesQuery['sites'][number];
 
+const EMPTY_COUNT = 0;
+const FIRST_INDEX = 0;
+const EXTRA_DOMAIN_OFFSET = 1;
+const SKELETON_CARD_COUNT = 3;
+
 export function SitesPage(): React.JSX.Element {
   const { data, loading, error } = useQuery(SitesDocument);
 
@@ -21,7 +26,7 @@ export function SitesPage(): React.JSX.Element {
           <Skeleton className="h-10 w-32" />
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }, (_, i) => (
+          {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
             <Card key={i}>
               <CardHeader>
                 <Skeleton className="h-6 w-32" />
@@ -37,7 +42,7 @@ export function SitesPage(): React.JSX.Element {
     );
   }
 
-  if (error) {
+  if (error !== undefined) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-destructive">Error loading sites: {error.message}</div>
@@ -62,7 +67,7 @@ export function SitesPage(): React.JSX.Element {
         </Link>
       </div>
 
-      {sites.length === 0 ? (
+      {sites.length === EMPTY_COUNT ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-16">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -99,10 +104,10 @@ export function SitesPage(): React.JSX.Element {
                     {site.name}
                   </CardTitle>
                   <CardDescription className="flex items-center gap-2">
-                    <span>{site.domains[0] ?? ''}</span>
-                    {site.domains.length > 1 ? (
+                    <span>{site.domains[FIRST_INDEX] ?? ''}</span>
+                    {site.domains.length > EXTRA_DOMAIN_OFFSET ? (
                       <span className="text-xs text-muted-foreground">
-                        +{site.domains.length - 1} more
+                        +{site.domains.length - EXTRA_DOMAIN_OFFSET} more
                       </span>
                     ) : null}
                     <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />

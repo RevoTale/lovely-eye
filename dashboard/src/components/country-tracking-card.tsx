@@ -26,6 +26,9 @@ export function CountryTrackingCard({
   onRetry,
 }: CountryTrackingCardProps): React.JSX.Element {
   const geoIPState = geoIPStatus?.state ?? 'disabled';
+  const geoIPSource = geoIPStatus?.source;
+  const geoIPDbPath = geoIPStatus?.dbPath;
+  const geoIPLastError = geoIPStatus?.lastError;
   const statusMessage = (() => {
     switch (geoIPState) {
       case 'downloading':
@@ -84,22 +87,22 @@ export function CountryTrackingCard({
           <Badge variant={geoIPBadgeVariant()} className="uppercase tracking-wide text-[10px]">
             {geoIPState}
           </Badge>
-          {geoIPStatus?.source ? (
+          {geoIPSource !== null && geoIPSource !== undefined && geoIPSource !== '' ? (
             <span className="text-xs text-muted-foreground">
-              source: {geoIPStatus.source}
+              source: {geoIPSource}
             </span>
           ) : null}
         </div>
 
-        {geoIPStatus?.dbPath ? (
+        {geoIPDbPath !== null && geoIPDbPath !== undefined && geoIPDbPath !== '' ? (
           <p className="text-xs text-muted-foreground">
-            Path: <span className="font-mono">{geoIPStatus.dbPath}</span>
+            Path: <span className="font-mono">{geoIPDbPath}</span>
           </p>
         ) : null}
 
-        {geoIPStatus?.lastError ? (
+        {geoIPLastError !== null && geoIPLastError !== undefined && geoIPLastError !== '' ? (
           <p className="text-xs text-destructive">
-            {geoIPStatus.lastError}
+            {geoIPLastError}
           </p>
         ) : null}
 

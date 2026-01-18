@@ -1,11 +1,14 @@
 type SearchValue = string | string[] | undefined;
 
+const EMPTY_COUNT = 0;
+const EMPTY_STRING = '';
+
 export function encodeFilterValue(value: string): string {
   return encodeURIComponent(value);
 }
 
 export function decodeFilterValue(value?: string): string | undefined {
-  if (!value) {
+  if (value === undefined || value === EMPTY_STRING) {
     return value;
   }
   try {
@@ -16,7 +19,7 @@ export function decodeFilterValue(value?: string): string | undefined {
 }
 
 export function normalizeFilterValue(value: SearchValue): string[] {
-  if (!value) {
+  if (value === undefined || value === EMPTY_STRING) {
     return [];
   }
   if (Array.isArray(value)) {
@@ -25,7 +28,7 @@ export function normalizeFilterValue(value: SearchValue): string[] {
       .filter((item): item is string => Boolean(item));
   }
   const decoded = decodeFilterValue(value);
-  return decoded ? [decoded] : [];
+  return decoded !== undefined && decoded !== EMPTY_STRING ? [decoded] : [];
 }
 
 export function addFilterValue(current: SearchValue, value: string): string[] {
@@ -38,7 +41,7 @@ export function addFilterValue(current: SearchValue, value: string): string[] {
 
 export function removeFilterValue(current: SearchValue, value: string): string[] | undefined {
   const next = normalizeFilterValue(current).filter(item => item !== value);
-  return next.length > 0 ? next : undefined;
+  return next.length > EMPTY_COUNT ? next : undefined;
 }
 
 export function updateFilterSearch<T extends Record<string, unknown>>(
@@ -48,7 +51,7 @@ export function updateFilterSearch<T extends Record<string, unknown>>(
 ): T {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- generic record reconstruction requires assertion
   const result: T = Object.fromEntries(Object.entries(prev).filter(([k]) => k !== key)) as T;
-  if (!value || value.length === 0) {
+  if (value === undefined || value.length === EMPTY_COUNT) {
     return result;
   }
   return Object.assign(result, { [key]: value });

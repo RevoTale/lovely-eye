@@ -5,6 +5,7 @@ import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, C
 import { Logo } from '@/components/logo';
 
 export function RegisterPage(): React.JSX.Element {
+  const MIN_PASSWORD_LENGTH = 8;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -13,7 +14,7 @@ export function RegisterPage(): React.JSX.Element {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
     setError(null);
 
@@ -22,8 +23,8 @@ export function RegisterPage(): React.JSX.Element {
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`);
       return;
     }
 
@@ -40,6 +41,8 @@ export function RegisterPage(): React.JSX.Element {
         setIsLoading(false);
       });
   };
+
+  const hasError = error !== null && error !== '';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
@@ -58,7 +61,7 @@ export function RegisterPage(): React.JSX.Element {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error ? (
+            {hasError ? (
               <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
                 {error}
               </div>

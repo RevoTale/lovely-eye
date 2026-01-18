@@ -20,6 +20,16 @@ interface SiteInfoCardProps {
   onCancel: () => void;
 }
 
+const DOMAIN_ID_INCREMENT = 1;
+const EMPTY_COUNT = 0;
+const EMPTY_STRING = '';
+const FIRST_DOMAIN_ID = 1;
+const FIRST_DOMAIN_INDEX = 0;
+const MIN_DOMAIN_COUNT = 1;
+const MIN_NAME_LENGTH = 1;
+const MAX_NAME_LENGTH = 100;
+const SECONDARY_DOMAIN_START = 2;
+
 export function SiteInfoCard({
   siteId,
   isNew,
@@ -33,13 +43,20 @@ export function SiteInfoCard({
 }: SiteInfoCardProps): React.JSX.Element {
   const [name, setName] = React.useState(initialName);
   const [formError, setFormError] = React.useState('');
-  const nextDomainIdRef = React.useRef(initialDomains.length > 0 ? initialDomains.length + 1 : 2);
+  const nextDomainIdRef = React.useRef(
+    initialDomains.length > EMPTY_COUNT
+      ? initialDomains.length + DOMAIN_ID_INCREMENT
+      : SECONDARY_DOMAIN_START
+  );
 
   const buildDomainEntries = (values: string[]): DomainEntry[] => {
-    if (values.length === 0) {
-      return [{ id: '1', value: '' }];
+    if (values.length === EMPTY_COUNT) {
+      return [{ id: String(FIRST_DOMAIN_ID), value: EMPTY_STRING }];
     }
-    return values.map((domain, index) => ({ id: String(index + 1), value: domain }));
+    return values.map((domain, index) => ({
+      id: String(index + DOMAIN_ID_INCREMENT),
+      value: domain,
+    }));
   };
 
   const [domains, setDomains] = React.useState<DomainEntry[]>(() => buildDomainEntries(initialDomains));
@@ -48,7 +65,10 @@ export function SiteInfoCard({
     setName(initialName);
     setDomains(buildDomainEntries(initialDomains));
     setFormError('');
-    nextDomainIdRef.current = initialDomains.length > 0 ? initialDomains.length + 1 : 2;
+    nextDomainIdRef.current =
+      initialDomains.length > EMPTY_COUNT
+        ? initialDomains.length + DOMAIN_ID_INCREMENT
+        : SECONDARY_DOMAIN_START;
   }, [initialDomains, initialName, siteId]);
 
   const hasDomainChanges = React.useMemo(() => {
@@ -60,14 +80,15 @@ export function SiteInfoCard({
   }, [domains, initialDomains]);
 
   const validateDomains = (): string[] | null => {
-    const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
+    const domainRegex =
+      /^[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9\-]{0,61}[a-z0-9])?)*$/v;
     const trimmedDomains = domains
       .map((domainEntry) => normalizeDomainInput(domainEntry.value))
-      .filter((domainValue) => domainValue.length > 0);
+      .filter((domainValue) => domainValue.length > EMPTY_COUNT);
 
     const uniqueDomains = Array.from(new Set(trimmedDomains));
 
-    if (uniqueDomains.length === 0) {
+    if (uniqueDomains.length === EMPTY_COUNT) {
       setFormError('At least one domain is required');
       return null;
     }
@@ -85,17 +106,17 @@ export function SiteInfoCard({
     const trimmedName = name.trim();
     const validatedDomains = validateDomains();
 
-    if (!trimmedName) {
+    if (trimmedName === EMPTY_STRING) {
       setFormError('Name is required');
       return;
     }
 
-    if (trimmedName.length < 1 || trimmedName.length > 100) {
+    if (trimmedName.length < MIN_NAME_LENGTH || trimmedName.length > MAX_NAME_LENGTH) {
       setFormError('Site name must be between 1 and 100 characters');
       return;
     }
 
-    if (!validatedDomains) {
+    if (validatedDomains === null) {
       return;
     }
 
@@ -112,15 +133,17 @@ export function SiteInfoCard({
   };
 
   const handleDomainChange = (index: number, id: string, value: string): void => {
-    const previousPrimary = domains[0]?.value ?? '';
+    const previousPrimary = domains[FIRST_DOMAIN_INDEX]?.value ?? EMPTY_STRING;
     const normalized = normalizeDomainInput(value);
-    setDomains((prev) => {
-      return prev.map((entry) => entry.id === id
-        ? { ...entry, value: normalized }
-        : entry
-      );
-    });
-    if (isNew && index === 0 && (name.trim() === '' || name.trim() === previousPrimary)) {
+    setDomains((prev) =>
+      prev.map((entry) => (entry.id === id ? { ...entry, value: normalized } : entry))
+    );
+    const trimmedName = name.trim();
+    if (
+      isNew &&
+      index === FIRST_DOMAIN_INDEX &&
+      (trimmedName === EMPTY_STRING || trimmedName === previousPrimary)
+    ) {
       setName(normalized);
     }
   };
@@ -148,15 +171,15 @@ export function SiteInfoCard({
               {domains.map((domainEntry, index) => (
                 <div key={domainEntry.id} className="flex items-center gap-2">
                   <Input
-                    id={index === 0 ? 'primary-domain' : `domain-${index}`}
-                    placeholder={index === 0 ? 'example.com' : 'blog.example.com'}
+                    id={index === FIRST_DOMAIN_INDEX ? 'primary-domain' : `domain-${index}`}
+                    placeholder={index === FIRST_DOMAIN_INDEX ? 'example.com' : 'blog.example.com'}
                     value={domainEntry.value}
                     onChange={(e) => {
                       handleDomainChange(index, domainEntry.id, e.target.value);
                     }}
-                    required={index === 0}
+                    required={index === FIRST_DOMAIN_INDEX}
                   />
-                  {domains.length > 1 ? (
+                  {domains.length > MIN_DOMAIN_COUNT ? (
                     <Button
                       type="button"
                       variant="outline"
@@ -179,8 +202,8 @@ export function SiteInfoCard({
                 size="sm"
                 onClick={() => {
                   const nextId = String(nextDomainIdRef.current);
-                  nextDomainIdRef.current += 1;
-                  setDomains((prev) => [...prev, { id: nextId, value: '' }]);
+                  nextDomainIdRef.current += DOMAIN_ID_INCREMENT;
+                  setDomains((prev) => [...prev, { id: nextId, value: EMPTY_STRING }]);
                 }}
               >
                 <Plus className="h-4 w-4" />
@@ -244,11 +267,11 @@ export function SiteInfoCard({
               </Button>
             </div>
           )}
-          {formError ? (
+          {formError === EMPTY_STRING ? null : (
             <p className="text-xs text-destructive">
               {formError}
             </p>
-          ) : null}
+          )}
         </CardContent>
       </Card>
     </form>

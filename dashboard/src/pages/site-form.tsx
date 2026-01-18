@@ -25,6 +25,7 @@ export function SiteFormPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const navigate = useNavigate();
   const isNew = siteId === 'new';
+  const GEO_IP_POLL_INTERVAL_MS = 5000;
 
   const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
     variables: { id: siteId },
@@ -33,7 +34,7 @@ export function SiteFormPage(): React.JSX.Element {
 
   const { data: geoIPData } = useQuery(GeoIpStatusDocument, {
     skip: isNew,
-    pollInterval: 5000,
+    pollInterval: GEO_IP_POLL_INTERVAL_MS,
   });
 
   const [createSite, { loading: creating }] = useMutation(CreateSiteDocument, {
@@ -59,7 +60,7 @@ export function SiteFormPage(): React.JSX.Element {
   };
 
   const handleDomainsSave = async (nameValue: string, domainsValue: string[]): Promise<void> => {
-    if (!site) return;
+    if (site === undefined) return;
     await updateSite({
       variables: {
         id: site.id,
@@ -119,14 +120,18 @@ export function SiteFormPage(): React.JSX.Element {
         initialDomains={site?.domains ?? []}
         creating={creating}
         updating={updating}
-        onCreate={(newName, newDomains) => handleSubmit(newName, newDomains)}
-        onSaveDomains={(newName, newDomains) => handleDomainsSave(newName, newDomains)}
+        onCreate={async (newName, newDomains) => {
+          await handleSubmit(newName, newDomains);
+        }}
+        onSaveDomains={async (newName, newDomains) => {
+          await handleDomainsSave(newName, newDomains);
+        }}
         onCancel={() => {
           void navigate({ to: '/' });
         }}
       />
 
-      {!isNew && site ? (
+      {!isNew && site !== undefined ? (
         <>
           <TrackingCodeSection
             siteId={site.id}
@@ -155,7 +160,6 @@ export function SiteFormPage(): React.JSX.Element {
 
           <DangerZoneSection
             siteId={site.id}
-            siteName={site.name}
             onDeleted={() => {
               void navigate({ to: '/' });
             }}

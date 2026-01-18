@@ -15,13 +15,10 @@ export function TrackingCodeSection({
   onViewAnalytics,
 }: TrackingCodeSectionProps): React.JSX.Element {
   const [actionError, setActionError] = React.useState('');
+  const [confirmingRegenerate, setConfirmingRegenerate] = React.useState(false);
   const [regenerateKey, { loading: regenerating }] = useMutation(RegenerateSiteKeyDocument);
 
   const handleRegenerateKey = async (): Promise<void> => {
-    if (!window.confirm('Are you sure you want to regenerate the site key? The old key will stop working.')) {
-      return;
-    }
-
     setActionError('');
     try {
       await regenerateKey({
@@ -29,6 +26,8 @@ export function TrackingCodeSection({
       });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to regenerate the site key');
+    } finally {
+      setConfirmingRegenerate(false);
     }
   };
 
@@ -49,16 +48,23 @@ export function TrackingCodeSection({
         publicKey={publicKey}
         trackingScript={trackingScript}
         regenerating={regenerating}
-        onRegenerateKey={() => {
+        confirmingRegenerate={confirmingRegenerate}
+        onRegenerateRequest={() => {
+          setConfirmingRegenerate(true);
+        }}
+        onConfirmRegenerate={() => {
           void handleRegenerateKey();
+        }}
+        onCancelRegenerate={() => {
+          setConfirmingRegenerate(false);
         }}
         onViewAnalytics={onViewAnalytics}
       />
-      {actionError ? (
+      {actionError === '' ? null : (
         <p className="text-xs text-destructive">
           {actionError}
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

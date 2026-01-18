@@ -19,6 +19,9 @@ export function StatCard({
   trend,
   trendValue,
 }: StatCardProps): React.JSX.Element {
+  const hasSuffix = suffix !== undefined && suffix !== '';
+  const hasTrend = trend !== undefined && trendValue !== undefined && trendValue !== '';
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -30,9 +33,11 @@ export function StatCard({
       <CardContent>
         <div className="text-2xl font-bold tracking-tight">
           {value}
-          {suffix ? <span className="text-sm font-normal text-muted-foreground ml-1">{suffix}</span> : null}
+          {hasSuffix ? (
+            <span className="text-sm font-normal text-muted-foreground ml-1">{suffix}</span>
+          ) : null}
         </div>
-        {trend && trendValue ? (
+        {hasTrend ? (
           <div className="flex items-center gap-1 mt-1">
             {trend === 'up' ? (
               <ArrowUpRight className="h-3 w-3 text-green-500" />

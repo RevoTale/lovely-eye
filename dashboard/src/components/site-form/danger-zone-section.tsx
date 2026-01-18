@@ -5,16 +5,15 @@ import { DangerZoneCard } from '@/components/site-form/danger-zone-card';
 
 interface DangerZoneSectionProps {
   siteId: string;
-  siteName: string;
   onDeleted: () => void;
 }
 
 export function DangerZoneSection({
   siteId,
-  siteName,
   onDeleted,
 }: DangerZoneSectionProps): React.JSX.Element {
   const [actionError, setActionError] = React.useState('');
+  const [confirmingDelete, setConfirmingDelete] = React.useState(false);
   const [deleteSite, { loading: deleting }] = useMutation(DeleteSiteDocument, {
     refetchQueries: [{ query: SitesDocument }],
     onCompleted: () => {
@@ -23,10 +22,6 @@ export function DangerZoneSection({
   });
 
   const handleDelete = async (): Promise<void> => {
-    if (!window.confirm(`Are you sure you want to delete "${siteName}"? This action cannot be undone.`)) {
-      return;
-    }
-
     setActionError('');
     try {
       await deleteSite({
@@ -34,6 +29,8 @@ export function DangerZoneSection({
       });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to delete site');
+    } finally {
+      setConfirmingDelete(false);
     }
   };
 
@@ -41,15 +38,22 @@ export function DangerZoneSection({
     <div className="space-y-2">
       <DangerZoneCard
         deleting={deleting}
-        onDelete={() => {
+        confirming={confirmingDelete}
+        onDeleteRequest={() => {
+          setConfirmingDelete(true);
+        }}
+        onConfirmDelete={() => {
           void handleDelete();
         }}
+        onCancelDelete={() => {
+          setConfirmingDelete(false);
+        }}
       />
-      {actionError ? (
+      {actionError === '' ? null : (
         <p className="text-xs text-destructive">
           {actionError}
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

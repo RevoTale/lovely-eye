@@ -53,7 +53,7 @@ export function useDateRange(): DateRangeState {
         isValidTimeInput(toTime);
       if (hasValidInputs) {
         const candidate = buildDateRange(fromDate, toDate, fromTime, toTime);
-        if (candidate && new Date(candidate.from) <= new Date(candidate.to)) {
+        if (candidate !== undefined && new Date(candidate.from) <= new Date(candidate.to)) {
           return { preset: 'custom', fromDate, toDate, fromTime, toTime };
         }
       }
@@ -142,7 +142,7 @@ export function useDateRange(): DateRangeState {
       return false;
     }
     const candidate = buildDateRange(nextFrom, nextTo, nextFromTime, nextToTime);
-    if (!candidate || new Date(candidate.from) > new Date(candidate.to)) {
+    if (candidate === undefined || new Date(candidate.from) > new Date(candidate.to)) {
       return false;
     }
     void navigate({

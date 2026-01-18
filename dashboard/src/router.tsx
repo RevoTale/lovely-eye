@@ -19,49 +19,67 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
-  beforeLoad: ({ context }) => {
+  beforeLoad: async ({ context }) => {
+    await Promise.resolve();
     if (context.auth.isLoading) {
       return;
     }
     if (context.auth.isAuthenticated) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router expects redirect throws.
       throw redirect({ to: '/' });
     }
   },
-  component: lazyRouteComponent(() => import('./pages/login').then(m => ({ default: m.LoginPage }))),
+  component: lazyRouteComponent(async () => {
+    const module = await import('./pages/login');
+    return { default: module.LoginPage };
+  }),
 });
 
 const registerRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/register',
-  beforeLoad: ({ context }) => {
+  beforeLoad: async ({ context }) => {
+    await Promise.resolve();
     if (context.auth.isLoading) {
       return;
     }
     if (context.auth.isAuthenticated) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router expects redirect throws.
       throw redirect({ to: '/' });
     }
   },
-  component: lazyRouteComponent(() => import('./pages/register').then(m => ({ default: m.RegisterPage }))),
+  component: lazyRouteComponent(async () => {
+    const module = await import('./pages/register');
+    return { default: module.RegisterPage };
+  }),
 });
 
 const authLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'auth',
-  beforeLoad: ({ context }) => {
+  beforeLoad: async ({ context }) => {
+    await Promise.resolve();
     if (context.auth.isLoading) {
       return;
     }
     if (!context.auth.isAuthenticated) {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router expects redirect throws.
       throw redirect({ to: '/login' });
     }
   },
-  component: lazyRouteComponent(() => import('./layouts/dashboard-layout').then(m => ({ default: m.DashboardLayout }))),
+  component: lazyRouteComponent(async () => {
+    const module = await import('./layouts/dashboard-layout');
+    return { default: module.DashboardLayout };
+  }),
 });
 
 const sitesRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: '/',
-  component: lazyRouteComponent(() => import('./pages/sites').then(m => ({ default: m.SitesPage }))),
+  component: lazyRouteComponent(async () => {
+    const module = await import('./pages/sites');
+    return { default: module.SitesPage };
+  }),
 });
 
 const siteDetailRoute = createRoute({
@@ -90,7 +108,10 @@ const siteDetailRoute = createRoute({
     const parsed = searchSchema.safeParse(search);
     return parsed.success ? parsed.data : {};
   },
-  component: lazyRouteComponent(() => import('./pages/site-view').then(m => ({ default: m.SiteViewPage }))),
+  component: lazyRouteComponent(async () => {
+    const module = await import('./pages/site-view');
+    return { default: module.SiteViewPage };
+  }),
 });
 
 const routeTree = rootRoute.addChildren([

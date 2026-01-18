@@ -1,15 +1,17 @@
 import React from 'react';
-import logoSvg from '/favicon.svg';
 
 interface LogoProps {
   className?: string;
   size?: number;
 }
 
-export function Logo({ className, size = 24 }: LogoProps): React.JSX.Element {
+const DEFAULT_LOGO_SIZE = 24;
+const LOGO_SRC = '/favicon.svg';
+
+export function Logo({ className, size = DEFAULT_LOGO_SIZE }: LogoProps): React.JSX.Element {
   return (
     <img
-      src={logoSvg}
+      src={LOGO_SRC}
       alt="Lovely Eye"
       width={size}
       height={size}

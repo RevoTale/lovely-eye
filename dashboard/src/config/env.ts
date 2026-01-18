@@ -5,24 +5,32 @@ interface RuntimeConfig {
 }
 
 function getConfig(): RuntimeConfig {
-  const env = window.__ENV__
-  if (!env) {
+  const { __ENV__: runtimeEnv } = window
+  if (runtimeEnv === undefined) {
     throw new Error('Runtime environment configuration is missing.');
   }
-  if (env.BASE_PATH === undefined || !env.API_URL || !env.GRAPHQL_URL) {
+  const { BASE_PATH, API_URL, GRAPHQL_URL } = runtimeEnv
+  if (
+    BASE_PATH === undefined ||
+    API_URL === undefined ||
+    API_URL === '' ||
+    GRAPHQL_URL === undefined ||
+    GRAPHQL_URL === ''
+  ) {
     throw new Error('Incomplete runtime environment configuration.');
   }
   return {
-    BASE_PATH: env.BASE_PATH,
-    API_URL: env.API_URL,
-    GRAPHQL_URL: env.GRAPHQL_URL,
+    BASE_PATH,
+    API_URL,
+    GRAPHQL_URL,
   };
 }
 
 export const config = getConfig();
 
 export function getBasePath(): string {
-  return config.BASE_PATH.replace(/\/$/, '') || '/';
+  const trimmedBasePath = config.BASE_PATH.replace(/\/$/v, '');
+  return trimmedBasePath === '' ? '/' : trimmedBasePath;
 }
 
 export function getApiUrl(): string {

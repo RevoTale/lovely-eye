@@ -16,6 +16,15 @@ interface ReferrersCardProps {
   onPageChange: (page: number) => void;
 }
 
+const EMPTY_COUNT = 0;
+const FALLBACK_MAX_VISITORS = 1;
+const PERCENT_MULTIPLIER = 100;
+const PERCENT_PRECISION = 1;
+const ZERO_PERCENT = '0.0';
+const DIRECT_LABEL = '(direct)';
+const DIRECT_REFERRER_LABEL = 'Direct / None';
+const FIRST_INDEX = 0;
+
 export function ReferrersCard({
   referrers,
   totalCount,
@@ -26,7 +35,7 @@ export function ReferrersCard({
   onPageChange,
 }: ReferrersCardProps): React.JSX.Element {
   const formatReferrer = (referrer: string | null): string => {
-    if (!referrer) return 'Direct / None';
+    if (referrer === null || referrer === '') return DIRECT_REFERRER_LABEL;
 
     try {
       const url = new URL(referrer);
@@ -37,7 +46,7 @@ export function ReferrersCard({
   };
 
   const getReferrerIcon = (referrer: string | null): string => {
-    if (!referrer) return '🔗';
+    if (referrer === null || referrer === '') return '🔗';
 
     const hostname = formatReferrer(referrer).toLowerCase();
 
@@ -52,7 +61,10 @@ export function ReferrersCard({
     return '🌐';
   };
 
-  const maxVisitors = referrers.length > 0 && referrers[0] ? referrers[0].visitors : 1;
+  const hasReferrers = referrers.length > EMPTY_COUNT;
+  const topReferrer = hasReferrers ? referrers[FIRST_INDEX] : undefined;
+  const maxVisitors =
+    topReferrer === undefined ? FALLBACK_MAX_VISITORS:topReferrer.visitors ;
 
   const headerRight = (
     <Badge variant="secondary" className="flex items-center gap-1">
@@ -69,14 +81,16 @@ export function ReferrersCard({
       pagination={{ page, pageSize, total: totalCount, onPageChange }}
     >
       <div className="space-y-4">
-        {referrers.length > 0 ? (
+        {hasReferrers ? (
           referrers.map((ref, index) => {
-            const percentage = totalVisitors > 0
-              ? ((ref.visitors / totalVisitors) * 100).toFixed(1)
-              : '0.0';
-            const barWidth = maxVisitors > 0
-              ? (ref.visitors / maxVisitors) * 100
-              : 0;
+            const percentage =
+              totalVisitors > EMPTY_COUNT
+                ? ((ref.visitors / totalVisitors) * PERCENT_MULTIPLIER).toFixed(PERCENT_PRECISION)
+                : ZERO_PERCENT;
+            const barWidth =
+              maxVisitors > EMPTY_COUNT
+                ? (ref.visitors / maxVisitors) * PERCENT_MULTIPLIER
+                : EMPTY_COUNT;
 
             return (
               <div key={index} className="space-y-2">
@@ -88,12 +102,12 @@ export function ReferrersCard({
                     <FilterLink
                       siteId={siteId}
                       filterKey="referrer"
-                      value={ref.referrer || '(direct)'}
+                      value={ref.referrer === '' ? DIRECT_LABEL : ref.referrer}
                       className="text-sm font-medium truncate hover:text-primary hover:underline cursor-pointer"
                     >
                       {formatReferrer(ref.referrer)}
                     </FilterLink>
-                    {ref.referrer && ref.referrer !== '' ? (
+                    {ref.referrer === '' ? null : (
                       <a
                         href={ref.referrer}
                         target="_blank"
@@ -105,7 +119,7 @@ export function ReferrersCard({
                       >
                         <ExternalLink className="h-3 w-3" />
                       </a>
-                    ) : null}
+                    )}
                   </div>
                   <div className="flex items-center gap-3 ml-2">
                     <Badge variant="outline" className="font-mono">

@@ -23,13 +23,20 @@ const REFERRERS_PAGE_SIZE = 5;
 const DEVICES_PAGE_SIZE = 6;
 const COUNTRIES_PAGE_SIZE = 6;
 
+const EMPTY_COUNT = 0;
+const FIRST_INDEX = 0;
+const FIRST_PAGE = 1;
+const PAGE_INDEX_OFFSET = 1;
+const DASHBOARD_POLL_INTERVAL_MS = 60000;
+const REALTIME_POLL_INTERVAL_MS = 5000;
+
 type PageValue = string | string[] | undefined;
 
 function parsePage(value: PageValue): number {
-  const raw = Array.isArray(value) ? value[0] : value;
+  const raw = Array.isArray(value) ? value[FIRST_INDEX] : value;
   const numeric = Number(raw);
-  if (!Number.isFinite(numeric) || numeric < 1) {
-    return 1;
+  if (!Number.isFinite(numeric) || numeric < FIRST_PAGE) {
+    return FIRST_PAGE;
   }
   return Math.floor(numeric);
 }
@@ -48,22 +55,23 @@ function buildFilters(search: Record<string, string | string[] | undefined>): {
   const countries = normalizeFilterValue(search['country']);
   const decodedSearch = {
     ...search,
-    ...(referrers.length ? { referrer: referrers } : {}),
-    ...(devices.length ? { device: devices } : {}),
-    ...(pages.length ? { page: pages } : {}),
-    ...(countries.length ? { country: countries } : {}),
+    ...(referrers.length > EMPTY_COUNT ? { referrer: referrers } : {}),
+    ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
+    ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
+    ...(countries.length > EMPTY_COUNT ? { country: countries } : {}),
   };
 
   const filter = {
-    ...(referrers.length ? { referrer: referrers } : {}),
-    ...(devices.length ? { device: devices } : {}),
-    ...(pages.length ? { page: pages } : {}),
-    ...(countries.length ? { country: countries } : {}),
+    ...(referrers.length > EMPTY_COUNT ? { referrer: referrers } : {}),
+    ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
+    ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
+    ...(countries.length > EMPTY_COUNT ? { country: countries } : {}),
   };
 
   return { referrers, devices, pages, countries, decodedSearch, filter };
 }
 
+// eslint-disable-next-line complexity -- DashboardPage orchestrates multiple sections and filters.
 export function DashboardPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const search = useSearch({ from: siteDetailRoute.id });
@@ -75,9 +83,10 @@ export function DashboardPage(): React.JSX.Element {
   const devicesPage = useMemo(() => parsePage(search.devicesPage), [search.devicesPage]);
   const countriesPage = useMemo(() => parsePage(search.countriesPage), [search.countriesPage]);
 
+  const hasSiteId = siteId !== '';
   const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
     variables: { id: siteId },
-    skip: !siteId,
+    skip: !hasSiteId,
   });
 
   const { referrers, devices, pages, countries, decodedSearch, filter } = useMemo(
@@ -108,7 +117,7 @@ export function DashboardPage(): React.JSX.Element {
       to: '/sites/$siteId',
       params: { siteId },
       search: (prev) => {
-        if (nextPage <= 1) {
+        if (nextPage <= FIRST_PAGE) {
           return Object.fromEntries(
             Object.entries(prev).filter(([entryKey]) => entryKey !== key)
           );
@@ -122,16 +131,16 @@ export function DashboardPage(): React.JSX.Element {
     variables: {
       siteId,
       dateRange: dateRange ?? null,
-      filter: Object.keys(filter).length > 0 ? filter : null,
+      filter: Object.keys(filter).length > EMPTY_COUNT ? filter : null,
     },
-    skip: !siteId,
-    pollInterval: 60000,
+    skip: !hasSiteId,
+    pollInterval: DASHBOARD_POLL_INTERVAL_MS,
   });
 
   const { data: realtimeData } = useQuery(RealtimeDocument, {
     variables: { siteId },
-    skip: !siteId,
-    pollInterval: 5000,
+    skip: !hasSiteId,
+    pollInterval: REALTIME_POLL_INTERVAL_MS,
   });
 
   const { data: eventsData, loading: eventsLoading } = useQuery(EventsDocument, {
@@ -139,10 +148,10 @@ export function DashboardPage(): React.JSX.Element {
       siteId,
       dateRange: dateRange ?? null,
       limit: EVENTS_PAGE_SIZE,
-      offset: (eventsPage - 1) * EVENTS_PAGE_SIZE,
+      offset: (eventsPage - PAGE_INDEX_OFFSET) * EVENTS_PAGE_SIZE,
     },
-    skip: !siteId,
-    pollInterval: 60000,
+    skip: !hasSiteId,
+    pollInterval: DASHBOARD_POLL_INTERVAL_MS,
   });
 
   const { data: eventsCountsData } = useQuery(EventsDocument, {
@@ -150,10 +159,10 @@ export function DashboardPage(): React.JSX.Element {
       siteId,
       dateRange: dateRange ?? null,
       limit: EVENTS_COUNT_LIMIT,
-      offset: 0,
+      offset: EMPTY_COUNT,
     },
-    skip: !siteId,
-    pollInterval: 60000,
+    skip: !hasSiteId,
+    pollInterval: DASHBOARD_POLL_INTERVAL_MS,
   });
 
   if (siteLoading || dashboardLoading) {
@@ -169,28 +178,30 @@ export function DashboardPage(): React.JSX.Element {
   const referrersAll = stats?.topReferrers ?? [];
   const devicesAll = stats?.devices ?? [];
   const countriesAll = stats?.countries ?? [];
-  const devicesTotalVisitors = devicesAll.reduce((sum, device) => sum + device.visitors, 0);
-  const countriesTotalVisitors = countriesAll.reduce((sum, country) => sum + country.visitors, 0);
+  const devicesTotalVisitors = devicesAll.reduce((sum, device) => sum + device.visitors, EMPTY_COUNT);
+  const countriesTotalVisitors = countriesAll.reduce((sum, country) => sum + country.visitors, EMPTY_COUNT);
   const topPagesSlice = topPages.slice(
-    (topPagesPage - 1) * TOP_PAGES_PAGE_SIZE,
+    (topPagesPage - PAGE_INDEX_OFFSET) * TOP_PAGES_PAGE_SIZE,
     topPagesPage * TOP_PAGES_PAGE_SIZE
   );
   const referrersSlice = referrersAll.slice(
-    (referrersPage - 1) * REFERRERS_PAGE_SIZE,
+    (referrersPage - PAGE_INDEX_OFFSET) * REFERRERS_PAGE_SIZE,
     referrersPage * REFERRERS_PAGE_SIZE
   );
   const devicesSlice = devicesAll.slice(
-    (devicesPage - 1) * DEVICES_PAGE_SIZE,
+    (devicesPage - PAGE_INDEX_OFFSET) * DEVICES_PAGE_SIZE,
     devicesPage * DEVICES_PAGE_SIZE
   );
   const countriesSlice = countriesAll.slice(
-    (countriesPage - 1) * COUNTRIES_PAGE_SIZE,
+    (countriesPage - PAGE_INDEX_OFFSET) * COUNTRIES_PAGE_SIZE,
     countriesPage * COUNTRIES_PAGE_SIZE
   );
 
-  if (!site) {
+  if (site === null || site === undefined) {
     return <DashboardNotFound />;
   }
+
+  const hasStats = stats !== undefined;
 
   return (
     <div className="space-y-8">
@@ -208,7 +219,7 @@ export function DashboardPage(): React.JSX.Element {
 
       <ActiveFilters siteId={siteId} search={decodedSearch} />
 
-      {stats ? (
+      {hasStats ? (
         <AnalyticsContent
           siteId={siteId}
           stats={stats}

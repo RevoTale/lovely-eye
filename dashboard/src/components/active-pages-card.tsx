@@ -11,6 +11,8 @@ interface ActivePagesCardProps {
   activePages: ActivePage[];
 }
 
+const EMPTY_COUNT = 0;
+
 export function ActivePagesCard({ activePages }: ActivePagesCardProps): React.JSX.Element {
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -33,7 +35,7 @@ export function ActivePagesCard({ activePages }: ActivePagesCardProps): React.JS
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {activePages.length > 0 ? (
+          {activePages.length > EMPTY_COUNT ? (
             activePages.map((page, index) => (
               <div
                 key={index}

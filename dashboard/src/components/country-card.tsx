@@ -16,6 +16,10 @@ interface CountryCardProps {
   onPageChange: (page: number) => void;
 }
 
+const EMPTY_COUNT = 0;
+const PERCENT_MULTIPLIER = 100;
+const PERCENT_PRECISION = 1;
+
 export function CountryCard({ countries, total, totalVisitors, page, pageSize, siteId, onPageChange }: CountryCardProps): React.JSX.Element {
   return (
     <BoardCard
@@ -24,9 +28,12 @@ export function CountryCard({ countries, total, totalVisitors, page, pageSize, s
       pagination={{ page, pageSize, total, onPageChange, align: 'center' }}
     >
       <div className="space-y-3">
-        {countries.length > 0 ? (
+        {countries.length > EMPTY_COUNT ? (
           countries.map((countryStat, index) => {
-            const percentage = totalVisitors > 0 ? (countryStat.visitors / totalVisitors) * 100 : 0;
+            const percentage =
+              totalVisitors > EMPTY_COUNT
+                ? (countryStat.visitors / totalVisitors) * PERCENT_MULTIPLIER
+                : EMPTY_COUNT;
 
             return (
               <div key={index}>
@@ -41,7 +48,9 @@ export function CountryCard({ countries, total, totalVisitors, page, pageSize, s
                   </FilterLink>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{countryStat.visitors.toLocaleString()}</Badge>
-                    <span className="text-xs text-muted-foreground">{percentage.toFixed(1)}%</span>
+                    <span className="text-xs text-muted-foreground">
+                      {percentage.toFixed(PERCENT_PRECISION)}%
+                    </span>
                   </div>
                 </div>
                 <Progress value={percentage} className="h-2" />

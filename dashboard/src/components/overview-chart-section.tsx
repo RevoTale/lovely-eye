@@ -8,8 +8,21 @@ interface OverviewChartSectionProps {
   dailyStats: DailyStats[];
 }
 
+const EMPTY_COUNT = 0;
+const CHART_MARGIN_TOP = 10;
+const CHART_MARGIN_RIGHT = 10;
+const CHART_MARGIN_LEFT = 0;
+const CHART_MARGIN_BOTTOM = 0;
+const CHART_MARGIN = {
+  top: CHART_MARGIN_TOP,
+  right: CHART_MARGIN_RIGHT,
+  left: CHART_MARGIN_LEFT,
+  bottom: CHART_MARGIN_BOTTOM,
+};
+const TICK_MARGIN = 8;
+
 export function OverviewChartSection({ dailyStats }: OverviewChartSectionProps): React.JSX.Element | null {
-  if (dailyStats.length === 0) {
+  if (dailyStats.length === EMPTY_COUNT) {
     return null;
   }
 
@@ -48,20 +61,20 @@ export function OverviewChartSection({ dailyStats }: OverviewChartSectionProps):
               pageViews: stat.pageViews,
               sessions: stat.sessions,
             }))}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            margin={CHART_MARGIN}
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
             <XAxis
               dataKey="date"
               tickLine={false}
               axisLine={false}
-              tickMargin={8}
+              tickMargin={TICK_MARGIN}
               className="text-xs"
             />
             <YAxis
               tickLine={false}
               axisLine={false}
-              tickMargin={8}
+              tickMargin={TICK_MARGIN}
               className="text-xs"
             />
             <ChartTooltip content={<ChartTooltipContent />} />

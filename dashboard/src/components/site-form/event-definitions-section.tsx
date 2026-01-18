@@ -64,11 +64,11 @@ export function EventDefinitionsSection({
         onSave={handleSaveEventDefinition}
         onDelete={handleDeleteEventDefinition}
       />
-      {actionError ? (
+      {actionError === '' ? null : (
         <p className="text-xs text-destructive">
           {actionError}
         </p>
-      ) : null}
+      )}
     </div>
   );
 }

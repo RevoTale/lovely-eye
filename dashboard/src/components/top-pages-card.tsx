@@ -15,6 +15,10 @@ interface TopPagesCardProps {
   onPageChange: (page: number) => void;
 }
 
+const EMPTY_COUNT = 0;
+const FIRST_INDEX = 0;
+const PERCENT_MULTIPLIER = 100;
+
 export function TopPagesCard({
   pages,
   total,
@@ -23,7 +27,7 @@ export function TopPagesCard({
   siteId,
   onPageChange,
 }: TopPagesCardProps): React.JSX.Element {
-  const maxViews = pages[0] ? pages[0].views : 0;
+  const maxViews = pages.length > EMPTY_COUNT ? pages[FIRST_INDEX]?.views ?? EMPTY_COUNT : EMPTY_COUNT;
 
   return (
     <BoardCard
@@ -32,7 +36,7 @@ export function TopPagesCard({
       pagination={{ page, pageSize, total, onPageChange }}
     >
       <div className="space-y-3">
-        {pages.length > 0 ? (
+        {pages.length > EMPTY_COUNT ? (
           pages.map((pageStat, index) => (
             <div key={index}>
               <div className="flex items-center justify-between mb-1">
@@ -48,7 +52,14 @@ export function TopPagesCard({
                   {pageStat.views.toLocaleString()}
                 </Badge>
               </div>
-              <Progress value={maxViews ? (pageStat.views / maxViews) * 100 : 0} className="h-2" />
+              <Progress
+                value={
+                  maxViews > EMPTY_COUNT
+                    ? (pageStat.views / maxViews) * PERCENT_MULTIPLIER
+                    : EMPTY_COUNT
+                }
+                className="h-2"
+              />
             </div>
           ))
         ) : (

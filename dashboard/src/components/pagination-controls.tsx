@@ -8,30 +8,38 @@ interface PaginationControlsProps {
   onPageChange: (page: number) => void;
 }
 
+const EMPTY_COUNT = 0;
+const MIN_PAGE = 1;
+const PAGE_INCREMENT = 1;
+
 export function PaginationControls({
   page,
   pageSize,
   total,
   onPageChange,
 }: PaginationControlsProps): React.JSX.Element {
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const clampedPage = Math.min(Math.max(page, 1), totalPages);
-  const start = total === 0 ? 0 : (clampedPage - 1) * pageSize + 1;
-  const end = total === 0 ? 0 : Math.min(clampedPage * pageSize, total);
+  const totalPages = Math.max(MIN_PAGE, Math.ceil(total / pageSize));
+  const clampedPage = Math.min(Math.max(page, MIN_PAGE), totalPages);
+  const start =
+    total === EMPTY_COUNT
+      ? EMPTY_COUNT
+      : (clampedPage - PAGE_INCREMENT) * pageSize + PAGE_INCREMENT;
+  const end =
+    total === EMPTY_COUNT ? EMPTY_COUNT : Math.min(clampedPage * pageSize, total);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
       <span>
-        {total === 0 ? 'No results' : `Showing ${start}-${end} of ${total}`}
+        {total === EMPTY_COUNT ? 'No results' : `Showing ${start}-${end} of ${total}`}
       </span>
       <div className="flex items-center gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          disabled={clampedPage <= 1}
+          disabled={clampedPage <= MIN_PAGE}
           onClick={() => {
-            onPageChange(Math.max(1, clampedPage - 1));
+            onPageChange(Math.max(MIN_PAGE, clampedPage - PAGE_INCREMENT));
           }}
         >
           Prev
@@ -45,7 +53,7 @@ export function PaginationControls({
           size="sm"
           disabled={clampedPage >= totalPages}
           onClick={() => {
-            onPageChange(Math.min(totalPages, clampedPage + 1));
+            onPageChange(Math.min(totalPages, clampedPage + PAGE_INCREMENT));
           }}
         >
           Next

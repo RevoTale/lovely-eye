@@ -6,11 +6,14 @@ interface EventCountsCardProps {
   events: Event[];
 }
 
+const EMPTY_COUNT = 0;
+const COUNT_INCREMENT = 1;
+
 export function EventCountsCard({ events }: EventCountsCardProps): React.JSX.Element {
   const counts = useMemo(() => {
     const counter = new Map<string, number>();
     for (const event of events) {
-      counter.set(event.name, (counter.get(event.name) ?? 0) + 1);
+      counter.set(event.name, (counter.get(event.name) ?? EMPTY_COUNT) + COUNT_INCREMENT);
     }
     return Array.from(counter.entries())
       .map(([name, count]) => ({ name, count }))
@@ -26,7 +29,7 @@ export function EventCountsCard({ events }: EventCountsCardProps): React.JSX.Ele
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {counts.length === 0 ? (
+        {counts.length === EMPTY_COUNT ? (
           <p className="text-sm text-muted-foreground text-center py-6">No events recorded yet.</p>
         ) : (
           <div className="space-y-3">

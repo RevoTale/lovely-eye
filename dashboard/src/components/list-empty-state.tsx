@@ -14,11 +14,14 @@ export function ListEmptyState({
   icon: Icon,
   className,
 }: ListEmptyStateProps): React.JSX.Element {
+  const hasDescription = description !== undefined && description !== '';
+  const hasIcon = Icon !== undefined;
+
   return (
     <div className={cn('text-center py-6 text-muted-foreground', className)}>
-      {Icon ? <Icon className="h-10 w-10 mx-auto mb-3 opacity-50" /> : null}
+      {hasIcon ? <Icon className="h-10 w-10 mx-auto mb-3 opacity-50" /> : null}
       <p className="text-sm">{title}</p>
-      {description ? <p className="text-xs mt-1">{description}</p> : null}
+      {hasDescription ? <p className="text-xs mt-1">{description}</p> : null}
     </div>
   );
 }
