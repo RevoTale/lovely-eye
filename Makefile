@@ -5,4 +5,4 @@ test:
 	@echo "Running dashboard linting and type checking..."
 	cd ./dashboard && bun run lint && bun run tsc
 	@echo "\nRunning Go unit tests..."
-	cd ./server && DASHBOARD_PATH=../dashboard/dist go test -v ./... --count=2
+	cd ./server && DASHBOARD_PATH=../dashboard/dist go test ./... --count=2
