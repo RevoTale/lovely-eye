@@ -1,13 +1,14 @@
 import React from 'react';
-import { useQuery } from '@apollo/client';
-import { SITES_QUERY } from '@/graphql';
+import { useQuery } from '@apollo/client/react';
+import { SitesDocument, type SitesQuery } from '@/gql/graphql';
 import { Link } from '@/router';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton, Badge } from '@/components/ui';
 import { Plus, Globe, ExternalLink, TrendingUp } from 'lucide-react';
-import type { Site } from '@/generated/graphql';
+
+type SiteListItem = SitesQuery['sites'][number];
 
 export function SitesPage(): React.JSX.Element {
-  const { data, loading, error } = useQuery(SITES_QUERY);
+  const { data, loading, error } = useQuery(SitesDocument);
 
   if (loading) {
     return (
@@ -20,7 +21,7 @@ export function SitesPage(): React.JSX.Element {
           <Skeleton className="h-10 w-32" />
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
+          {Array.from({ length: 3 }, (_, i) => (
             <Card key={i}>
               <CardHeader>
                 <Skeleton className="h-6 w-32" />
@@ -44,7 +45,7 @@ export function SitesPage(): React.JSX.Element {
     );
   }
 
-  const sites = (data?.sites ?? []) as Site[];
+  const sites: SiteListItem[] = data?.sites ?? [];
 
   return (
     <div className="space-y-8">

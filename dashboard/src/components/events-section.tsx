@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
-import type { EventsResult, Event } from '@/generated/graphql';
+import type { EventsResult, Event } from '@/gql/graphql';
 import { EventsCard } from '@/components/events-card';
 import { EventCountsCard } from '@/components/event-counts-card';
 

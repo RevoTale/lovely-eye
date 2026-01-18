@@ -1,6 +1,6 @@
 import React from 'react';
-import { useMutation } from '@apollo/client';
-import { REGENERATE_SITE_KEY_MUTATION } from '@/graphql';
+import { useMutation } from '@apollo/client/react';
+import { RegenerateSiteKeyDocument } from '@/gql/graphql';
 import { TrackingCodeCard } from '@/components/site-form/tracking-code-card';
 
 interface TrackingCodeSectionProps {
@@ -15,7 +15,7 @@ export function TrackingCodeSection({
   onViewAnalytics,
 }: TrackingCodeSectionProps): React.JSX.Element {
   const [actionError, setActionError] = React.useState('');
-  const [regenerateKey, { loading: regenerating }] = useMutation(REGENERATE_SITE_KEY_MUTATION);
+  const [regenerateKey, { loading: regenerating }] = useMutation(RegenerateSiteKeyDocument);
 
   const handleRegenerateKey = async (): Promise<void> => {
     if (!window.confirm('Are you sure you want to regenerate the site key? The old key will stop working.')) {

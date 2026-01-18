@@ -1,0 +1,9 @@
+mutation RefreshGeoIPDatabase {
+  refreshGeoIPDatabase {
+    state
+    dbPath
+    source
+    lastError
+    updatedAt
+  }
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui';
-import type { Event } from '@/generated/graphql';
+import type { Event } from '@/gql/graphql';
 import { PaginationControls } from '@/components/pagination-controls';
 
 interface EventsCardProps {

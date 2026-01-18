@@ -1,7 +1,7 @@
 import React from 'react';
 import { Globe } from 'lucide-react';
 import { Badge, Progress } from '@/components/ui';
-import type { CountryStats } from '@/generated/graphql';
+import type { CountryStats } from '@/gql/graphql';
 import { BoardCard } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';

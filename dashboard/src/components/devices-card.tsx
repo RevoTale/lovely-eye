@@ -1,6 +1,6 @@
 import React from 'react';
 import { Badge, Progress } from '@/components/ui';
-import type { DeviceStats } from '@/generated/graphql';
+import type { DeviceStats } from '@/gql/graphql';
 import { Monitor, Smartphone } from 'lucide-react';
 import { BoardCard } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';

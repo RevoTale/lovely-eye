@@ -1,6 +1,6 @@
-import { ApolloProvider } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client/react';
 import { RouterProvider } from '@tanstack/react-router';
-import { useMemo, useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { createApolloClient } from '@/lib/apollo';
 import { AuthProvider, useAuth } from '@/hooks';
 import { router } from '@/router';
@@ -12,6 +12,7 @@ function InnerApp(): React.JSX.Element {
 
 export function App(): React.JSX.Element {
   const authErrorHandlerRef = useRef<(() => void) | null>(null);
+  // eslint-disable-next-line react-hooks/refs -- callback is only called on auth errors, not during render
   const apolloClient = useMemo(() => createApolloClient(() => {
     authErrorHandlerRef.current?.();
   }), []);

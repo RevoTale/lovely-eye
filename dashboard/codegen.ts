@@ -2,31 +2,20 @@ import type { CodegenConfig } from '@graphql-codegen/cli';
 
 const config: CodegenConfig = {
   schema: '../server/schema.graphqls',
-  documents: ['src/**/*.graphql', 'src/**/*.tsx', 'src/**/*.ts'],
-  ignoreNoDocuments: true,
+  documents: 'src/**/*.graphql',
   generates: {
-    './src/generated/graphql.ts': {
-      plugins: [
-        'typescript',
-        'typescript-operations',
-        'typescript-react-apollo',
-      ],
+    './src/gql/': {
+      preset: 'client',
+      presetConfig: {
+        fragmentMasking: false,
+      },
       config: {
-        withHooks: true,
-        withHOC: false,
-        withComponent: false,
         strictScalars: true,
-        scalars: {
-          Time: 'string',
-        },
+        scalars: { Time: 'string' },
         enumsAsTypes: true,
-        avoidOptionals: {
-          field: true,
-          inputValue: false,
-          object: true,
-          defaultValue: false,
-        },
+        avoidOptionals: { field: true, inputValue: false, object: true },
         nonOptionalTypename: true,
+        useTypeImports: true,
       },
     },
   },

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui';
-import type { Event } from '@/generated/graphql';
+import type { Event } from '@/gql/graphql';
 
 interface EventCountsCardProps {
   events: Event[];

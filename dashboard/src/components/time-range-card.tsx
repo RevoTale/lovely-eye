@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger, Label } from '@/components/ui';
 import type { DatePreset } from '@/lib/date-range';
-import { formatDateInput, isValidDateInput, isValidTimeInput, normalizeTimeInput } from '@/lib/date-range';
+import { formatDateInput, isDatePreset, isValidDateInput, isValidTimeInput, normalizeTimeInput } from '@/lib/date-range';
 import { DateTimePicker } from '@/components/ui/datetime-picker';
 
 interface TimeRangeCardProps {
@@ -13,11 +13,13 @@ interface TimeRangeCardProps {
   onPresetChange: (preset: DatePreset) => void;
   onApplyRange: (range: { fromDate: string; toDate: string; fromTime: string; toTime: string }) => boolean;
 }
-  const parseDraft = (dateValue: string, timeValue: string): Date | undefined => {
-      if (!isValidDateInput(dateValue) || !isValidTimeInput(timeValue)) return undefined;
-      const candidate = new Date(`${dateValue}T${timeValue}:00`);
-      return Number.isNaN(candidate.getTime()) ? undefined : candidate;
-    };
+
+const parseDraft = (dateValue: string, timeValue: string): Date | undefined => {
+  if (!isValidDateInput(dateValue) || !isValidTimeInput(timeValue)) return undefined;
+  const candidate = new Date(`${dateValue}T${timeValue}:00`);
+  return Number.isNaN(candidate.getTime()) ? undefined : candidate;
+};
+
 export function TimeRangeCard({
   preset,
   fromDate,
@@ -30,16 +32,24 @@ export function TimeRangeCard({
   const isCustom = preset === 'custom';
   const displayFromTime = normalizeTimeInput(fromTime, '00:00');
   const displayToTime = normalizeTimeInput(toTime, '23:59');
-  const [draftFromDate, setDraftFromDate] = useState<Date | undefined>(undefined);
-  const [draftToDate, setDraftToDate] = useState<Date | undefined>(undefined);
+
+  const propFromDate = useMemo(() => parseDraft(fromDate, fromTime), [fromDate, fromTime]);
+  const propToDate = useMemo(() => parseDraft(toDate, toTime), [toDate, toTime]);
+
+  const [draftFromDate, setDraftFromDate] = useState<Date | undefined>(propFromDate);
+  const [draftToDate, setDraftToDate] = useState<Date | undefined>(propToDate);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  useEffect(() => {
-  
-    setDraftFromDate(parseDraft(fromDate, fromTime));
-    setDraftToDate(parseDraft(toDate, toTime));
+  const [lastSyncKey, setLastSyncKey] = useState(`${fromDate}-${fromTime}-${toDate}-${toTime}-${preset}`);
+
+  const syncKey = `${fromDate}-${fromTime}-${toDate}-${toTime}-${preset}`;
+  if (syncKey !== lastSyncKey) {
+    setLastSyncKey(syncKey);
+    setDraftFromDate(propFromDate);
+    setDraftToDate(propToDate);
     setSubmitAttempted(false);
-  }, [fromDate, fromTime, preset, toDate, toTime]);
- const applied = parseDraft(fromDate,fromTime)?.toDateString() === draftFromDate?.toDateString()  && parseDraft(toDate, toTime)?.toDateString() === draftToDate?.toDateString() 
+  }
+
+  const applied = propFromDate?.toDateString() === draftFromDate?.toDateString() && propToDate?.toDateString() === draftToDate?.toDateString();
   const showRange = Boolean(fromDate && toDate);
   const draftHasValidInputs = Boolean(draftFromDate && draftToDate);
   const draftRangeValid = useMemo(() => {
@@ -59,10 +69,12 @@ export function TimeRangeCard({
         <div className="space-y-2">
           <label className="text-xs text-muted-foreground">Quick presets</label>
           <div className="flex flex-wrap items-center gap-3">
-            <Tabs value={preset}  onValueChange={(value) => {
-              onPresetChange(value as DatePreset);
+            <Tabs value={preset} onValueChange={(value) => {
+              if (isDatePreset(value)) {
+                onPresetChange(value);
+              }
             }}>
-              <TabsList className='h-auto flex flex-wrap max-w-full'>
+              <TabsList className="h-auto flex flex-wrap max-w-full">
                 <TabsTrigger value="all">All time</TabsTrigger>
                 <TabsTrigger value="7d">7d</TabsTrigger>
                 <TabsTrigger value="30d">30d</TabsTrigger>
@@ -113,15 +125,14 @@ export function TimeRangeCard({
                   setSubmitAttempted(true);
                   if (!canApply) return;
                   if (!draftFromDate || !draftToDate) return;
-                  const applied = onApplyRange({
+                  const didApply = onApplyRange({
                     fromDate: formatDateInput(draftFromDate),
                     toDate: formatDateInput(draftToDate),
                     fromTime: `${String(draftFromDate.getHours()).padStart(2, '0')}:${String(draftFromDate.getMinutes()).padStart(2, '0')}`,
                     toTime: `${String(draftToDate.getHours()).padStart(2, '0')}:${String(draftToDate.getMinutes()).padStart(2, '0')}`,
                   });
-                  if (applied) {
+                  if (didApply) {
                     setSubmitAttempted(false);
-
                   }
                 }}
                 disabled={!canApply || applied}

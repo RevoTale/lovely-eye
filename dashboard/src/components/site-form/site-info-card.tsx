@@ -33,22 +33,23 @@ export function SiteInfoCard({
 }: SiteInfoCardProps): React.JSX.Element {
   const [name, setName] = React.useState(initialName);
   const [formError, setFormError] = React.useState('');
-  const nextDomainId = React.useRef(1);
-  const buildDomainEntries = React.useCallback((values: string[]): DomainEntry[] => {
+  const nextDomainIdRef = React.useRef(initialDomains.length > 0 ? initialDomains.length + 1 : 2);
+
+  const buildDomainEntries = (values: string[]): DomainEntry[] => {
     if (values.length === 0) {
-      nextDomainId.current = 2;
       return [{ id: '1', value: '' }];
     }
-    nextDomainId.current = values.length + 1;
     return values.map((domain, index) => ({ id: String(index + 1), value: domain }));
-  }, []);
+  };
+
   const [domains, setDomains] = React.useState<DomainEntry[]>(() => buildDomainEntries(initialDomains));
 
   React.useEffect(() => {
     setName(initialName);
     setDomains(buildDomainEntries(initialDomains));
     setFormError('');
-  }, [buildDomainEntries, initialDomains, initialName, siteId]);
+    nextDomainIdRef.current = initialDomains.length > 0 ? initialDomains.length + 1 : 2;
+  }, [initialDomains, initialName, siteId]);
 
   const hasDomainChanges = React.useMemo(() => {
     const currentDomains = getNormalizedDomains(domains.map((entry) => entry.value));
@@ -177,8 +178,8 @@ export function SiteInfoCard({
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const nextId = String(nextDomainId.current);
-                  nextDomainId.current += 1;
+                  const nextId = String(nextDomainIdRef.current);
+                  nextDomainIdRef.current += 1;
                   setDomains((prev) => [...prev, { id: nextId, value: '' }]);
                 }}
               >

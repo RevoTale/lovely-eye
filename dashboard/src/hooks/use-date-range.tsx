@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import {
   buildDateRange,
@@ -68,24 +68,9 @@ export function useDateRange(): DateRangeState {
     };
   }, [defaultPreset]);
 
-  const [state, setState] = useState(() => resolveSearchState(search));
-  const { preset, fromDate, toDate, fromTime, toTime } = state;
+  const resolvedState = useMemo(() => resolveSearchState(search), [resolveSearchState, search]);
 
-  useEffect(() => {
-    const nextState = resolveSearchState(search);
-    setState((prev) => {
-      if (
-        prev.preset === nextState.preset &&
-        prev.fromDate === nextState.fromDate &&
-        prev.toDate === nextState.toDate &&
-        prev.fromTime === nextState.fromTime &&
-        prev.toTime === nextState.toTime
-      ) {
-        return prev;
-      }
-      return nextState;
-    });
-  }, [resolveSearchState, search]);
+  const { preset, fromDate, toDate, fromTime, toTime } = resolvedState;
 
   const dateRange = useMemo(() => {
     if (preset === 'all') {
@@ -105,14 +90,6 @@ export function useDateRange(): DateRangeState {
       const nextToDate = isValidDateInput(toDate) ? toDate : fallbackDates.toDate;
       const nextFromTime = isValidTimeInput(fromTime) ? fromTime : '00:00';
       const nextToTime = isValidTimeInput(toTime) ? toTime : '23:59';
-      setState((prev) => ({
-        ...prev,
-        preset: 'custom',
-        fromDate: nextFromDate,
-        toDate: nextToDate,
-        fromTime: nextFromTime,
-        toTime: nextToTime,
-      }));
       void navigate({
         to: '/sites/$siteId',
         params: { siteId },
@@ -128,13 +105,6 @@ export function useDateRange(): DateRangeState {
       return;
     }
     if (value === 'all') {
-      setState({
-        preset: 'all',
-        fromDate: '',
-        toDate: '',
-        fromTime: '',
-        toTime: '',
-      });
       void navigate({
         to: '/sites/$siteId',
         params: { siteId },
@@ -148,14 +118,6 @@ export function useDateRange(): DateRangeState {
       });
       return;
     }
-    const presetDates = presetToDates(value, new Date());
-    setState({
-      preset: value,
-      fromDate: presetDates.fromDate,
-      toDate: presetDates.toDate,
-      fromTime: '00:00',
-      toTime: '23:59',
-    });
     void navigate({
       to: '/sites/$siteId',
       params: { siteId },
@@ -183,13 +145,6 @@ export function useDateRange(): DateRangeState {
     if (!candidate || new Date(candidate.from) > new Date(candidate.to)) {
       return false;
     }
-    setState({
-      preset: 'custom',
-      fromDate: nextFrom,
-      toDate: nextTo,
-      fromTime: nextFromTime,
-      toTime: nextToTime,
-    });
     void navigate({
       to: '/sites/$siteId',
       params: { siteId },

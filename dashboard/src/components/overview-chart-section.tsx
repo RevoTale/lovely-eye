@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { TrendingUp } from 'lucide-react';
-import type { DailyStats } from '@/generated/graphql';
+import type { DailyStats } from '@/gql/graphql';
 
 interface OverviewChartSectionProps {
   dailyStats: DailyStats[];

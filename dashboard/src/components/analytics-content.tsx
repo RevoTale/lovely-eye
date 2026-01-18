@@ -8,7 +8,7 @@ import type {
   PageStats,
   ReferrerStats,
   RealtimeStats,
-} from '@/generated/graphql';
+} from '@/gql/graphql';
 import { Users, Eye, Clock, TrendingDown } from 'lucide-react';
 import { StatCard } from '@/components/stat-card';
 import { OverviewChartSection } from '@/components/overview-chart-section';

@@ -8,7 +8,7 @@ export default [
     ignores: [
       'dist/**',
       'node_modules/**',
-      'src/generated/**',
+      'src/gql/**',
       'public/**',
       '*.config.js',
       '*.config.ts',
@@ -28,18 +28,16 @@ export default [
     },
     rules: {
       ...love.rules,
-      // Practical adjustments to overly strict rules
+      // Practical adjustments
       '@typescript-eslint/no-magic-numbers': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/prefer-destructuring': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-type-assertion': 'off',
+      '@typescript-eslint/max-params': 'off',
+      '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/promise-function-async': 'off',
       '@typescript-eslint/only-throw-error': 'off',
       '@typescript-eslint/triple-slash-reference': 'off',
-      '@typescript-eslint/consistent-type-assertions': 'off',
       'complexity': ['error', { max: 25 }],
       'require-unicode-regexp': 'off',
       'no-negated-condition': 'off',

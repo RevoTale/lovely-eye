@@ -1,39 +1,38 @@
 import {
   ApolloClient,
   InMemoryCache,
-  createHttpLink,
   ApolloLink,
-  type ApolloError,
-  type NormalizedCacheObject,
 } from '@apollo/client';
-import { onError } from '@apollo/client/link/error';
+import { HttpLink } from '@apollo/client/link/http';
+import { ErrorLink } from '@apollo/client/link/error';
+import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { getGraphQLUrl } from '@/config';
 
-const httpLink = createHttpLink({
+const httpLink = new HttpLink({
   uri: getGraphQLUrl(),
   credentials: 'include',
 });
 
 type AuthErrorHandler = () => void;
 
-export const createApolloClient = (onAuthError?: AuthErrorHandler): ApolloClient<NormalizedCacheObject> => {
-  const errorLink = onError((response) => {
-    const error = ('error' in response ? (response.error as ApolloError | undefined) : undefined);
-    const networkError = error?.networkError as { statusCode?: number; status?: number } | undefined;
-    const statusCode = networkError?.statusCode ?? networkError?.status;
-    const hasAuthNetworkError = statusCode === 401 || statusCode === 403;
-    const graphQLErrors = error?.graphQLErrors ?? [];
-    const hasAuthGraphQLError = graphQLErrors.some((graphQLError) => {
-      const code = graphQLError.extensions?.code;
-      return code === 'UNAUTHENTICATED' || code === 'FORBIDDEN';
-    });
+export const createApolloClient = (onAuthError?: AuthErrorHandler): ApolloClient => {
+  const errorLink = new ErrorLink(({ error }) => {
+    const hasAuthNetworkError =
+      ServerError.is(error) &&
+      (error.statusCode === 401 || error.statusCode === 403);
+    const hasAuthGraphQLError =
+      CombinedGraphQLErrors.is(error) &&
+      error.errors.some((graphQLError) => {
+        const code = (graphQLError.extensions as { code?: string } | undefined)?.code;
+        return code === 'UNAUTHENTICATED' || code === 'FORBIDDEN';
+      });
 
     if (hasAuthNetworkError || hasAuthGraphQLError) {
       onAuthError?.();
     }
   });
 
-  return new ApolloClient<NormalizedCacheObject>({
+  return new ApolloClient({
     link: ApolloLink.from([errorLink, httpLink]),
     cache: new InMemoryCache(),
     defaultOptions: {

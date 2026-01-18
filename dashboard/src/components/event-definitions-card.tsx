@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, Input, Label } from '@/components/ui';
-import type { EventDefinition, EventDefinitionInput, EventDefinitionFieldInput, EventFieldType } from '@/generated/graphql';
+import type { EventDefinition, EventDefinitionInput, EventDefinitionFieldInput, EventFieldType } from '@/gql/graphql';
 
 const DEFAULT_MAX_LENGTH = 500;
 
@@ -14,6 +14,10 @@ const FIELD_TYPES: EventFieldTypeOption[] = [
   { label: 'Number', value: 'NUMBER' },
   { label: 'Boolean', value: 'BOOLEAN' },
 ];
+
+function isEventFieldType(value: string): value is EventFieldType {
+  return value === 'STRING' || value === 'NUMBER' || value === 'BOOLEAN';
+}
 
 interface EventDefinitionsCardProps {
   definitions: EventDefinition[];
@@ -244,10 +248,12 @@ export function EventDefinitionsCard({
                         value={field.type}
                         className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                         onChange={(e) => {
-                          const value = e.target.value as EventFieldType;
-                          setDraftFields((prev) =>
-                            prev.map((item, idx) => (idx === index ? { ...item, type: value } : item))
-                          );
+                          const value = e.target.value;
+                          if (isEventFieldType(value)) {
+                            setDraftFields((prev) =>
+                              prev.map((item, idx) => (idx === index ? { ...item, type: value } : item))
+                            );
+                          }
                         }}
                       >
                         {FIELD_TYPES.map((option) => (

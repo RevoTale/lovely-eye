@@ -1,8 +1,12 @@
 import React, { useMemo, useEffect } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { useQuery } from '@apollo/client';
-import { DASHBOARD_QUERY, REALTIME_QUERY, SITE_QUERY, EVENTS_QUERY } from '@/graphql';
-import type { DashboardStats, Site, RealtimeStats } from '@/generated/graphql';
+import { useQuery } from '@apollo/client/react';
+import {
+  DashboardDocument,
+  RealtimeDocument,
+  EventsDocument,
+  SiteDocument,
+} from '@/gql/graphql';
 import { siteDetailRoute } from '@/router';
 import { ActiveFilters } from '@/components/active-filters';
 import { TimeRangeCard } from '@/components/time-range-card';
@@ -38,10 +42,10 @@ function buildFilters(search: Record<string, string | string[] | undefined>): {
   decodedSearch: Record<string, unknown>;
   filter: Record<string, string[]>;
 } {
-  const referrers = normalizeFilterValue(search.referrer);
-  const devices = normalizeFilterValue(search.device);
-  const pages = normalizeFilterValue(search.page);
-  const countries = normalizeFilterValue(search.country);
+  const referrers = normalizeFilterValue(search['referrer']);
+  const devices = normalizeFilterValue(search['device']);
+  const pages = normalizeFilterValue(search['page']);
+  const countries = normalizeFilterValue(search['country']);
   const decodedSearch = {
     ...search,
     ...(referrers.length ? { referrer: referrers } : {}),
@@ -71,7 +75,7 @@ export function DashboardPage(): React.JSX.Element {
   const devicesPage = useMemo(() => parsePage(search.devicesPage), [search.devicesPage]);
   const countriesPage = useMemo(() => parsePage(search.countriesPage), [search.countriesPage]);
 
-  const { data: siteData, loading: siteLoading } = useQuery(SITE_QUERY, {
+  const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
     variables: { id: siteId },
     skip: !siteId,
   });
@@ -114,26 +118,26 @@ export function DashboardPage(): React.JSX.Element {
     });
   };
 
-  const { data: dashboardData, loading: dashboardLoading } = useQuery(DASHBOARD_QUERY, {
+  const { data: dashboardData, loading: dashboardLoading } = useQuery(DashboardDocument, {
     variables: {
       siteId,
-      dateRange,
-      filter: Object.keys(filter).length > 0 ? filter : undefined,
+      dateRange: dateRange ?? null,
+      filter: Object.keys(filter).length > 0 ? filter : null,
     },
     skip: !siteId,
     pollInterval: 60000,
   });
 
-  const { data: realtimeData } = useQuery(REALTIME_QUERY, {
+  const { data: realtimeData } = useQuery(RealtimeDocument, {
     variables: { siteId },
     skip: !siteId,
     pollInterval: 5000,
   });
 
-  const { data: eventsData, loading: eventsLoading } = useQuery(EVENTS_QUERY, {
+  const { data: eventsData, loading: eventsLoading } = useQuery(EventsDocument, {
     variables: {
       siteId,
-      dateRange,
+      dateRange: dateRange ?? null,
       limit: EVENTS_PAGE_SIZE,
       offset: (eventsPage - 1) * EVENTS_PAGE_SIZE,
     },
@@ -141,10 +145,10 @@ export function DashboardPage(): React.JSX.Element {
     pollInterval: 60000,
   });
 
-  const { data: eventsCountsData } = useQuery(EVENTS_QUERY, {
+  const { data: eventsCountsData } = useQuery(EventsDocument, {
     variables: {
       siteId,
-      dateRange,
+      dateRange: dateRange ?? null,
       limit: EVENTS_COUNT_LIMIT,
       offset: 0,
     },
@@ -156,11 +160,11 @@ export function DashboardPage(): React.JSX.Element {
     return <DashboardLoading />;
   }
 
-  const site = siteData?.site as Site | undefined;
-  const stats = dashboardData?.dashboard as DashboardStats | undefined;
-  const realtime = realtimeData?.realtime as RealtimeStats | undefined;
+  const site = siteData?.site;
+  const stats = dashboardData?.dashboard;
+  const realtime = realtimeData?.realtime;
   const eventsResult = eventsData?.events;
-  const eventsCounts = eventsCountsData?.events?.events ?? [];
+  const eventsCounts = eventsCountsData?.events.events ?? [];
   const topPages = stats?.topPages ?? [];
   const referrersAll = stats?.topReferrers ?? [];
   const devicesAll = stats?.devices ?? [];

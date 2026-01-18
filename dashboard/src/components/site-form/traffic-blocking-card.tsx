@@ -1,10 +1,9 @@
 import React from 'react';
-import { useQuery } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
+import { GeoIpCountriesDocument } from '@/gql/graphql';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui';
 import { Loader2, Shield, X } from 'lucide-react';
-import { GEOIP_COUNTRIES_QUERY } from '@/graphql';
 import { getNormalizedBlockedIPs, normalizeCountryCodesPreserveOrder, normalizeIPInput } from '@/components/site-form/utils';
-import type { GeoIpCountriesQuery, GeoIpCountriesQueryVariables } from '@/generated/graphql';
 
 interface BlockedIPEntry {
   id: string;
@@ -57,7 +56,7 @@ export function TrafficBlockingCard({
 
   const trimmedCountrySearch = countrySearch.trim();
   const shouldSearchCountries = geoIPReady && trimmedCountrySearch.length >= 2;
-  const { data: geoIPCountriesData, loading: geoIPCountriesLoading } = useQuery<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>(GEOIP_COUNTRIES_QUERY, {
+  const { data: geoIPCountriesData, loading: geoIPCountriesLoading } = useQuery(GeoIpCountriesDocument, {
     variables: { search: trimmedCountrySearch },
     skip: !shouldSearchCountries,
   });
@@ -67,7 +66,7 @@ export function TrafficBlockingCard({
   const normalizedBlockedCountries = React.useMemo(() => normalizeCountryCodesPreserveOrder(blockedCountries), [blockedCountries]);
   const blockedCountryCount = normalizedBlockedCountries.length;
   const countryNameLookup = React.useMemo(() => {
-    return new Map(geoIPCountries.map((country) => [country.code, country.name]));
+    return new Map(geoIPCountries.map((country) => [country.code, country.name] as const));
   }, [geoIPCountries]);
   const isUpdating = savingBlockedIPs || savingBlockedCountries;
 
@@ -88,9 +87,13 @@ export function TrafficBlockingCard({
     }
     setBlockedCountryNames((prev) => {
       const next = { ...prev };
-      geoIPCountries.forEach((country) => {
-          next[country.code] ??= country.name;
-      });
+      for (const country of geoIPCountries) {
+        const code = country.code;
+        const name = country.name;
+        if (code && name && next[code] === undefined) {
+          next[code] = name;
+        }
+      }
       return next;
     });
   }, [geoIPCountries]);
@@ -209,9 +212,10 @@ export function TrafficBlockingCard({
     );
     const singleMatch = matchingCountries.length === 1 ? matchingCountries[0] : undefined;
     const target = exactMatch ?? singleMatch;
-    if (target) {
+    if (target?.code) {
+      const code = target.code;
       void (async () => {
-        await handleAddBlockedCountry(target.code);
+        await handleAddBlockedCountry(code);
         setCountrySearch('');
       })();
       event.preventDefault();
@@ -384,23 +388,28 @@ export function TrafficBlockingCard({
                 {trimmedCountrySearch.length >= 2 ? `No matches for "${trimmedCountrySearch}".` : 'Search results will appear here.'}
               </p>
             ) : (
-              matchingCountries.slice(0, 8).map((country) => (
-                <button
-                  key={country.code}
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-sm hover:bg-accent"
-                  disabled={savingBlockedCountries}
-                  onClick={() => {
-                    void (async () => {
-                      await handleAddBlockedCountry(country.code);
-                      setCountrySearch('');
-                    })();
-                  }}
-                >
-                  <span>{country.name}</span>
-                  <span className="text-xs text-muted-foreground">{country.code}</span>
-                </button>
-              ))
+              matchingCountries.slice(0, 8).map((country) => {
+                const countryCode = country.code;
+                const countryName = country.name;
+                if (!countryCode) return null;
+                return (
+                  <button
+                    key={countryCode}
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-md px-2 py-1 text-left text-sm hover:bg-accent"
+                    disabled={savingBlockedCountries}
+                    onClick={() => {
+                      void (async () => {
+                        await handleAddBlockedCountry(countryCode);
+                        setCountrySearch('');
+                      })();
+                    }}
+                  >
+                    <span>{countryName}</span>
+                    <span className="text-xs text-muted-foreground">{countryCode}</span>
+                  </button>
+                );
+              })
             )}
           </div>
 

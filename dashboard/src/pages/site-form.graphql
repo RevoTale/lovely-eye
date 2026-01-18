@@ -1,0 +1,45 @@
+mutation CreateSite($input: CreateSiteInput!) {
+  createSite(input: $input) {
+    id
+    domains
+    name
+    publicKey
+    createdAt
+  }
+}
+
+query GeoIPStatus {
+  geoIPStatus {
+    state
+    dbPath
+    source
+    lastError
+    updatedAt
+  }
+}
+
+query Site($id: ID!) {
+  site(id: $id) {
+    id
+    domains
+    name
+    publicKey
+    trackCountry
+    blockedIPs
+    blockedCountries
+    createdAt
+  }
+}
+
+mutation UpdateSite($id: ID!, $input: UpdateSiteInput!) {
+  updateSite(id: $id, input: $input) {
+    id
+    domains
+    name
+    publicKey
+    trackCountry
+    blockedIPs
+    blockedCountries
+    createdAt
+  }
+}

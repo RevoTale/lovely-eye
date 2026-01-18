@@ -1,6 +1,6 @@
 import React from 'react';
-import { useMutation } from '@apollo/client';
-import { SITE_QUERY, UPDATE_SITE_MUTATION } from '@/graphql';
+import { useMutation } from '@apollo/client/react';
+import { UpdateSiteDocument, SiteDocument } from '@/gql/graphql';
 import { TrafficBlockingCard } from '@/components/site-form/traffic-blocking-card';
 
 interface TrafficBlockingSectionProps {
@@ -18,8 +18,8 @@ export function TrafficBlockingSection({
   initialBlockedCountries,
   geoIPReady,
 }: TrafficBlockingSectionProps): React.JSX.Element {
-  const [updateBlockedIPs, { loading: savingBlockedIPs }] = useMutation(UPDATE_SITE_MUTATION);
-  const [updateBlockedCountries, { loading: savingBlockedCountries }] = useMutation(UPDATE_SITE_MUTATION);
+  const [updateBlockedIPs, { loading: savingBlockedIPs }] = useMutation(UpdateSiteDocument);
+  const [updateBlockedCountries, { loading: savingBlockedCountries }] = useMutation(UpdateSiteDocument);
 
   const handleUpdateBlockedIPs = async (blockedIPs: string[]): Promise<void> => {
     await updateBlockedIPs({
@@ -30,7 +30,7 @@ export function TrafficBlockingSection({
           blockedIPs,
         },
       },
-      refetchQueries: [{ query: SITE_QUERY, variables: { id: siteId } }],
+      refetchQueries: [{ query: SiteDocument, variables: { id: siteId } }],
       awaitRefetchQueries: true,
     });
   };
@@ -44,7 +44,7 @@ export function TrafficBlockingSection({
           blockedCountries,
         },
       },
-      refetchQueries: [{ query: SITE_QUERY, variables: { id: siteId } }],
+      refetchQueries: [{ query: SiteDocument, variables: { id: siteId } }],
       awaitRefetchQueries: true,
     });
   };

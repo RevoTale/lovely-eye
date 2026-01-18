@@ -1,0 +1,39 @@
+query Me {
+  me {
+    id
+    username
+    role
+    createdAt
+    sites {
+      id
+      domains
+      name
+      publicKey
+      createdAt
+    }
+  }
+}
+
+mutation Login($input: LoginInput!) {
+  login(input: $input) {
+    user {
+      id
+      username
+      role
+    }
+  }
+}
+
+mutation Register($input: RegisterInput!) {
+  register(input: $input) {
+    user {
+      id
+      username
+      role
+    }
+  }
+}
+
+mutation Logout {
+  logout
+}

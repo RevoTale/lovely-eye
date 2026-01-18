@@ -1,0 +1,35 @@
+query EventDefinitions($siteId: ID!) {
+  eventDefinitions(siteId: $siteId) {
+    id
+    name
+    createdAt
+    updatedAt
+    fields {
+      id
+      key
+      type
+      required
+      maxLength
+    }
+  }
+}
+
+mutation UpsertEventDefinition($siteId: ID!, $input: EventDefinitionInput!) {
+  upsertEventDefinition(siteId: $siteId, input: $input) {
+    id
+    name
+    createdAt
+    updatedAt
+    fields {
+      id
+      key
+      type
+      required
+      maxLength
+    }
+  }
+}
+
+mutation DeleteEventDefinition($siteId: ID!, $name: String!) {
+  deleteEventDefinition(siteId: $siteId, name: $name)
+}

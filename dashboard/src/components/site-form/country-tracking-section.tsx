@@ -1,7 +1,7 @@
 import React from 'react';
-import { useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
+import { RefreshGeoIpDatabaseDocument, UpdateSiteDocument } from '@/gql/graphql';
 import { CountryTrackingCard } from '@/components/country-tracking-card';
-import { REFRESH_GEOIP_MUTATION, UPDATE_SITE_MUTATION } from '@/graphql';
 
 interface GeoIPStatus {
   state: string;
@@ -25,8 +25,8 @@ export function CountryTrackingSection({
 }: CountryTrackingSectionProps): React.JSX.Element {
   const [trackCountry, setTrackCountry] = React.useState(initialTrackCountry);
   const [actionError, setActionError] = React.useState('');
-  const [updateSite, { loading: updating }] = useMutation(UPDATE_SITE_MUTATION);
-  const [refreshGeoIP, { loading: refreshing }] = useMutation(REFRESH_GEOIP_MUTATION);
+  const [updateSite, { loading: updating }] = useMutation(UpdateSiteDocument);
+  const [refreshGeoIP, { loading: refreshing }] = useMutation(RefreshGeoIpDatabaseDocument);
 
   React.useEffect(() => {
     setTrackCountry(initialTrackCountry);

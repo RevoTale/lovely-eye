@@ -147,7 +147,7 @@ function setDateByType(
   value: string,
   type: TimePickerType,
   period?: Period,
-) {
+): Date {
   switch (type) {
     case "minutes":
       return setMinutes(date, value);
@@ -155,15 +155,13 @@ function setDateByType(
       return setSeconds(date, value);
     case "hours":
       return setHours(date, value);
-    case "12hours": {
+    case "12hours":
       if (!period) return date;
       return set12Hours(date, value, period);
-    }
   }
-  return date;
 }
 
-function getDateByType(date: Date | null, type: TimePickerType) {
+function getDateByType(date: Date | null, type: TimePickerType): string {
   if (!date) return "00";
   switch (type) {
     case "minutes":
@@ -175,10 +173,9 @@ function getDateByType(date: Date | null, type: TimePickerType) {
     case "12hours":
       return getValid12Hour(display12HourValue(date.getHours()));
   }
-  return "00";
 }
 
-function getArrowByType(value: string, step: number, type: TimePickerType) {
+function getArrowByType(value: string, step: number, type: TimePickerType): string {
   switch (type) {
     case "minutes":
       return getValidArrowMinuteOrSecond(value, step);
@@ -189,7 +186,6 @@ function getArrowByType(value: string, step: number, type: TimePickerType) {
     case "12hours":
       return getValidArrow12Hour(value, step);
   }
-  return "00";
 }
 
 /**

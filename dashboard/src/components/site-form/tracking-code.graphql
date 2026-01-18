@@ -1,0 +1,9 @@
+mutation RegenerateSiteKey($id: ID!) {
+  regenerateSiteKey(id: $id) {
+    id
+    domains
+    name
+    publicKey
+    createdAt
+  }
+}

@@ -1,6 +1,6 @@
 import React from 'react';
-import { useMutation } from '@apollo/client';
-import { DELETE_SITE_MUTATION, SITES_QUERY } from '@/graphql';
+import { useMutation } from '@apollo/client/react';
+import { DeleteSiteDocument, SitesDocument } from '@/gql/graphql';
 import { DangerZoneCard } from '@/components/site-form/danger-zone-card';
 
 interface DangerZoneSectionProps {
@@ -15,8 +15,8 @@ export function DangerZoneSection({
   onDeleted,
 }: DangerZoneSectionProps): React.JSX.Element {
   const [actionError, setActionError] = React.useState('');
-  const [deleteSite, { loading: deleting }] = useMutation(DELETE_SITE_MUTATION, {
-    refetchQueries: [{ query: SITES_QUERY }],
+  const [deleteSite, { loading: deleting }] = useMutation(DeleteSiteDocument, {
+    refetchQueries: [{ query: SitesDocument }],
     onCompleted: () => {
       onDeleted();
     },

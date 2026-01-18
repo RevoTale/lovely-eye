@@ -6,6 +6,12 @@ interface RouterContext {
   auth: AuthContextType;
 }
 
+// Helper to create initial router context (overridden at runtime via RouterProvider)
+function createInitialContext(): RouterContext {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/consistent-type-assertions -- TanStack Router requires initial context placeholder
+  return {} as RouterContext;
+}
+
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: () => <Outlet />,
 });
@@ -95,9 +101,7 @@ const routeTree = rootRoute.addChildren([
 
 export const router = createRouter({
   routeTree,
-  context: {
-    auth: undefined as unknown as AuthContextType,
-  },
+  context: createInitialContext(),
   defaultPreload: 'intent',
   basepath: window.__ENV__?.BASE_PATH ?? '/',
 });

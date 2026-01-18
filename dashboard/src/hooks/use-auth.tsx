@@ -1,10 +1,19 @@
-import { createContext, useContext, useState, useCallback, useRef, type MutableRefObject, type ReactNode } from 'react';
-import { useMutation, useQuery, useApolloClient } from '@apollo/client';
-import { ME_QUERY, LOGIN_MUTATION, LOGOUT_MUTATION, REGISTER_MUTATION } from '@/graphql';
-import type { User, LoginInput, RegisterInput } from '@/generated/graphql';
+import { createContext, useContext, useCallback, useRef, useEffect, type RefObject, type ReactNode } from 'react';
+import { useQuery, useMutation, useApolloClient } from '@apollo/client/react';
+import {
+  MeDocument,
+  LoginDocument,
+  RegisterDocument,
+  LogoutDocument,
+  type MeQuery,
+  type LoginInput,
+  type RegisterInput,
+} from '@/gql/graphql';
+
+type AuthUser = NonNullable<MeQuery['me']>;
 
 export interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (input: LoginInput) => Promise<void>;
@@ -16,64 +25,56 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 interface AuthProviderProps {
   children: ReactNode;
-  authErrorHandlerRef?: MutableRefObject<(() => void) | null>;
+  authErrorHandlerRef?: RefObject<(() => void) | null>;
 }
 
 export function AuthProvider({ children, authErrorHandlerRef }: AuthProviderProps): React.JSX.Element {
-  const [overrideUser, setOverrideUser] = useState<User | null>(null);
   const authErrorHandledRef = useRef(false);
   const client = useApolloClient();
 
-  const { loading: meLoading, data: meData, refetch } = useQuery(ME_QUERY, {
+  const { loading: meLoading, data: meData, refetch } = useQuery(MeDocument, {
     fetchPolicy: 'network-only',
     errorPolicy: 'ignore',
   });
 
-  const [loginMutation] = useMutation(LOGIN_MUTATION);
-  const [registerMutation] = useMutation(REGISTER_MUTATION);
-  const [logoutMutation] = useMutation(LOGOUT_MUTATION);
+  const [loginMutation] = useMutation(LoginDocument);
+  const [registerMutation] = useMutation(RegisterDocument);
+  const [logoutMutation] = useMutation(LogoutDocument);
 
   const handleAuthError = useCallback(() => {
     if (authErrorHandledRef.current) {
       return;
     }
     authErrorHandledRef.current = true;
-    setOverrideUser(null);
     void client.clearStore();
-  }, [client]);
+    void refetch();
+  }, [client, refetch]);
 
-  const handlerRef = authErrorHandlerRef;
-  if (handlerRef) {
-    handlerRef.current = handleAuthError;
-  }
+  useEffect(() => {
+    if (authErrorHandlerRef && 'current' in authErrorHandlerRef) {
+      const ref = authErrorHandlerRef;
+      ref.current = handleAuthError;
+    }
+  }, [authErrorHandlerRef, handleAuthError]);
 
   const login = useCallback(async (input: LoginInput) => {
-    const result = await loginMutation({ variables: { input } });
-    if (result.data?.login?.user) {
-      authErrorHandledRef.current = false;
-      setOverrideUser(result.data.login.user as User);
-      await refetch();
-    }
+    await loginMutation({ variables: { input } });
+    authErrorHandledRef.current = false;
+    await refetch();
   }, [loginMutation, refetch]);
 
   const register = useCallback(async (input: RegisterInput) => {
-    const result = await registerMutation({ variables: { input } });
-    if (result.data?.register?.user) {
-      authErrorHandledRef.current = false;
-      setOverrideUser(result.data.register.user as User);
-      await refetch();
-    }
+    await registerMutation({ variables: { input } });
+    authErrorHandledRef.current = false;
+    await refetch();
   }, [registerMutation, refetch]);
 
   const logout = useCallback(async () => {
     await logoutMutation();
-    setOverrideUser(null);
     await refetch();
   }, [logoutMutation, refetch]);
 
-  const hasMeData = meData !== undefined;
-  const meUser = hasMeData ? (meData?.me ? (meData.me as User) : null) : null;
-  const user = hasMeData ? meUser : overrideUser;
+  const user = meData?.me ?? null;
 
   const value: AuthContextType = {
     user,

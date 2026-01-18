@@ -46,9 +46,10 @@ export function updateFilterSearch<T extends Record<string, unknown>>(
   key: keyof T,
   value: string[] | undefined
 ): T {
-  const { [key]: _ignored, ...rest } = prev;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- generic record reconstruction requires assertion
+  const result: T = Object.fromEntries(Object.entries(prev).filter(([k]) => k !== key)) as T;
   if (!value || value.length === 0) {
-    return rest as T;
+    return result;
   }
-  return { ...(rest as T), [key]: value };
+  return Object.assign(result, { [key]: value });
 }

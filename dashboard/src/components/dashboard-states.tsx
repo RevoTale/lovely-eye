@@ -9,7 +9,7 @@ export function DashboardLoading(): React.JSX.Element {
         <Skeleton className="h-4 w-48" />
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
+        {Array.from({ length: 4 }, (_, i) => (
           <Card key={i}>
             <CardHeader>
               <Skeleton className="h-4 w-24" />

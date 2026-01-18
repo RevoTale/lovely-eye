@@ -1,7 +1,14 @@
 import React from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
-import { useMutation, useQuery } from '@apollo/client';
-import { CREATE_SITE_MUTATION, SITE_QUERY, SITES_QUERY, UPDATE_SITE_MUTATION, GEOIP_STATUS_QUERY } from '@/graphql';
+import { useQuery, useMutation } from '@apollo/client/react';
+import {
+  SiteDocument,
+  SitesDocument,
+  CreateSiteDocument,
+  UpdateSiteDocument,
+  GeoIpStatusDocument,
+  type SiteQuery,
+} from '@/gql/graphql';
 import { Button, Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
 import { ArrowLeft } from 'lucide-react';
 import { siteDetailRoute } from '@/router';
@@ -11,35 +18,34 @@ import { EventDefinitionsSection } from '@/components/site-form/event-definition
 import { SiteInfoCard } from '@/components/site-form/site-info-card';
 import { TrackingCodeSection } from '@/components/site-form/tracking-code-section';
 import { TrafficBlockingSection } from '@/components/site-form/traffic-blocking-section';
-import type { Site } from '@/generated/graphql';
+
+type SiteDetails = NonNullable<SiteQuery['site']>;
 
 export function SiteFormPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const navigate = useNavigate();
   const isNew = siteId === 'new';
 
-  const { data: siteData, loading: siteLoading } = useQuery(SITE_QUERY, {
+  const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
     variables: { id: siteId },
     skip: isNew,
   });
 
-  const { data: geoIPData } = useQuery(GEOIP_STATUS_QUERY, {
+  const { data: geoIPData } = useQuery(GeoIpStatusDocument, {
     skip: isNew,
     pollInterval: 5000,
   });
 
-  const [createSite, { loading: creating }] = useMutation(CREATE_SITE_MUTATION, {
-    refetchQueries: [{ query: SITES_QUERY }],
+  const [createSite, { loading: creating }] = useMutation(CreateSiteDocument, {
+    refetchQueries: [{ query: SitesDocument }],
     onCompleted: (data) => {
-      if (data?.createSite) {
-        void navigate({ to: '/sites/$siteId', params: { siteId: data.createSite.id } });
-      }
+      void navigate({ to: '/sites/$siteId', params: { siteId: data.createSite.id } });
     },
   });
 
-  const [updateSite, { loading: updating }] = useMutation(UPDATE_SITE_MUTATION);
+  const [updateSite, { loading: updating }] = useMutation(UpdateSiteDocument);
 
-  const site = siteData?.site as Site | undefined;
+  const site: SiteDetails | undefined = siteData?.site ?? undefined;
   const geoIPStatus = geoIPData?.geoIPStatus;
   const handleSubmit = async (nameValue: string, domainsValue: string[]): Promise<void> => {
     await createSite({

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui';
 import { Activity, Settings } from 'lucide-react';
-import type { RealtimeStats, Site } from '@/generated/graphql';
+import type { RealtimeStats, Site } from '@/gql/graphql';
 import { Link } from '@/router';
 
 interface DashboardHeaderProps {
