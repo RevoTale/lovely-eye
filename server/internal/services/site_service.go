@@ -12,9 +12,11 @@ import (
 )
 
 var (
-	ErrSiteNotFound  = errors.New("site not found")
-	ErrSiteExists    = errors.New("site with this domain already exists")
-	ErrNotAuthorized = errors.New("not authorized to access this site")
+	ErrSiteNotFound            = errors.New("site not found")
+	ErrSiteExists              = errors.New("site with this domain already exists")
+	ErrNotAuthorized           = errors.New("not authorized to access this site")
+	ErrTooManyBlockedIPs       = errors.New("blocked IP list exceeds 500 entries")
+	ErrTooManyBlockedCountries = errors.New("blocked country list exceeds 250 entries")
 )
 
 type SiteService struct {
@@ -32,9 +34,11 @@ type CreateSiteInput struct {
 }
 
 type UpdateSiteInput struct {
-	Name         string
-	TrackCountry *bool
-	Domains      []string
+	Name             string
+	TrackCountry     *bool
+	Domains          []string
+	BlockedIPs       []string
+	BlockedCountries []string
 }
 
 func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*models.Site, error) {
@@ -115,29 +119,57 @@ func (s *SiteService) Update(ctx context.Context, id, userID int64, input Update
 		site.TrackCountry = *input.TrackCountry
 	}
 
-	if input.Domains == nil {
+	var normalizedDomains []string
+	if input.Domains != nil {
+		normalizedDomains, err = normalizeDomains(input.Domains)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, domain := range normalizedDomains {
+			existing, _ := s.siteRepo.GetByDomain(ctx, domain)
+			if existing != nil && existing.ID != site.ID {
+				return nil, ErrSiteExists
+			}
+		}
+	}
+
+	var normalizedBlockedIPs []string
+	if input.BlockedIPs != nil {
+		normalizedBlockedIPs, err = normalizeBlockedIPs(input.BlockedIPs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var normalizedBlockedCountries []string
+	if input.BlockedCountries != nil {
+		normalizedBlockedCountries, err = normalizeBlockedCountries(input.BlockedCountries)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if input.Domains == nil && input.BlockedIPs == nil && input.BlockedCountries == nil {
 		if err := s.siteRepo.Update(ctx, site); err != nil {
 			return nil, err
 		}
 		return site, nil
 	}
 
-	normalizedDomains, err := normalizeDomains(input.Domains)
-	if err != nil {
+	if err := s.siteRepo.UpdateWithRelations(ctx, site, normalizedDomains, normalizedBlockedIPs, normalizedBlockedCountries); err != nil {
 		return nil, err
 	}
 
-	for _, domain := range normalizedDomains {
-		existing, _ := s.siteRepo.GetByDomain(ctx, domain)
-		if existing != nil && existing.ID != site.ID {
-			return nil, ErrSiteExists
-		}
+	if input.Domains != nil {
+		site.Domains = buildSiteDomains(site.ID, normalizedDomains)
 	}
-
-	if err := s.siteRepo.UpdateWithDomains(ctx, site, normalizedDomains); err != nil {
-		return nil, err
+	if input.BlockedIPs != nil {
+		site.BlockedIPs = buildBlockedIPs(site.ID, normalizedBlockedIPs)
 	}
-	site.Domains = buildSiteDomains(site.ID, normalizedDomains)
+	if input.BlockedCountries != nil {
+		site.BlockedCountries = buildBlockedCountries(site.ID, normalizedBlockedCountries)
+	}
 	return site, nil
 }
 
@@ -217,4 +249,68 @@ func buildSiteDomains(siteID int64, domains []string) []*models.SiteDomain {
 		})
 	}
 	return result
+}
+
+func buildBlockedIPs(siteID int64, ips []string) []*models.SiteBlockedIP {
+	result := make([]*models.SiteBlockedIP, 0, len(ips))
+	for _, ip := range ips {
+		result = append(result, &models.SiteBlockedIP{
+			SiteID: siteID,
+			IP:     ip,
+		})
+	}
+	return result
+}
+
+func buildBlockedCountries(siteID int64, codes []string) []*models.SiteBlockedCountry {
+	result := make([]*models.SiteBlockedCountry, 0, len(codes))
+	for _, code := range codes {
+		result = append(result, &models.SiteBlockedCountry{
+			SiteID:      siteID,
+			CountryCode: code,
+		})
+	}
+	return result
+}
+
+func normalizeBlockedIPs(ips []string) ([]string, error) {
+	normalized := make([]string, 0, len(ips))
+	seen := make(map[string]struct{}, len(ips))
+	for _, value := range ips {
+		ip, err := utils.ValidateIPAddress(value)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := seen[ip]; ok {
+			continue
+		}
+		seen[ip] = struct{}{}
+		normalized = append(normalized, ip)
+	}
+
+	if len(normalized) > 500 {
+		return nil, ErrTooManyBlockedIPs
+	}
+	return normalized, nil
+}
+
+func normalizeBlockedCountries(countries []string) ([]string, error) {
+	normalized := make([]string, 0, len(countries))
+	seen := make(map[string]struct{}, len(countries))
+	for _, value := range countries {
+		code, err := utils.ValidateCountryCode(value)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := seen[code]; ok {
+			continue
+		}
+		seen[code] = struct{}{}
+		normalized = append(normalized, code)
+	}
+
+	if len(normalized) > 250 {
+		return nil, ErrTooManyBlockedCountries
+	}
+	return normalized, nil
 }

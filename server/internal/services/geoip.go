@@ -11,11 +11,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/oschwald/geoip2-golang"
+	"github.com/oschwald/maxminddb-golang"
 )
 
 const (
@@ -40,6 +42,11 @@ type GeoIPStatus struct {
 	UpdatedAt *time.Time
 }
 
+type GeoIPCountry struct {
+	Code string
+	Name string
+}
+
 // GeoIPService provides IP geolocation capabilities.
 type GeoIPService struct {
 	reader *geoip2.Reader
@@ -55,6 +62,10 @@ type GeoIPService struct {
 	enabled    bool
 	downloadMu sync.Mutex
 	httpClient *http.Client
+
+	countriesMu        sync.RWMutex
+	countries          []GeoIPCountry
+	countriesUpdatedAt *time.Time
 }
 
 // NewGeoIPService creates a new GeoIP service.
@@ -81,6 +92,7 @@ func (g *GeoIPService) SetEnabled(enabled bool) {
 			State:  geoIPStateDisabled,
 			DBPath: g.dbPath,
 		}
+		g.clearCountriesCache()
 	}
 	g.statusMu.Unlock()
 }
@@ -89,6 +101,85 @@ func (g *GeoIPService) Status() GeoIPStatus {
 	g.statusMu.RLock()
 	defer g.statusMu.RUnlock()
 	return g.status
+}
+
+func (g *GeoIPService) ListCountries(search string) ([]GeoIPCountry, error) {
+	status := g.Status()
+	if status.State != geoIPStateReady {
+		return []GeoIPCountry{}, nil
+	}
+
+	if status.UpdatedAt != nil {
+		if cached := g.getCachedCountries(*status.UpdatedAt); cached != nil {
+			return filterCountries(cached, search), nil
+		}
+	}
+
+	reader, err := maxminddb.Open(g.dbPath)
+	if err != nil {
+		return nil, fmt.Errorf("open GeoIP database: %w", err)
+	}
+	defer reader.Close()
+
+	type countryRecord struct {
+		Country struct {
+			ISOCode string            `maxminddb:"iso_code"`
+			Names   map[string]string `maxminddb:"names"`
+		} `maxminddb:"country"`
+		RegisteredCountry struct {
+			ISOCode string            `maxminddb:"iso_code"`
+			Names   map[string]string `maxminddb:"names"`
+		} `maxminddb:"registered_country"`
+	}
+
+	network := reader.Networks(maxminddb.SkipAliasedNetworks)
+	seen := make(map[string]string)
+	var record countryRecord
+	for network.Next() {
+		_, err := network.Network(&record)
+		if err != nil {
+			return nil, fmt.Errorf("read GeoIP network: %w", err)
+		}
+
+		code := record.Country.ISOCode
+		name := record.Country.Names["en"]
+		if code == "" {
+			code = record.RegisteredCountry.ISOCode
+			name = record.RegisteredCountry.Names["en"]
+		}
+		if code == "" {
+			continue
+		}
+		if name == "" {
+			name = code
+		}
+		if _, ok := seen[code]; ok {
+			continue
+		}
+		seen[code] = name
+	}
+	if err := network.Err(); err != nil {
+		return nil, fmt.Errorf("read GeoIP networks: %w", err)
+	}
+
+	countries := make([]GeoIPCountry, 0, len(seen))
+	for code, name := range seen {
+		countries = append(countries, GeoIPCountry{
+			Code: code,
+			Name: name,
+		})
+	}
+	sort.Slice(countries, func(i, j int) bool {
+		if countries[i].Name == countries[j].Name {
+			return countries[i].Code < countries[j].Code
+		}
+		return countries[i].Name < countries[j].Name
+	})
+
+	if status.UpdatedAt != nil {
+		g.setCachedCountries(countries, *status.UpdatedAt)
+	}
+	return filterCountries(countries, search), nil
 }
 
 func (g *GeoIPService) EnsureAvailable(ctx context.Context) error {
@@ -407,6 +498,51 @@ func (g *GeoIPService) setStatus(status GeoIPStatus) {
 	g.statusMu.Lock()
 	g.status = status
 	g.statusMu.Unlock()
+}
+
+func (g *GeoIPService) getCachedCountries(updatedAt time.Time) []GeoIPCountry {
+	g.countriesMu.RLock()
+	defer g.countriesMu.RUnlock()
+	if g.countriesUpdatedAt == nil || !g.countriesUpdatedAt.Equal(updatedAt) {
+		return nil
+	}
+	result := make([]GeoIPCountry, len(g.countries))
+	copy(result, g.countries)
+	return result
+}
+
+func (g *GeoIPService) setCachedCountries(countries []GeoIPCountry, updatedAt time.Time) {
+	g.countriesMu.Lock()
+	g.countries = make([]GeoIPCountry, len(countries))
+	copy(g.countries, countries)
+	g.countriesUpdatedAt = &updatedAt
+	g.countriesMu.Unlock()
+}
+
+func (g *GeoIPService) clearCountriesCache() {
+	g.countriesMu.Lock()
+	g.countries = nil
+	g.countriesUpdatedAt = nil
+	g.countriesMu.Unlock()
+}
+
+func filterCountries(countries []GeoIPCountry, search string) []GeoIPCountry {
+	query := strings.TrimSpace(strings.ToLower(search))
+	if query == "" {
+		result := make([]GeoIPCountry, len(countries))
+		copy(result, countries)
+		return result
+	}
+
+	filtered := make([]GeoIPCountry, 0, len(countries))
+	for _, country := range countries {
+		code := strings.ToLower(country.Code)
+		name := strings.ToLower(country.Name)
+		if strings.Contains(code, query) || strings.Contains(name, query) {
+			filtered = append(filtered, country)
+		}
+	}
+	return filtered
 }
 
 func (g *GeoIPService) setStatusError(state, message string) error {

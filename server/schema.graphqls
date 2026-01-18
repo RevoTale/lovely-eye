@@ -15,6 +15,10 @@ type Site {
   publicKey: String!
   """Enable country tracking (requires GeoIP database)"""
   trackCountry: Boolean!
+  """IP addresses blocked from tracking"""
+  blockedIPs: [String!]!
+  """ISO country codes blocked from tracking"""
+  blockedCountries: [String!]!
   createdAt: Time!
 }
 
@@ -98,6 +102,11 @@ type GeoIPStatus {
   updatedAt: Time
 }
 
+type GeoIPCountry {
+  code: String!
+  name: String!
+}
+
 type ActivePageStats {
   path: String!
   """Number of visitors currently viewing this page"""
@@ -165,6 +174,10 @@ input UpdateSiteInput {
   trackCountry: Boolean
   """Full list of tracked domains (includes primary)"""
   domains: [String!]
+  """Full list of blocked IPs"""
+  blockedIPs: [String!]
+  """Full list of blocked country codes"""
+  blockedCountries: [String!]
 }
 
 input DateRangeInput {
@@ -204,6 +217,7 @@ type Query {
   dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
   realtime(siteId: ID!): RealtimeStats!
   geoIPStatus: GeoIPStatus!
+  geoIPCountries(search: String): [GeoIPCountry!]!
   """Get events for a site with pagination"""
   events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!
   """Get event definitions for a site"""

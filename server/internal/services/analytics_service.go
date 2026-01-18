@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 	"time"
@@ -81,6 +82,9 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		return err
 	}
 	if !IsAllowedDomain(input.Origin, input.Referer, site.Domains) {
+		return nil
+	}
+	if s.isBlockedRequest(site, input.IP) {
 		return nil
 	}
 
@@ -187,6 +191,9 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		return err
 	}
 	if !IsAllowedDomain(input.Origin, input.Referer, site.Domains) {
+		return nil
+	}
+	if s.isBlockedRequest(site, input.IP) {
 		return nil
 	}
 
@@ -303,7 +310,7 @@ func (s *AnalyticsService) SyncGeoIPRequirement(ctx context.Context) error {
 	if s.geoIPService == nil {
 		return nil
 	}
-	requires, err := s.siteRepo.AnyTrackCountry(ctx)
+	requires, err := s.siteRepo.AnyGeoIPRequirement(ctx)
 	if err != nil {
 		return err
 	}
@@ -319,6 +326,13 @@ func (s *AnalyticsService) GeoIPStatus() GeoIPStatus {
 		return GeoIPStatus{State: geoIPStateDisabled}
 	}
 	return s.geoIPService.Status()
+}
+
+func (s *AnalyticsService) GeoIPCountries(search string) ([]GeoIPCountry, error) {
+	if s.geoIPService == nil {
+		return []GeoIPCountry{}, nil
+	}
+	return s.geoIPService.ListCountries(search)
 }
 
 func (s *AnalyticsService) RefreshGeoIPDatabase(ctx context.Context) (GeoIPStatus, error) {
@@ -578,4 +592,52 @@ func hostFromHeader(raw string) string {
 	}
 
 	return normalized
+}
+
+func (s *AnalyticsService) isBlockedRequest(site *models.Site, ip string) bool {
+	if site == nil {
+		return false
+	}
+	if ip == "" {
+		return false
+	}
+
+	if s.isIPBlocked(site.BlockedIPs, ip) {
+		return true
+	}
+
+	return s.isCountryBlocked(site.BlockedCountries, ip)
+}
+
+func (s *AnalyticsService) isIPBlocked(blocked []*models.SiteBlockedIP, ip string) bool {
+	if len(blocked) == 0 {
+		return false
+	}
+	parsed := net.ParseIP(strings.TrimSpace(ip))
+	if parsed == nil {
+		return false
+	}
+	normalized := parsed.String()
+	for _, entry := range blocked {
+		if entry != nil && entry.IP == normalized {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *AnalyticsService) isCountryBlocked(blocked []*models.SiteBlockedCountry, ip string) bool {
+	if len(blocked) == 0 || s.geoIPService == nil {
+		return false
+	}
+	code := s.geoIPService.GetCountry(ip)
+	if code == "" || code == "Unknown" || code == "Local" {
+		return false
+	}
+	for _, entry := range blocked {
+		if entry != nil && strings.EqualFold(entry.CountryCode, code) {
+			return true
+		}
+	}
+	return false
 }

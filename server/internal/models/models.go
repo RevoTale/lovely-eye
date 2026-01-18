@@ -33,12 +33,14 @@ type Site struct {
 	CreatedAt    time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt    time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
 
-	User             *User              `bun:"rel:belongs-to,join:user_id=id" json:"user,omitempty"`
-	Domains          []*SiteDomain      `bun:"rel:has-many,join:id=site_id" json:"domains,omitempty"`
-	PageViews        []*PageView        `bun:"rel:has-many,join:id=site_id" json:"page_views,omitempty"`
-	Events           []*Event           `bun:"rel:has-many,join:id=site_id" json:"events,omitempty"`
-	Sessions         []*Session         `bun:"rel:has-many,join:id=site_id" json:"sessions,omitempty"`
-	EventDefinitions []*EventDefinition `bun:"rel:has-many,join:id=site_id" json:"event_definitions,omitempty"`
+	User             *User                 `bun:"rel:belongs-to,join:user_id=id" json:"user,omitempty"`
+	Domains          []*SiteDomain         `bun:"rel:has-many,join:id=site_id" json:"domains,omitempty"`
+	BlockedIPs       []*SiteBlockedIP      `bun:"rel:has-many,join:id=site_id" json:"blocked_ips,omitempty"`
+	BlockedCountries []*SiteBlockedCountry `bun:"rel:has-many,join:id=site_id" json:"blocked_countries,omitempty"`
+	PageViews        []*PageView           `bun:"rel:has-many,join:id=site_id" json:"page_views,omitempty"`
+	Events           []*Event              `bun:"rel:has-many,join:id=site_id" json:"events,omitempty"`
+	Sessions         []*Session            `bun:"rel:has-many,join:id=site_id" json:"sessions,omitempty"`
+	EventDefinitions []*EventDefinition    `bun:"rel:has-many,join:id=site_id" json:"event_definitions,omitempty"`
 }
 
 // SiteDomain represents an allowed domain for a site
@@ -51,6 +53,32 @@ type SiteDomain struct {
 	Position  int       `bun:"position,notnull,default:0" json:"position"`
 	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+
+	Site *Site `bun:"rel:belongs-to,join:site_id=id" json:"site,omitempty"`
+}
+
+// SiteBlockedIP represents a blocked IP for a site
+type SiteBlockedIP struct {
+	bun.BaseModel `bun:"table:site_blocked_ips,alias:sbi"`
+
+	ID        int64     `bun:"id,pk,autoincrement" json:"id"`
+	SiteID    int64     `bun:"site_id,notnull" json:"site_id"`
+	IP        string    `bun:"ip,notnull" json:"ip"`
+	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
+
+	Site *Site `bun:"rel:belongs-to,join:site_id=id" json:"site,omitempty"`
+}
+
+// SiteBlockedCountry represents a blocked country for a site
+type SiteBlockedCountry struct {
+	bun.BaseModel `bun:"table:site_blocked_countries,alias:sbc"`
+
+	ID          int64     `bun:"id,pk,autoincrement" json:"id"`
+	SiteID      int64     `bun:"site_id,notnull" json:"site_id"`
+	CountryCode string    `bun:"country_code,notnull" json:"country_code"`
+	CreatedAt   time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
+	UpdatedAt   time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
 
 	Site *Site `bun:"rel:belongs-to,join:site_id=id" json:"site,omitempty"`
 }

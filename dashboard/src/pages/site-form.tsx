@@ -1,70 +1,31 @@
-/* eslint-disable max-lines -- no time to fix */
-import React, { useMemo, useRef, useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { useMutation, useQuery } from '@apollo/client';
-import { CREATE_SITE_MUTATION, SITE_QUERY, SITES_QUERY, DELETE_SITE_MUTATION, REGENERATE_SITE_KEY_MUTATION, UPDATE_SITE_MUTATION, GEOIP_STATUS_QUERY, REFRESH_GEOIP_MUTATION, EVENT_DEFINITIONS_QUERY, UPSERT_EVENT_DEFINITION_MUTATION, DELETE_EVENT_DEFINITION_MUTATION } from '@/graphql';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label, Skeleton } from '@/components/ui';
-import { Globe, ArrowLeft, Save, Trash2, RefreshCw, Copy, CheckCircle2, AlertCircle, Plus, X, Loader2 } from 'lucide-react';
+import { CREATE_SITE_MUTATION, SITE_QUERY, SITES_QUERY, UPDATE_SITE_MUTATION, GEOIP_STATUS_QUERY } from '@/graphql';
+import { Button, Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
+import { ArrowLeft } from 'lucide-react';
 import { siteDetailRoute } from '@/router';
-import { CountryTrackingCard } from '@/components/country-tracking-card';
-import { EventDefinitionsCard } from '@/components/event-definitions-card';
-import type { EventDefinitionInput, Site } from '@/generated/graphql';
-
-const normalizeDomainInput = (value: string): string => value
-  .replace(/^https?:\/\//, '')
-  .replace(/^www\./, '')
-  .replace(/\/.*$/, '')
-  .toLowerCase()
-  .trim();
-
-const getNormalizedDomains = (values: string[]): string[] => {
-  const normalized = values
-    .map((domainValue) => normalizeDomainInput(domainValue))
-    .filter((domainValue) => domainValue.length > 0);
-  return Array.from(new Set(normalized));
-};
+import { CountryTrackingSection } from '@/components/site-form/country-tracking-section';
+import { DangerZoneSection } from '@/components/site-form/danger-zone-section';
+import { EventDefinitionsSection } from '@/components/site-form/event-definitions-section';
+import { SiteInfoCard } from '@/components/site-form/site-info-card';
+import { TrackingCodeSection } from '@/components/site-form/tracking-code-section';
+import { TrafficBlockingSection } from '@/components/site-form/traffic-blocking-section';
+import type { Site } from '@/generated/graphql';
 
 export function SiteFormPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const navigate = useNavigate();
   const isNew = siteId === 'new';
 
-  const [name, setName] = useState('');
-  const nextDomainId = useRef(1);
-  const createDomainEntry = (value = ''): { id: string; value: string } => {
-    const nextId = String(nextDomainId.current);
-    nextDomainId.current += 1;
-    return { id: nextId, value };
-  };
-  const [domains, setDomains] = useState<Array<{ id: string; value: string }>>([createDomainEntry()]);
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState('');
-  const [trackCountry, setTrackCountry] = useState(false);
-
   const { data: siteData, loading: siteLoading } = useQuery(SITE_QUERY, {
     variables: { id: siteId },
     skip: isNew,
-    onCompleted: (data) => {
-      if (data?.site) {
-        const site = data.site as Site;
-        setName(site.name);
-        const entries = site.domains.length > 0
-          ? site.domains.map((domain) => createDomainEntry(domain))
-          : [createDomainEntry()];
-        setDomains(entries);
-        setTrackCountry(site.trackCountry);
-      }
-    },
   });
 
   const { data: geoIPData } = useQuery(GEOIP_STATUS_QUERY, {
     skip: isNew,
     pollInterval: 5000,
-  });
-
-  const { data: eventDefinitionsData } = useQuery(EVENT_DEFINITIONS_QUERY, {
-    variables: { siteId },
-    skip: isNew,
   });
 
   const [createSite, { loading: creating }] = useMutation(CREATE_SITE_MUTATION, {
@@ -74,218 +35,34 @@ export function SiteFormPage(): React.JSX.Element {
         void navigate({ to: '/sites/$siteId', params: { siteId: data.createSite.id } });
       }
     },
-    onError: (err) => {
-      setError(err.message);
-    },
   });
 
-  const [deleteSite, { loading: deleting }] = useMutation(DELETE_SITE_MUTATION, {
-    refetchQueries: [{ query: SITES_QUERY }],
-    onCompleted: () => {
-      void navigate({ to: '/' });
-    },
-    onError: (err) => {
-      setError(err.message);
-    },
-  });
-
-  const [regenerateKey, { loading: regenerating }] = useMutation(REGENERATE_SITE_KEY_MUTATION, {
-    onError: (err) => {
-      setError(err.message);
-    },
-  });
-
-  const [updateSite, { loading: updating }] = useMutation(UPDATE_SITE_MUTATION, {
-    onError: (err) => {
-      setError(err.message);
-    },
-  });
-
-  const [refreshGeoIP, { loading: refreshingGeoIP }] = useMutation(REFRESH_GEOIP_MUTATION, {
-    onError: (err) => {
-      setError(err.message);
-    },
-  });
-
-  const [upsertEventDefinition, { loading: savingDefinition }] = useMutation(UPSERT_EVENT_DEFINITION_MUTATION);
-  const [deleteEventDefinition, { loading: deletingDefinition }] = useMutation(DELETE_EVENT_DEFINITION_MUTATION);
+  const [updateSite, { loading: updating }] = useMutation(UPDATE_SITE_MUTATION);
 
   const site = siteData?.site as Site | undefined;
   const geoIPStatus = geoIPData?.geoIPStatus;
-  const eventDefinitions = eventDefinitionsData?.eventDefinitions ?? [];
-
-  const hasDomainChanges = useMemo(() => {
-    if (!site) return false;
-    const currentDomains = getNormalizedDomains(domains.map((entry) => entry.value));
-    const savedDomains = getNormalizedDomains(site.domains);
-    if (currentDomains.length !== savedDomains.length) return true;
-    const savedSet = new Set(savedDomains);
-    return currentDomains.some((domainValue) => !savedSet.has(domainValue));
-  }, [domains, site]);
-
-  const getValidatedDomains = (): string[] | null => {
-    const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
-    const trimmedDomains = domains
-      .map((domainEntry) => normalizeDomainInput(domainEntry.value))
-      .filter((domainValue) => domainValue.length > 0);
-
-    const uniqueDomains = Array.from(new Set(trimmedDomains));
-
-    if (uniqueDomains.length === 0) {
-      setError('At least one domain is required');
-      return null;
-    }
-
-    if (!uniqueDomains.every((domainValue) => domainRegex.test(domainValue))) {
-      setError('Please enter valid domains (e.g., example.com)');
-      return null;
-    }
-
-    return uniqueDomains;
-  };
-
-  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    setError('');
-
-    const trimmedName = name.trim();
-    const validatedDomains = getValidatedDomains();
-
-    if (!trimmedName) {
-      setError('Name is required');
-      return;
-    }
-
-    if (trimmedName.length < 1 || trimmedName.length > 100) {
-      setError('Site name must be between 1 and 100 characters');
-      return;
-    }
-
-    if (!validatedDomains) {
-      return;
-    }
-
-    if (isNew) {
-      await createSite({
-        variables: {
-          input: {
-            name: trimmedName,
-            domains: validatedDomains,
-          },
+  const handleSubmit = async (nameValue: string, domainsValue: string[]): Promise<void> => {
+    await createSite({
+      variables: {
+        input: {
+          name: nameValue,
+          domains: domainsValue,
         },
-      });
-    }
-  };
-
-  const handleDelete = async (): Promise<void> => {
-    if (!site) return;
-
-    if (!window.confirm(`Are you sure you want to delete "${site.name}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    await deleteSite({
-      variables: { id: site.id },
+      },
     });
   };
 
-  const handleRegenerateKey = async (): Promise<void> => {
+  const handleDomainsSave = async (nameValue: string, domainsValue: string[]): Promise<void> => {
     if (!site) return;
-
-    if (!window.confirm('Are you sure you want to regenerate the site key? The old key will stop working.')) {
-      return;
-    }
-
-    await regenerateKey({
-      variables: { id: site.id },
-    });
-  };
-
-  const handleCountryTrackingChange = async (enabled: boolean): Promise<void> => {
-    if (!site) return;
-    setError('');
-    const previous = trackCountry;
-    setTrackCountry(enabled);
-    try {
-      await updateSite({
-        variables: {
-          id: site.id,
-          input: {
-            name: name.trim(),
-            trackCountry: enabled,
-          },
-        },
-      });
-    } catch {
-      setTrackCountry(previous);
-    }
-  };
-
-  const handleDomainsSave = async (): Promise<void> => {
-    if (!site) return;
-    setError('');
-    const validatedDomains = getValidatedDomains();
-    if (!validatedDomains) return;
-
     await updateSite({
       variables: {
         id: site.id,
         input: {
-          name: name.trim(),
-          domains: validatedDomains,
+          name: nameValue,
+          domains: domainsValue,
         },
       },
     });
-  };
-
-  const handleRefreshGeoIP = async (): Promise<void> => {
-    setError('');
-    await refreshGeoIP();
-  };
-
-  const handleCopyKey = async (): Promise<void> => {
-    if (!site) return;
-
-    await navigator.clipboard.writeText(site.publicKey);
-    setCopied(true);
-    setTimeout(() => {
-      setCopied(false);
-    }, 2000);
-  };
-
-  const handleSaveEventDefinition = async (input: EventDefinitionInput): Promise<void> => {
-    if (!site) return;
-    await upsertEventDefinition({
-      variables: {
-        siteId: site.id,
-        input,
-      },
-      refetchQueries: [{ query: EVENT_DEFINITIONS_QUERY, variables: { siteId: site.id } }],
-    });
-  };
-
-  const handleDeleteEventDefinition = async (nameToDelete: string): Promise<void> => {
-    if (!site) return;
-    await deleteEventDefinition({
-      variables: {
-        siteId: site.id,
-        name: nameToDelete,
-      },
-      refetchQueries: [{ query: EVENT_DEFINITIONS_QUERY, variables: { siteId: site.id } }],
-    });
-  };
-
-  const generateTrackingScript = (): string => {
-    if (!site) return '';
-
-    const basePath = window.__ENV__?.BASE_PATH ?? '';
-    const trackerUrl = `${window.location.origin}${basePath}/tracker.js`;
-
-    return `<script
-  defer
-  src="${trackerUrl}"
-  data-site-key="${site.publicKey}"
-></script>`;
   };
 
   if (siteLoading) {
@@ -329,287 +106,54 @@ export function SiteFormPage(): React.JSX.Element {
         </p>
       </div>
 
-      {error ? (
-        <div className="flex items-center gap-2 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive">
-          <AlertCircle className="h-5 w-5" />
-          <p className="text-sm">{error}</p>
-        </div>
-      ) : null}
-
-      <form onSubmit={(e) => {
-        void handleSubmit(e);
-      }}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Globe className="h-4 w-4 text-primary" />
-              </div>
-              Site Information
-            </CardTitle>
-            <CardDescription>
-              {isNew ? 'Enter your website details' : 'Site configuration and tracking details'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="primary-domain">Domains</Label>
-              <div className="space-y-2">
-                {domains.map((domainEntry, index) => (
-                  <div key={domainEntry.id} className="flex items-center gap-2">
-                    <Input
-                      id={index === 0 ? 'primary-domain' : `domain-${index}`}
-                      placeholder={index === 0 ? 'example.com' : 'blog.example.com'}
-                      value={domainEntry.value}
-                      onChange={(e) => {
-                        const previousPrimary = domains[0]?.value ?? '';
-                        const normalized = normalizeDomainInput(e.target.value);
-                        setDomains((prev) => {
-                          return prev.map((entry) => entry.id === domainEntry.id
-                            ? { ...entry, value: normalized }
-                            : entry
-                          );
-                        });
-                        if (isNew && index === 0 && (name.trim() === '' || name.trim() === previousPrimary)) {
-                          setName(normalized);
-                        }
-                      }}
-                      required={index === 0}
-                    />
-                    {domains.length > 1 ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          setDomains((prev) => (prev.length > 1 ? prev.filter((entry) => entry.id !== domainEntry.id) : prev));
-                        }}
-                        aria-label="Remove domain"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setDomains((prev) => [...prev, createDomainEntry()]);
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add domain
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Add domains without https://. The first domain is treated as the primary domain.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="name">Site Name</Label>
-              <Input
-                id="name"
-                placeholder="My Awesome Website"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                }}
-                disabled={!isNew}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                A friendly name to identify your site
-              </p>
-            </div>
-
-            {isNew ? (
-              <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={creating}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {creating ? 'Creating...' : 'Create Site'}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    void navigate({ to: '/' });
-                  }}
-                  disabled={creating}
-                >
-                  Cancel
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="button"
-                  onClick={() => {
-                    void handleDomainsSave();
-                  }}
-                  disabled={updating || !hasDomainChanges}
-                >
-                  {updating ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save Domains
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </form>
+      <SiteInfoCard
+        siteId={site?.id}
+        isNew={isNew}
+        initialName={site?.name ?? ''}
+        initialDomains={site?.domains ?? []}
+        creating={creating}
+        updating={updating}
+        onCreate={(newName, newDomains) => handleSubmit(newName, newDomains)}
+        onSaveDomains={(newName, newDomains) => handleDomainsSave(newName, newDomains)}
+        onCancel={() => {
+          void navigate({ to: '/' });
+        }}
+      />
 
       {!isNew && site ? (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Tracking Code</CardTitle>
-              <CardDescription>
-                Add this script to your website's HTML to start tracking
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Site Key</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={site.publicKey}
-                    readOnly
-                    className="font-mono text-sm"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      void handleCopyKey();
-                    }}
-                  >
-                    {copied ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      void handleRegenerateKey();
-                    }}
-                    disabled={regenerating}
-                  >
-                    <RefreshCw className={`h-4 w-4 ${regenerating ? 'animate-spin' : ''}`} />
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Used by the tracker to associate events with this site.
-                </p>
-              </div>
+          <TrackingCodeSection
+            siteId={site.id}
+            publicKey={site.publicKey}
+            onViewAnalytics={() => {
+              void navigate({ to: '/sites/$siteId', params: { siteId: site.id }, search: { view: 'analytics' } });
+            }}
+          />
 
-              <div className="space-y-2">
-                <Label>Tracking Script</Label>
-                <div className="relative">
-                  <pre className="p-4 bg-muted rounded-lg overflow-x-auto text-xs border">
-                    <code>{generateTrackingScript()}</code>
-                  </pre>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="absolute top-2 right-2"
-                    onClick={() => {
-                      void (async () => {
-                        await navigator.clipboard.writeText(generateTrackingScript());
-                        setCopied(true);
-                        setTimeout(() => {
-                          setCopied(false);
-                        }, 2000);
-                      })();
-                    }}
-                  >
-                    {copied ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Add this script to the &lt;head&gt; section of your website
-                </p>
-              </div>
-
-              <div className="pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    void navigate({ to: '/sites/$siteId', params: { siteId: site.id }, search: { view: 'analytics' } });
-                  }}
-                >
-                  View Analytics
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <CountryTrackingCard
-            trackCountry={trackCountry}
-            updating={updating}
-            refreshing={refreshingGeoIP}
+          <CountryTrackingSection
+            siteId={site.id}
+            siteName={site.name}
+            initialTrackCountry={site.trackCountry}
             geoIPStatus={geoIPStatus}
-            onToggle={(enabled) => {
-              void handleCountryTrackingChange(enabled);
-            }}
-            onRetry={() => {
-              void handleRefreshGeoIP();
-            }}
           />
 
-          <EventDefinitionsCard
-            definitions={eventDefinitions}
-            saving={savingDefinition}
-            deleting={deletingDefinition}
-            onSave={handleSaveEventDefinition}
-            onDelete={handleDeleteEventDefinition}
+          <TrafficBlockingSection
+            siteId={site.id}
+            siteName={site.name}
+            initialBlockedIPs={site.blockedIPs}
+            initialBlockedCountries={site.blockedCountries}
+            geoIPReady={geoIPStatus?.state === 'ready'}
           />
 
-          <Card className="border-destructive/50">
-            <CardHeader>
-              <CardTitle className="text-destructive">Danger Zone</CardTitle>
-              <CardDescription>
-                Irreversible actions that affect this site
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button
-                variant="destructive"
-                onClick={() => {
-                  void handleDelete();
-                }}
-                disabled={deleting}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {deleting ? 'Deleting...' : 'Delete Site'}
-              </Button>
-              <p className="text-xs text-muted-foreground mt-2">
-                This will permanently delete all analytics data for this site
-              </p>
-            </CardContent>
-          </Card>
+          <EventDefinitionsSection siteId={site.id} />
+
+          <DangerZoneSection
+            siteId={site.id}
+            siteName={site.name}
+            onDeleted={() => {
+              void navigate({ to: '/' });
+            }}
+          />
         </>
       ) : null}
     </div>

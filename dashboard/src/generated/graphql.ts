@@ -150,6 +150,12 @@ export type FilterInput = {
   referrer?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+export type GeoIpCountry = {
+  __typename: 'GeoIPCountry';
+  code: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+};
+
 export type GeoIpStatus = {
   __typename: 'GeoIPStatus';
   dbPath: Scalars['String']['output'];
@@ -245,6 +251,7 @@ export type Query = {
   eventDefinitions: Array<EventDefinition>;
   /** Get events for a site with pagination */
   events: EventsResult;
+  geoIPCountries: Array<GeoIpCountry>;
   geoIPStatus: GeoIpStatus;
   me: Maybe<User>;
   realtime: RealtimeStats;
@@ -270,6 +277,11 @@ export type QueryEventsArgs = {
   limit: InputMaybe<Scalars['Int']['input']>;
   offset: InputMaybe<Scalars['Int']['input']>;
   siteId: Scalars['ID']['input'];
+};
+
+
+export type QueryGeoIpCountriesArgs = {
+  search: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -301,8 +313,19 @@ export type RegisterInput = {
   username: Scalars['String']['input'];
 };
 
+export type Session = {
+  __typename: 'Session';
+  /** True when created from an event without a page view; flipped to false after a page view arrives. */
+  eventOnly: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+};
+
 export type Site = {
   __typename: 'Site';
+  /** ISO country codes blocked from tracking */
+  blockedCountries: Array<Scalars['String']['output']>;
+  /** IP addresses blocked from tracking */
+  blockedIPs: Array<Scalars['String']['output']>;
   createdAt: Scalars['Time']['output'];
   /** All tracked domains (includes primary) */
   domains: Array<Scalars['String']['output']>;
@@ -321,6 +344,10 @@ export type TokenPayload = {
 };
 
 export type UpdateSiteInput = {
+  /** Full list of blocked country codes */
+  blockedCountries?: InputMaybe<Array<Scalars['String']['input']>>;
+  /** Full list of blocked IPs */
+  blockedIPs?: InputMaybe<Array<Scalars['String']['input']>>;
   /** Full list of tracked domains (includes primary) */
   domains?: InputMaybe<Array<Scalars['String']['input']>>;
   name: Scalars['String']['input'];
@@ -351,7 +378,7 @@ export type SiteQueryVariables = Exact<{
 }>;
 
 
-export type SiteQuery = { __typename: 'Query', site: { __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, trackCountry: boolean, createdAt: string } | null };
+export type SiteQuery = { __typename: 'Query', site: { __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, trackCountry: boolean, blockedIPs: Array<string>, blockedCountries: Array<string>, createdAt: string } | null };
 
 export type DashboardQueryVariables = Exact<{
   siteId: Scalars['ID']['input'];
@@ -411,7 +438,7 @@ export type UpdateSiteMutationVariables = Exact<{
 }>;
 
 
-export type UpdateSiteMutation = { __typename: 'Mutation', updateSite: { __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, trackCountry: boolean, createdAt: string } };
+export type UpdateSiteMutation = { __typename: 'Mutation', updateSite: { __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, trackCountry: boolean, blockedIPs: Array<string>, blockedCountries: Array<string>, createdAt: string } };
 
 export type EventDefinitionsQueryVariables = Exact<{
   siteId: Scalars['ID']['input'];
@@ -440,6 +467,13 @@ export type GeoIpStatusQueryVariables = Exact<{ [key: string]: never; }>;
 
 
 export type GeoIpStatusQuery = { __typename: 'Query', geoIPStatus: { __typename: 'GeoIPStatus', state: string, dbPath: string, source: string | null, lastError: string | null, updatedAt: string | null } };
+
+export type GeoIpCountriesQueryVariables = Exact<{
+  search: InputMaybe<Scalars['String']['input']>;
+}>;
+
+
+export type GeoIpCountriesQuery = { __typename: 'Query', geoIPCountries: Array<{ __typename: 'GeoIPCountry', code: string, name: string }> };
 
 export type RefreshGeoIpDatabaseMutationVariables = Exact<{ [key: string]: never; }>;
 
@@ -567,6 +601,8 @@ export const SiteDocument = gql`
     name
     publicKey
     trackCountry
+    blockedIPs
+    blockedCountries
     createdAt
   }
 }
@@ -935,6 +971,8 @@ export const UpdateSiteDocument = gql`
     name
     publicKey
     trackCountry
+    blockedIPs
+    blockedCountries
     createdAt
   }
 }
@@ -1141,6 +1179,50 @@ export type GeoIpStatusQueryHookResult = ReturnType<typeof useGeoIpStatusQuery>;
 export type GeoIpStatusLazyQueryHookResult = ReturnType<typeof useGeoIpStatusLazyQuery>;
 export type GeoIpStatusSuspenseQueryHookResult = ReturnType<typeof useGeoIpStatusSuspenseQuery>;
 export type GeoIpStatusQueryResult = Apollo.QueryResult<GeoIpStatusQuery, GeoIpStatusQueryVariables>;
+export const GeoIpCountriesDocument = gql`
+    query GeoIPCountries($search: String) {
+  geoIPCountries(search: $search) {
+    code
+    name
+  }
+}
+    `;
+
+/**
+ * __useGeoIpCountriesQuery__
+ *
+ * To run a query within a React component, call `useGeoIpCountriesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGeoIpCountriesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGeoIpCountriesQuery({
+ *   variables: {
+ *      search: // value for 'search'
+ *   },
+ * });
+ */
+export function useGeoIpCountriesQuery(baseOptions?: Apollo.QueryHookOptions<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>(GeoIpCountriesDocument, options);
+      }
+export function useGeoIpCountriesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>(GeoIpCountriesDocument, options);
+        }
+// @ts-ignore
+export function useGeoIpCountriesSuspenseQuery(baseOptions?: Apollo.SuspenseQueryHookOptions<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>): Apollo.UseSuspenseQueryResult<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>;
+export function useGeoIpCountriesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>): Apollo.UseSuspenseQueryResult<GeoIpCountriesQuery | undefined, GeoIpCountriesQueryVariables>;
+export function useGeoIpCountriesSuspenseQuery(baseOptions?: Apollo.SkipToken | Apollo.SuspenseQueryHookOptions<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>) {
+          const options = baseOptions === Apollo.skipToken ? baseOptions : {...defaultOptions, ...baseOptions}
+          return Apollo.useSuspenseQuery<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>(GeoIpCountriesDocument, options);
+        }
+export type GeoIpCountriesQueryHookResult = ReturnType<typeof useGeoIpCountriesQuery>;
+export type GeoIpCountriesLazyQueryHookResult = ReturnType<typeof useGeoIpCountriesLazyQuery>;
+export type GeoIpCountriesSuspenseQueryHookResult = ReturnType<typeof useGeoIpCountriesSuspenseQuery>;
+export type GeoIpCountriesQueryResult = Apollo.QueryResult<GeoIpCountriesQuery, GeoIpCountriesQueryVariables>;
 export const RefreshGeoIpDatabaseDocument = gql`
     mutation RefreshGeoIPDatabase {
   refreshGeoIPDatabase {

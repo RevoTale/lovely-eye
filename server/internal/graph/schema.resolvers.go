@@ -128,9 +128,11 @@ func (r *mutationResolver) UpdateSite(ctx context.Context, id string, input mode
 	}
 
 	site, err := r.SiteService.Update(ctx, siteID, claims.UserID, services.UpdateSiteInput{
-		Name:         input.Name,
-		TrackCountry: input.TrackCountry,
-		Domains:      input.Domains,
+		Name:             input.Name,
+		TrackCountry:     input.TrackCountry,
+		Domains:          input.Domains,
+		BlockedIPs:       input.BlockedIPs,
+		BlockedCountries: input.BlockedCountries,
 	})
 	if err != nil {
 		return nil, err
@@ -404,6 +406,33 @@ func (r *queryResolver) GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, er
 
 	status := r.AnalyticsService.GeoIPStatus()
 	return convertToGraphQLGeoIPStatus(status), nil
+}
+
+// GeoIPCountries is the resolver for the geoIPCountries field.
+func (r *queryResolver) GeoIPCountries(ctx context.Context, search *string) ([]*model.GeoIPCountry, error) {
+	claims := auth.GetUserFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized")
+	}
+
+	query := ""
+	if search != nil {
+		query = *search
+	}
+
+	countries, err := r.AnalyticsService.GeoIPCountries(query)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*model.GeoIPCountry, 0, len(countries))
+	for _, country := range countries {
+		result = append(result, &model.GeoIPCountry{
+			Code: country.Code,
+			Name: country.Name,
+		})
+	}
+	return result, nil
 }
 
 // Events is the resolver for the events field.

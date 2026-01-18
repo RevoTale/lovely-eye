@@ -23,6 +23,11 @@ type FilterInput struct {
 	Country []string `json:"country,omitempty"`
 }
 
+type GeoIPCountry struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
 type GeoIPStatus struct {
 	State     string     `json:"state"`
 	DbPath    string     `json:"dbPath"`
@@ -35,4 +40,10 @@ type Mutation struct {
 }
 
 type Query struct {
+}
+
+type Session struct {
+	ID string `json:"id"`
+	// True when created from an event without a page view; flipped to false after a page view arrives.
+	EventOnly bool `json:"eventOnly"`
 }

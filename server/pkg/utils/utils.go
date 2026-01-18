@@ -86,12 +86,17 @@ var (
 	ErrDomainTooLong = errors.New("domain name too long")
 	// ErrSiteNameTooLong indicates the site name exceeds maximum length
 	ErrSiteNameTooLong = errors.New("site name must be between 1 and 100 characters")
+	// ErrInvalidIPAddress indicates the IP address format is invalid
+	ErrInvalidIPAddress = errors.New("invalid IP address")
+	// ErrInvalidCountryCode indicates the country code format is invalid
+	ErrInvalidCountryCode = errors.New("invalid country code")
 )
 
 // Domain regex pattern for valid domain names
 // Matches: example.com, sub.example.com, example-site.com
 // Does not match: -example.com, example-.com, example..com, http://example.com
 var domainRegex = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$`)
+var countryCodeRegex = regexp.MustCompile(`^[A-Z]{2}$`)
 
 // ValidateDomain validates and normalizes a domain name
 func ValidateDomain(domain string) (string, error) {
@@ -147,4 +152,26 @@ func ValidateSiteName(name string) (string, error) {
 	}
 
 	return name, nil
+}
+
+// ValidateIPAddress validates and normalizes an IP address.
+func ValidateIPAddress(ip string) (string, error) {
+	ip = strings.TrimSpace(ip)
+	if ip == "" {
+		return "", ErrInvalidIPAddress
+	}
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return "", ErrInvalidIPAddress
+	}
+	return parsed.String(), nil
+}
+
+// ValidateCountryCode validates and normalizes a 2-letter ISO country code.
+func ValidateCountryCode(code string) (string, error) {
+	code = strings.TrimSpace(strings.ToUpper(code))
+	if !countryCodeRegex.MatchString(code) {
+		return "", ErrInvalidCountryCode
+	}
+	return code, nil
 }

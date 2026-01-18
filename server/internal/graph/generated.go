@@ -127,6 +127,11 @@ type ComplexityRoot struct {
 		Total  func(childComplexity int) int
 	}
 
+	GeoIPCountry struct {
+		Code func(childComplexity int) int
+		Name func(childComplexity int) int
+	}
+
 	GeoIPStatus struct {
 		DbPath    func(childComplexity int) int
 		LastError func(childComplexity int) int
@@ -159,6 +164,7 @@ type ComplexityRoot struct {
 		Dashboard        func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) int
 		EventDefinitions func(childComplexity int, siteID string) int
 		Events           func(childComplexity int, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) int
+		GeoIPCountries   func(childComplexity int, search *string) int
 		GeoIPStatus      func(childComplexity int) int
 		Me               func(childComplexity int) int
 		Realtime         func(childComplexity int, siteID string) int
@@ -176,13 +182,20 @@ type ComplexityRoot struct {
 		Visitors func(childComplexity int) int
 	}
 
+	Session struct {
+		EventOnly func(childComplexity int) int
+		ID        func(childComplexity int) int
+	}
+
 	Site struct {
-		CreatedAt    func(childComplexity int) int
-		Domains      func(childComplexity int) int
-		ID           func(childComplexity int) int
-		Name         func(childComplexity int) int
-		PublicKey    func(childComplexity int) int
-		TrackCountry func(childComplexity int) int
+		BlockedCountries func(childComplexity int) int
+		BlockedIPs       func(childComplexity int) int
+		CreatedAt        func(childComplexity int) int
+		Domains          func(childComplexity int) int
+		ID               func(childComplexity int) int
+		Name             func(childComplexity int) int
+		PublicKey        func(childComplexity int) int
+		TrackCountry     func(childComplexity int) int
 	}
 
 	TokenPayload struct {
@@ -219,6 +232,7 @@ type QueryResolver interface {
 	Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) (*model.DashboardStats, error)
 	Realtime(ctx context.Context, siteID string) (*model.RealtimeStats, error)
 	GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, error)
+	GeoIPCountries(ctx context.Context, search *string) ([]*model.GeoIPCountry, error)
 	Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) (*model.EventsResult, error)
 	EventDefinitions(ctx context.Context, siteID string) ([]*model.EventDefinition, error)
 }
@@ -515,6 +529,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.EventsResult.Total(childComplexity), true
 
+	case "GeoIPCountry.code":
+		if e.complexity.GeoIPCountry.Code == nil {
+			break
+		}
+
+		return e.complexity.GeoIPCountry.Code(childComplexity), true
+	case "GeoIPCountry.name":
+		if e.complexity.GeoIPCountry.Name == nil {
+			break
+		}
+
+		return e.complexity.GeoIPCountry.Name(childComplexity), true
+
 	case "GeoIPStatus.dbPath":
 		if e.complexity.GeoIPStatus.DbPath == nil {
 			break
@@ -710,6 +737,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Events(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["limit"].(*int), args["offset"].(*int)), true
+	case "Query.geoIPCountries":
+		if e.complexity.Query.GeoIPCountries == nil {
+			break
+		}
+
+		args, err := ec.field_Query_geoIPCountries_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GeoIPCountries(childComplexity, args["search"].(*string)), true
 	case "Query.geoIPStatus":
 		if e.complexity.Query.GeoIPStatus == nil {
 			break
@@ -777,6 +815,31 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.ReferrerStats.Visitors(childComplexity), true
 
+	case "Session.eventOnly":
+		if e.complexity.Session.EventOnly == nil {
+			break
+		}
+
+		return e.complexity.Session.EventOnly(childComplexity), true
+	case "Session.id":
+		if e.complexity.Session.ID == nil {
+			break
+		}
+
+		return e.complexity.Session.ID(childComplexity), true
+
+	case "Site.blockedCountries":
+		if e.complexity.Site.BlockedCountries == nil {
+			break
+		}
+
+		return e.complexity.Site.BlockedCountries(childComplexity), true
+	case "Site.blockedIPs":
+		if e.complexity.Site.BlockedIPs == nil {
+			break
+		}
+
+		return e.complexity.Site.BlockedIPs(childComplexity), true
 	case "Site.createdAt":
 		if e.complexity.Site.CreatedAt == nil {
 			break
@@ -988,6 +1051,10 @@ type Site {
   publicKey: String!
   """Enable country tracking (requires GeoIP database)"""
   trackCountry: Boolean!
+  """IP addresses blocked from tracking"""
+  blockedIPs: [String!]!
+  """ISO country codes blocked from tracking"""
+  blockedCountries: [String!]!
   createdAt: Time!
 }
 
@@ -1050,6 +1117,12 @@ type DailyStats {
   sessions: Int!
 }
 
+type Session {
+  id: ID!
+  """True when created from an event without a page view; flipped to false after a page view arrives."""
+  eventOnly: Boolean!
+}
+
 type RealtimeStats {
   """Visitors active in last 5 minutes"""
   visitors: Int!
@@ -1063,6 +1136,11 @@ type GeoIPStatus {
   source: String
   lastError: String
   updatedAt: Time
+}
+
+type GeoIPCountry {
+  code: String!
+  name: String!
 }
 
 type ActivePageStats {
@@ -1132,6 +1210,10 @@ input UpdateSiteInput {
   trackCountry: Boolean
   """Full list of tracked domains (includes primary)"""
   domains: [String!]
+  """Full list of blocked IPs"""
+  blockedIPs: [String!]
+  """Full list of blocked country codes"""
+  blockedCountries: [String!]
 }
 
 input DateRangeInput {
@@ -1171,6 +1253,7 @@ type Query {
   dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
   realtime(siteId: ID!): RealtimeStats!
   geoIPStatus: GeoIPStatus!
+  geoIPCountries(search: String): [GeoIPCountry!]!
   """Get events for a site with pagination"""
   events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!
   """Get event definitions for a site"""
@@ -1382,6 +1465,17 @@ func (ec *executionContext) field_Query_events_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["offset"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_geoIPCountries_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "search", ec.unmarshalOString2ᚖstring)
+	if err != nil {
+		return nil, err
+	}
+	args["search"] = arg0
 	return args, nil
 }
 
@@ -2790,6 +2884,64 @@ func (ec *executionContext) fieldContext_EventsResult_total(_ context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _GeoIPCountry_code(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPCountry) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GeoIPCountry_code,
+		func(ctx context.Context) (any, error) {
+			return obj.Code, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_GeoIPCountry_code(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GeoIPCountry",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GeoIPCountry_name(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPCountry) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_GeoIPCountry_name,
+		func(ctx context.Context) (any, error) {
+			return obj.Name, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_GeoIPCountry_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GeoIPCountry",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _GeoIPStatus_state(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPStatus) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -3136,6 +3288,10 @@ func (ec *executionContext) fieldContext_Mutation_createSite(ctx context.Context
 				return ec.fieldContext_Site_publicKey(ctx, field)
 			case "trackCountry":
 				return ec.fieldContext_Site_trackCountry(ctx, field)
+			case "blockedIPs":
+				return ec.fieldContext_Site_blockedIPs(ctx, field)
+			case "blockedCountries":
+				return ec.fieldContext_Site_blockedCountries(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -3191,6 +3347,10 @@ func (ec *executionContext) fieldContext_Mutation_updateSite(ctx context.Context
 				return ec.fieldContext_Site_publicKey(ctx, field)
 			case "trackCountry":
 				return ec.fieldContext_Site_trackCountry(ctx, field)
+			case "blockedIPs":
+				return ec.fieldContext_Site_blockedIPs(ctx, field)
+			case "blockedCountries":
+				return ec.fieldContext_Site_blockedCountries(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -3287,6 +3447,10 @@ func (ec *executionContext) fieldContext_Mutation_regenerateSiteKey(ctx context.
 				return ec.fieldContext_Site_publicKey(ctx, field)
 			case "trackCountry":
 				return ec.fieldContext_Site_trackCountry(ctx, field)
+			case "blockedIPs":
+				return ec.fieldContext_Site_blockedIPs(ctx, field)
+			case "blockedCountries":
+				return ec.fieldContext_Site_blockedCountries(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -3604,6 +3768,10 @@ func (ec *executionContext) fieldContext_Query_sites(_ context.Context, field gr
 				return ec.fieldContext_Site_publicKey(ctx, field)
 			case "trackCountry":
 				return ec.fieldContext_Site_trackCountry(ctx, field)
+			case "blockedIPs":
+				return ec.fieldContext_Site_blockedIPs(ctx, field)
+			case "blockedCountries":
+				return ec.fieldContext_Site_blockedCountries(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -3648,6 +3816,10 @@ func (ec *executionContext) fieldContext_Query_site(ctx context.Context, field g
 				return ec.fieldContext_Site_publicKey(ctx, field)
 			case "trackCountry":
 				return ec.fieldContext_Site_trackCountry(ctx, field)
+			case "blockedIPs":
+				return ec.fieldContext_Site_blockedIPs(ctx, field)
+			case "blockedCountries":
+				return ec.fieldContext_Site_blockedCountries(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -3817,6 +3989,53 @@ func (ec *executionContext) fieldContext_Query_geoIPStatus(_ context.Context, fi
 			}
 			return nil, fmt.Errorf("no field named %q was found under type GeoIPStatus", field.Name)
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_geoIPCountries(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_geoIPCountries,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().GeoIPCountries(ctx, fc.Args["search"].(*string))
+		},
+		nil,
+		ec.marshalNGeoIPCountry2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPCountryᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_geoIPCountries(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "code":
+				return ec.fieldContext_GeoIPCountry_code(ctx, field)
+			case "name":
+				return ec.fieldContext_GeoIPCountry_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GeoIPCountry", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_geoIPCountries_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4151,6 +4370,64 @@ func (ec *executionContext) fieldContext_ReferrerStats_visitors(_ context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _Session_id(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Session_id,
+		func(ctx context.Context) (any, error) {
+			return obj.ID, nil
+		},
+		nil,
+		ec.marshalNID2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Session_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Session",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Session_eventOnly(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Session_eventOnly,
+		func(ctx context.Context) (any, error) {
+			return obj.EventOnly, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Session_eventOnly(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Session",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Site_id(ctx context.Context, field graphql.CollectedField, obj *model.Site) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4291,6 +4568,64 @@ func (ec *executionContext) fieldContext_Site_trackCountry(_ context.Context, fi
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Site_blockedIPs(ctx context.Context, field graphql.CollectedField, obj *model.Site) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Site_blockedIPs,
+		func(ctx context.Context) (any, error) {
+			return obj.BlockedIPs, nil
+		},
+		nil,
+		ec.marshalNString2ᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Site_blockedIPs(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Site",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Site_blockedCountries(ctx context.Context, field graphql.CollectedField, obj *model.Site) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Site_blockedCountries,
+		func(ctx context.Context) (any, error) {
+			return obj.BlockedCountries, nil
+		},
+		nil,
+		ec.marshalNString2ᚕstringᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Site_blockedCountries(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Site",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4533,6 +4868,10 @@ func (ec *executionContext) fieldContext_User_sites(_ context.Context, field gra
 				return ec.fieldContext_Site_publicKey(ctx, field)
 			case "trackCountry":
 				return ec.fieldContext_Site_trackCountry(ctx, field)
+			case "blockedIPs":
+				return ec.fieldContext_Site_blockedIPs(ctx, field)
+			case "blockedCountries":
+				return ec.fieldContext_Site_blockedCountries(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Site_createdAt(ctx, field)
 			}
@@ -6261,7 +6600,7 @@ func (ec *executionContext) unmarshalInputUpdateSiteInput(ctx context.Context, o
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "trackCountry", "domains"}
+	fieldsInOrder := [...]string{"name", "trackCountry", "domains", "blockedIPs", "blockedCountries"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -6289,6 +6628,20 @@ func (ec *executionContext) unmarshalInputUpdateSiteInput(ctx context.Context, o
 				return it, err
 			}
 			it.Domains = data
+		case "blockedIPs":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("blockedIPs"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BlockedIPs = data
+		case "blockedCountries":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("blockedCountries"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.BlockedCountries = data
 		}
 	}
 
@@ -6926,6 +7279,50 @@ func (ec *executionContext) _EventsResult(ctx context.Context, sel ast.Selection
 	return out
 }
 
+var geoIPCountryImplementors = []string{"GeoIPCountry"}
+
+func (ec *executionContext) _GeoIPCountry(ctx context.Context, sel ast.SelectionSet, obj *model.GeoIPCountry) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, geoIPCountryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("GeoIPCountry")
+		case "code":
+			out.Values[i] = ec._GeoIPCountry_code(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "name":
+			out.Values[i] = ec._GeoIPCountry_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var geoIPStatusImplementors = []string{"GeoIPStatus"}
 
 func (ec *executionContext) _GeoIPStatus(ctx context.Context, sel ast.SelectionSet, obj *model.GeoIPStatus) graphql.Marshaler {
@@ -7289,6 +7686,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "geoIPCountries":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_geoIPCountries(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "events":
 			field := field
 
@@ -7483,6 +7902,50 @@ func (ec *executionContext) _ReferrerStats(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var sessionImplementors = []string{"Session"}
+
+func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, obj *model.Session) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, sessionImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Session")
+		case "id":
+			out.Values[i] = ec._Session_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "eventOnly":
+			out.Values[i] = ec._Session_eventOnly(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var siteImplementors = []string{"Site"}
 
 func (ec *executionContext) _Site(ctx context.Context, sel ast.SelectionSet, obj *model.Site) graphql.Marshaler {
@@ -7516,6 +7979,16 @@ func (ec *executionContext) _Site(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "trackCountry":
 			out.Values[i] = ec._Site_trackCountry(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "blockedIPs":
+			out.Values[i] = ec._Site_blockedIPs(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "blockedCountries":
+			out.Values[i] = ec._Site_blockedCountries(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -8591,6 +9064,60 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 		}
 	}
 	return graphql.WrapContextMarshaler(ctx, res)
+}
+
+func (ec *executionContext) marshalNGeoIPCountry2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPCountryᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.GeoIPCountry) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNGeoIPCountry2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPCountry(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNGeoIPCountry2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPCountry(ctx context.Context, sel ast.SelectionSet, v *model.GeoIPCountry) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._GeoIPCountry(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNGeoIPStatus2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus(ctx context.Context, sel ast.SelectionSet, v model.GeoIPStatus) graphql.Marshaler {

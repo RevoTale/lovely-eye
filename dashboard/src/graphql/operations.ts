@@ -38,6 +38,8 @@ export const SITE_QUERY = gql`
       name
       publicKey
       trackCountry
+      blockedIPs
+      blockedCountries
       createdAt
     }
   }
@@ -162,6 +164,8 @@ export const UPDATE_SITE_MUTATION = gql`
       name
       publicKey
       trackCountry
+      blockedIPs
+      blockedCountries
       createdAt
     }
   }
@@ -217,6 +221,15 @@ export const GEOIP_STATUS_QUERY = gql`
       source
       lastError
       updatedAt
+    }
+  }
+`;
+
+export const GEOIP_COUNTRIES_QUERY = gql`
+  query GeoIPCountries($search: String) {
+    geoIPCountries(search: $search) {
+      code
+      name
     }
   }
 `;

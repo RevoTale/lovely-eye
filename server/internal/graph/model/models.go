@@ -11,12 +11,14 @@ type User struct {
 }
 
 type Site struct {
-	ID           string    `json:"id"`
-	Domains      []string  `json:"domains"`
-	Name         string    `json:"name"`
-	PublicKey    string    `json:"publicKey"`
-	TrackCountry bool      `json:"trackCountry"`
-	CreatedAt    time.Time `json:"createdAt"`
+	ID               string    `json:"id"`
+	Domains          []string  `json:"domains"`
+	Name             string    `json:"name"`
+	PublicKey        string    `json:"publicKey"`
+	TrackCountry     bool      `json:"trackCountry"`
+	BlockedIPs       []string  `json:"blockedIPs"`
+	BlockedCountries []string  `json:"blockedCountries"`
+	CreatedAt        time.Time `json:"createdAt"`
 }
 
 type AuthPayload struct {
@@ -98,9 +100,11 @@ type CreateSiteInput struct {
 }
 
 type UpdateSiteInput struct {
-	Name         string   `json:"name"`
-	TrackCountry *bool    `json:"trackCountry,omitempty"`
-	Domains      []string `json:"domains,omitempty"`
+	Name             string   `json:"name"`
+	TrackCountry     *bool    `json:"trackCountry,omitempty"`
+	Domains          []string `json:"domains,omitempty"`
+	BlockedIPs       []string `json:"blockedIPs,omitempty"`
+	BlockedCountries []string `json:"blockedCountries,omitempty"`
 }
 
 type DateRangeInput struct {
