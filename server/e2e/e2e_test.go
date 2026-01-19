@@ -542,7 +542,12 @@ func TestEventPropertiesValidation(t *testing.T) {
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+		err := resp.Body.Close()
+		if nil != err {
+			slog.Error("resp close failed","error",err)
+		}	
+		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
@@ -562,7 +567,12 @@ func TestEventPropertiesValidation(t *testing.T) {
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+		err := resp.Body.Close()
+		if nil != err {
+			slog.Error("resp body failed","error",err)
+		}	
+		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
@@ -582,7 +592,12 @@ func TestEventPropertiesValidation(t *testing.T) {
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+		err := resp.Body.Close()
+		if nil != err {
+			slog.Error("resp body close","error",err)
+		}	
+		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
@@ -602,7 +617,12 @@ func TestEventPropertiesValidation(t *testing.T) {
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp body close err","error",err)
+			}
+		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
@@ -622,7 +642,12 @@ func TestEventPropertiesValidation(t *testing.T) {
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+		err :=  resp.Body.Close()
+		if nil != err {
+			slog.Error("resp body close failed","error",err)
+		}	
+		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 
@@ -642,7 +667,12 @@ func TestEventPropertiesValidation(t *testing.T) {
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+			defer func ()  {
+		err :=  resp.Body.Close()
+		if nil != err {
+			slog.Error("resp body close failed","error",err)
+		}	
+		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 }
@@ -724,7 +754,12 @@ func TestEventPropertiesStored(t *testing.T) {
 			"https://events-storage-test.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+			defer func ()  {
+		err :=  resp.Body.Close()
+		if nil != err {
+			slog.Error("resp body close failed","error",err)
+		}	
+		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 
 		// Retrieve events via GraphQL API
@@ -782,7 +817,8 @@ func TestEventPropertiesStored(t *testing.T) {
 				"https://events-storage-test.com",
 			)
 			require.NoError(t, err)
-			resp.Body.Close()
+			err = resp.Body.Close()
+			require.NoError(t,err)
 			require.Equal(t, http.StatusNoContent, resp.StatusCode)
 		}
 
@@ -823,7 +859,12 @@ func TestHealthEndpoint(t *testing.T) {
 	t.Run("health endpoint returns healthy status", func(t *testing.T) {
 		resp, err := ts.httpServer.Client().Get(ts.httpServer.URL + "/health")
 		require.NoError(t, err)
-		defer resp.Body.Close()
+			defer func ()  {
+		err :=  resp.Body.Close()
+		if nil != err {
+			slog.Error("resp body close failed","error",err)
+		}	
+		}()
 
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 		require.Contains(t, resp.Header.Get("Content-Type"), "application/json")

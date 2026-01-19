@@ -360,8 +360,10 @@ func TestInitialAdminWithUnsetEnvVars(t *testing.T) {
 	}()
 
 	// Unset the env vars
-	os.Unsetenv("INITIAL_ADMIN_USERNAME")
-	os.Unsetenv("INITIAL_ADMIN_PASSWORD")
+	err := os.Unsetenv("INITIAL_ADMIN_USERNAME")
+	require.NoError(t,err)
+	err = os.Unsetenv("INITIAL_ADMIN_PASSWORD")
+	require.NoError(t,err)
 
 	cfg := config.Load()
 	cfg.Database.Driver = "sqlite"
