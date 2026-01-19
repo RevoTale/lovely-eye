@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/lovely-eye/server/internal/models"
@@ -487,7 +488,7 @@ func (r *AnalyticsRepository) GetTopPagesWithFilter(ctx context.Context, siteID 
 		Where("created_at <= ?", to)
 	q = applyPageViewFilters(q, referrer, device, page, country)
 	err := q.Group("path").
-		Order("views DESC").
+		Order("views DESC", "path ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
 	return stats, err
@@ -504,7 +505,7 @@ func (r *AnalyticsRepository) GetTopReferrersWithFilter(ctx context.Context, sit
 		Where("started_at <= ?", to)
 	q = applySessionFilters(q, referrer, device, page, country)
 	err := q.Group("referrer").
-		Order("visitors DESC").
+		Order("visitors DESC", "referrer ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
 	return stats, err
@@ -522,7 +523,7 @@ func (r *AnalyticsRepository) GetBrowserStatsWithFilter(ctx context.Context, sit
 		Where("browser != ''")
 	q = applySessionFilters(q, referrer, device, page, country)
 	err := q.Group("browser").
-		Order("visitors DESC").
+		Order("visitors DESC", "browser ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
 	return stats, err
@@ -540,7 +541,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilter(ctx context.Context, site
 		Where("device != ''")
 	q = applySessionFilters(q, referrer, device, page, country)
 	err := q.Group("device").
-		Order("visitors DESC").
+		Order("visitors DESC", "device ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
 	return stats, err
@@ -557,17 +558,193 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilter(ctx context.Context, sit
 		Where("started_at <= ?", to)
 	q = applySessionFilters(q, referrer, device, page, country)
 	err := q.Group("country").
-		Order("visitors DESC").
+		Order("visitors DESC", "country ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
 	return stats, err
 }
 
 func (r *AnalyticsRepository) GetDailyStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string) ([]DailyVisitorStats, error) {
-	var stats []DailyVisitorStats
+	return r.GetTimeSeriesStatsWithFilter(ctx, siteID, from, to, TimeBucketDaily, 0, referrer, device, page, country)
+}
+
+func (r *AnalyticsRepository) GetTopPagesWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, referrer, device, page, country []string) ([]PageStats, int, error) {
+	var stats []PageStats
+	var total int
+	q := r.db.NewSelect().
+		Model((*models.PageView)(nil)).
+		ColumnExpr("path").
+		ColumnExpr("COUNT(*) as views").
+		ColumnExpr("COUNT(DISTINCT visitor_id) as visitors").
+		Where("site_id = ?", siteID).
+		Where("created_at >= ?", from).
+		Where("created_at <= ?", to)
+	q = applyPageViewFilters(q, referrer, device, page, country)
+	err := q.Group("path").
+		Order("views DESC", "path ASC").
+		Limit(limit).
+		Offset(offset).
+		Scan(ctx, &stats)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	countQuery := r.db.NewSelect().
+		Model((*models.PageView)(nil)).
+		ColumnExpr("COUNT(DISTINCT path)").
+		Where("site_id = ?", siteID).
+		Where("created_at >= ?", from).
+		Where("created_at <= ?", to)
+	countQuery = applyPageViewFilters(countQuery, referrer, device, page, country)
+	err = countQuery.Scan(ctx, &total)
+	return stats, total, err
+}
+
+func (r *AnalyticsRepository) GetTopReferrersWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, referrer, device, page, country []string) ([]ReferrerStats, int, error) {
+	var stats []ReferrerStats
+	var total int
 	q := r.db.NewSelect().
 		Model((*models.Session)(nil)).
-		ColumnExpr("DATE(started_at) as date").
+		ColumnExpr("COALESCE(NULLIF(referrer, ''), '(direct)') as referrer").
+		ColumnExpr("COUNT(DISTINCT visitor_id) as visitors").
+		Where("site_id = ?", siteID).
+		Where("started_at >= ?", from).
+		Where("started_at <= ?", to)
+	q = applySessionFilters(q, referrer, device, page, country)
+	err := q.Group("referrer").
+		Order("visitors DESC", "referrer ASC").
+		Limit(limit).
+		Offset(offset).
+		Scan(ctx, &stats)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	countQuery := r.db.NewSelect().
+		Model((*models.Session)(nil)).
+		ColumnExpr("COUNT(DISTINCT COALESCE(NULLIF(referrer, ''), '(direct)'))").
+		Where("site_id = ?", siteID).
+		Where("started_at >= ?", from).
+		Where("started_at <= ?", to)
+	countQuery = applySessionFilters(countQuery, referrer, device, page, country)
+	err = countQuery.Scan(ctx, &total)
+	return stats, total, err
+}
+
+func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, referrer, device, page, country []string) ([]DeviceStats, int, int, error) {
+	var stats []DeviceStats
+	var total int
+	var totalVisitors int
+	q := r.db.NewSelect().
+		Model((*models.Session)(nil)).
+		ColumnExpr("device").
+		ColumnExpr("COUNT(DISTINCT visitor_id) as visitors").
+		Where("site_id = ?", siteID).
+		Where("started_at >= ?", from).
+		Where("started_at <= ?", to).
+		Where("device != ''")
+	q = applySessionFilters(q, referrer, device, page, country)
+	err := q.Group("device").
+		Order("visitors DESC", "device ASC").
+		Limit(limit).
+		Offset(offset).
+		Scan(ctx, &stats)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	countQuery := r.db.NewSelect().
+		Model((*models.Session)(nil)).
+		ColumnExpr("COUNT(DISTINCT device)").
+		Where("site_id = ?", siteID).
+		Where("started_at >= ?", from).
+		Where("started_at <= ?", to).
+		Where("device != ''")
+	countQuery = applySessionFilters(countQuery, referrer, device, page, country)
+	err = countQuery.Scan(ctx, &total)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	deviceCounts := r.db.NewSelect().
+		Model((*models.Session)(nil)).
+		ColumnExpr("COUNT(DISTINCT visitor_id) as visitors").
+		Where("site_id = ?", siteID).
+		Where("started_at >= ?", from).
+		Where("started_at <= ?", to).
+		Where("device != ''")
+	deviceCounts = applySessionFilters(deviceCounts, referrer, device, page, country)
+	deviceCounts = deviceCounts.Group("device")
+
+	err = r.db.NewSelect().
+		TableExpr("(?) as device_counts", deviceCounts).
+		ColumnExpr("COALESCE(SUM(visitors), 0)").
+		Scan(ctx, &totalVisitors)
+	return stats, total, totalVisitors, err
+}
+
+func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, referrer, device, page, country []string) ([]CountryStats, int, int, error) {
+	var stats []CountryStats
+	var total int
+	var totalVisitors int
+	q := r.db.NewSelect().
+		Model((*models.Session)(nil)).
+		ColumnExpr("COALESCE(NULLIF(country, ''), 'Unknown') as country").
+		ColumnExpr("COUNT(DISTINCT visitor_id) as visitors").
+		Where("site_id = ?", siteID).
+		Where("started_at >= ?", from).
+		Where("started_at <= ?", to)
+	q = applySessionFilters(q, referrer, device, page, country)
+	err := q.Group("country").
+		Order("visitors DESC", "country ASC").
+		Limit(limit).
+		Offset(offset).
+		Scan(ctx, &stats)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	countQuery := r.db.NewSelect().
+		Model((*models.Session)(nil)).
+		ColumnExpr("COUNT(DISTINCT COALESCE(NULLIF(country, ''), 'Unknown'))").
+		Where("site_id = ?", siteID).
+		Where("started_at >= ?", from).
+		Where("started_at <= ?", to)
+	countQuery = applySessionFilters(countQuery, referrer, device, page, country)
+	err = countQuery.Scan(ctx, &total)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	countryCounts := r.db.NewSelect().
+		Model((*models.Session)(nil)).
+		ColumnExpr("COUNT(DISTINCT visitor_id) as visitors").
+		Where("site_id = ?", siteID).
+		Where("started_at >= ?", from).
+		Where("started_at <= ?", to)
+	countryCounts = applySessionFilters(countryCounts, referrer, device, page, country)
+	countryCounts = countryCounts.Group("country")
+
+	err = r.db.NewSelect().
+		TableExpr("(?) as country_counts", countryCounts).
+		ColumnExpr("COALESCE(SUM(visitors), 0)").
+		Scan(ctx, &totalVisitors)
+	return stats, total, totalVisitors, err
+}
+
+type TimeBucket string
+
+const (
+	TimeBucketDaily  TimeBucket = "daily"
+	TimeBucketHourly TimeBucket = "hourly"
+)
+
+func (r *AnalyticsRepository) GetTimeSeriesStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, bucket TimeBucket, limit int, referrer, device, page, country []string) ([]DailyVisitorStats, error) {
+	var stats []DailyVisitorStats
+	bucketExpr := r.timeBucketExpression(bucket)
+	q := r.db.NewSelect().
+		Model((*models.Session)(nil)).
+		ColumnExpr(bucketExpr+" as date").
 		ColumnExpr("COUNT(DISTINCT visitor_id) as visitors").
 		ColumnExpr("SUM(page_views) as page_views").
 		ColumnExpr("COUNT(*) as sessions").
@@ -575,8 +752,26 @@ func (r *AnalyticsRepository) GetDailyStatsWithFilter(ctx context.Context, siteI
 		Where("started_at >= ?", from).
 		Where("started_at <= ?", to)
 	q = applySessionFilters(q, referrer, device, page, country)
-	err := q.Group("DATE(started_at)").
-		Order("date ASC").
-		Scan(ctx, &stats)
+	q = q.Group(bucketExpr)
+	if limit > 0 {
+		q = q.Order("date DESC").Limit(limit)
+	} else {
+		q = q.Order("date ASC")
+	}
+	err := q.Scan(ctx, &stats)
 	return stats, err
+}
+
+func (r *AnalyticsRepository) timeBucketExpression(bucket TimeBucket) string {
+	dialect := fmt.Sprint(r.db.Dialect().Name())
+	if bucket == TimeBucketHourly {
+		if dialect == "pg" || dialect == "postgres" || dialect == "postgresql" {
+			return "date_trunc('hour', started_at)"
+		}
+		return "strftime('%Y-%m-%d %H:00:00', started_at)"
+	}
+	if dialect == "pg" || dialect == "postgres" || dialect == "postgresql" {
+		return "date_trunc('day', started_at)"
+	}
+	return "DATE(started_at)"
 }

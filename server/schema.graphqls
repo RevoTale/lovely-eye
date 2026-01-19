@@ -40,12 +40,12 @@ type DashboardStats {
   bounceRate: Float!
   """Average session duration in seconds"""
   avgDuration: Float!
-  topPages: [PageStats!]!
-  topReferrers: [ReferrerStats!]!
+  topPages(paging: PagingInput!): PagedPageStats!
+  topReferrers(paging: PagingInput!): PagedReferrerStats!
   browsers: [BrowserStats!]!
-  devices: [DeviceStats!]!
-  countries: [CountryStats!]!
-  dailyStats: [DailyStats!]!
+  devices(paging: PagingInput!): PagedDeviceStats!
+  countries(paging: PagingInput!): PagedCountryStats!
+  dailyStats(bucket: TimeBucket = DAILY, limit: Int): [DailyStats!]!
 }
 
 type PageStats {
@@ -79,6 +79,38 @@ type DailyStats {
   visitors: Int!
   pageViews: Int!
   sessions: Int!
+}
+
+type PagedPageStats {
+  items: [PageStats!]!
+  total: Int!
+}
+
+type PagedReferrerStats {
+  items: [ReferrerStats!]!
+  total: Int!
+}
+
+type PagedDeviceStats {
+  items: [DeviceStats!]!
+  total: Int!
+  totalVisitors: Int!
+}
+
+type PagedCountryStats {
+  items: [CountryStats!]!
+  total: Int!
+  totalVisitors: Int!
+}
+
+input PagingInput {
+  limit: Int!
+  offset: Int!
+}
+
+enum TimeBucket {
+  DAILY
+  HOURLY
 }
 
 type Session {

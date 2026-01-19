@@ -16,6 +16,7 @@ import (
 func TestDashboardFiltering(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
+	defaultPaging := operations.PagingInput{Limit: 50, Offset: 0}
 
 	// Create HTTP client with cookie jar (simulates browser)
 	jar, err := cookiejar.New(nil)
@@ -96,17 +97,17 @@ func TestDashboardFiltering(t *testing.T) {
 	}
 
 	t.Run("no filter shows all data", func(t *testing.T) {
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should have all page views
 		require.Equal(t, 7, resp.Dashboard.PageViews)
 
 		// Should have multiple referrers
-		require.GreaterOrEqual(t, len(resp.Dashboard.TopReferrers), 3)
+		require.GreaterOrEqual(t, len(resp.Dashboard.TopReferrers.Items), 3)
 
 		// Should have multiple pages
-		require.GreaterOrEqual(t, len(resp.Dashboard.TopPages), 3)
+		require.GreaterOrEqual(t, len(resp.Dashboard.TopPages.Items), 3)
 	})
 
 	t.Run("filter by referrer", func(t *testing.T) {
@@ -115,20 +116,20 @@ func TestDashboardFiltering(t *testing.T) {
 			Referrer: []string{googleReferrer},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should only show Google traffic (2 page views)
 		require.Equal(t, 2, resp.Dashboard.PageViews, "should only count Google referrer page views")
 
 		// Should only show /home page (all Google traffic went to /home)
-		require.Len(t, resp.Dashboard.TopPages, 1, "should only show pages visited via Google")
-		require.Equal(t, "/home", resp.Dashboard.TopPages[0].Path)
-		require.Equal(t, 2, resp.Dashboard.TopPages[0].Views)
+		require.Len(t, resp.Dashboard.TopPages.Items, 1, "should only show pages visited via Google")
+		require.Equal(t, "/home", resp.Dashboard.TopPages.Items[0].Path)
+		require.Equal(t, 2, resp.Dashboard.TopPages.Items[0].Views)
 
 		// Should only show desktop device (Google traffic is desktop)
-		require.Len(t, resp.Dashboard.Devices, 1, "should only show devices from Google traffic")
-		require.Equal(t, "desktop", resp.Dashboard.Devices[0].Device)
+		require.Len(t, resp.Dashboard.Devices.Items, 1, "should only show devices from Google traffic")
+		require.Equal(t, "desktop", resp.Dashboard.Devices.Items[0].Device)
 	})
 
 	t.Run("filter by device", func(t *testing.T) {
@@ -137,18 +138,18 @@ func TestDashboardFiltering(t *testing.T) {
 			Device: []string{mobileDevice},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should only show mobile traffic (3 page views: 2 from Facebook, 1 from Twitter)
 		require.Equal(t, 3, resp.Dashboard.PageViews, "should only count mobile page views")
 
 		// Should show pages visited on mobile
-		require.GreaterOrEqual(t, len(resp.Dashboard.TopPages), 1, "should show pages visited on mobile")
+		require.GreaterOrEqual(t, len(resp.Dashboard.TopPages.Items), 1, "should show pages visited on mobile")
 
 		// Find /about in top pages (Facebook mobile traffic)
 		foundAbout := false
-		for _, page := range resp.Dashboard.TopPages {
+		for _, page := range resp.Dashboard.TopPages.Items {
 			if page.Path == "/about" {
 				foundAbout = true
 				require.Equal(t, 2, page.Views, "/about should have 2 mobile views from Facebook")
@@ -163,18 +164,18 @@ func TestDashboardFiltering(t *testing.T) {
 			Page: []string{homePage},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should show traffic to /home page (3 views: 2 Google desktop + 1 Twitter mobile)
 		require.Equal(t, 3, resp.Dashboard.PageViews, "should only count /home page views")
 
 		// Should show only /home in top pages
-		require.Len(t, resp.Dashboard.TopPages, 1, "should only show /home page")
-		require.Equal(t, "/home", resp.Dashboard.TopPages[0].Path)
+		require.Len(t, resp.Dashboard.TopPages.Items, 1, "should only show /home page")
+		require.Equal(t, "/home", resp.Dashboard.TopPages.Items[0].Path)
 
 		// Should show referrers that led to /home
-		require.GreaterOrEqual(t, len(resp.Dashboard.TopReferrers), 2, "should show Google and Twitter referrers")
+		require.GreaterOrEqual(t, len(resp.Dashboard.TopReferrers.Items), 2, "should show Google and Twitter referrers")
 	})
 
 	t.Run("filter by multiple criteria - referrer and device", func(t *testing.T) {
@@ -185,16 +186,16 @@ func TestDashboardFiltering(t *testing.T) {
 			Device:   []string{mobileDevice},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should show only Facebook mobile traffic (2 page views to /about)
 		require.Equal(t, 2, resp.Dashboard.PageViews, "should only count Facebook mobile page views")
 
 		// Should only show /about page
-		require.Len(t, resp.Dashboard.TopPages, 1, "should only show /about page")
-		require.Equal(t, "/about", resp.Dashboard.TopPages[0].Path)
-		require.Equal(t, 2, resp.Dashboard.TopPages[0].Views)
+		require.Len(t, resp.Dashboard.TopPages.Items, 1, "should only show /about page")
+		require.Equal(t, "/about", resp.Dashboard.TopPages.Items[0].Path)
+		require.Equal(t, 2, resp.Dashboard.TopPages.Items[0].Views)
 	})
 
 	t.Run("filter by multiple criteria - page and device", func(t *testing.T) {
@@ -205,15 +206,15 @@ func TestDashboardFiltering(t *testing.T) {
 			Device: []string{desktopDevice},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should show only desktop traffic to /home (2 Google views)
 		require.Equal(t, 2, resp.Dashboard.PageViews, "should only count desktop views of /home")
 
 		// Should show only Google referrer
-		require.Len(t, resp.Dashboard.TopReferrers, 1, "should only show Google referrer")
-		require.Contains(t, resp.Dashboard.TopReferrers[0].Referrer, "google")
+		require.Len(t, resp.Dashboard.TopReferrers.Items, 1, "should only show Google referrer")
+		require.Contains(t, resp.Dashboard.TopReferrers.Items[0].Referrer, "google")
 	})
 
 	t.Run("filter with non-existent values returns empty results", func(t *testing.T) {
@@ -222,15 +223,15 @@ func TestDashboardFiltering(t *testing.T) {
 			Referrer: []string{nonExistentReferrer},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should have no data
 		require.Equal(t, 0, resp.Dashboard.PageViews)
 		require.Equal(t, 0, resp.Dashboard.Visitors)
 		require.Equal(t, 0, resp.Dashboard.Sessions)
-		require.Len(t, resp.Dashboard.TopPages, 0)
-		require.Len(t, resp.Dashboard.TopReferrers, 0)
+		require.Len(t, resp.Dashboard.TopPages.Items, 0)
+		require.Len(t, resp.Dashboard.TopReferrers.Items, 0)
 	})
 
 	t.Run("direct traffic filter", func(t *testing.T) {
@@ -239,14 +240,14 @@ func TestDashboardFiltering(t *testing.T) {
 			Referrer: []string{directReferrer},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should show direct traffic (2 views to /products)
 		require.Equal(t, 2, resp.Dashboard.PageViews, "should count direct traffic page views")
 
 		// Should only show /products page
-		require.Len(t, resp.Dashboard.TopPages, 1, "should only show /products page")
-		require.Equal(t, "/products", resp.Dashboard.TopPages[0].Path)
+		require.Len(t, resp.Dashboard.TopPages.Items, 1, "should only show /products page")
+		require.Equal(t, "/products", resp.Dashboard.TopPages.Items[0].Path)
 	})
 }

@@ -5,6 +5,7 @@ import { CheckCircle2, Copy, RefreshCw } from 'lucide-react';
 interface TrackingCodeCardProps {
   publicKey: string;
   trackingScript: string;
+  trackingSnippet: string;
   regenerating: boolean;
   confirmingRegenerate: boolean;
   onRegenerateRequest: () => void;
@@ -18,6 +19,7 @@ const COPY_RESET_DELAY_MS = 2000;
 export function TrackingCodeCard({
   publicKey,
   trackingScript,
+  trackingSnippet,
   regenerating,
   confirmingRegenerate,
   onRegenerateRequest,
@@ -25,13 +27,13 @@ export function TrackingCodeCard({
   onCancelRegenerate,
   onViewAnalytics,
 }: TrackingCodeCardProps): React.JSX.Element {
-  const [copied, setCopied] = React.useState(false);
+  const [copiedValue, setCopiedValue] = React.useState<string | null>(null);
 
   const handleCopy = async (value: string): Promise<void> => {
     await navigator.clipboard.writeText(value);
-    setCopied(true);
+    setCopiedValue(value);
     setTimeout(() => {
-      setCopied(false);
+      setCopiedValue(null);
     }, COPY_RESET_DELAY_MS);
   };
 
@@ -60,7 +62,7 @@ export function TrackingCodeCard({
                 void handleCopy(publicKey);
               }}
             >
-              {copied ? (
+              {copiedValue === publicKey ? (
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
               ) : (
                 <Copy className="h-4 w-4" />
@@ -120,7 +122,7 @@ export function TrackingCodeCard({
                 void handleCopy(trackingScript);
               }}
             >
-              {copied ? (
+              {copiedValue === trackingScript ? (
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
               ) : (
                 <Copy className="h-4 w-4" />
@@ -129,6 +131,33 @@ export function TrackingCodeCard({
           </div>
           <p className="text-xs text-muted-foreground">
             Add this script to the &lt;head&gt; section of your website
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Tracking Script (JavaScript)</Label>
+          <div className="relative">
+            <pre className="p-4 bg-muted rounded-lg overflow-x-auto text-xs border">
+              <code>{trackingSnippet}</code>
+            </pre>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="absolute top-2 right-2"
+              onClick={() => {
+                void handleCopy(trackingSnippet);
+              }}
+            >
+              {copiedValue === trackingSnippet ? (
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Use this to inject the tracker programmatically.
           </p>
         </div>
 

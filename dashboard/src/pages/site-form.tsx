@@ -11,7 +11,7 @@ import {
 } from '@/gql/graphql';
 import { Button, Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
 import { ArrowLeft } from 'lucide-react';
-import { siteDetailRoute } from '@/router';
+import { Link, siteDetailRoute } from '@/router';
 import { CountryTrackingSection } from '@/components/site-form/country-tracking-section';
 import { DangerZoneSection } from '@/components/site-form/danger-zone-section';
 import { EventDefinitionsSection } from '@/components/site-form/event-definitions-section';
@@ -92,15 +92,11 @@ export function SiteFormPage(): React.JSX.Element {
   return (
     <div className="space-y-6 max-w-3xl">
       <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            void navigate({ to: '/' });
-          }}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Sites
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Sites
+          </Link>
         </Button>
       </div>
 

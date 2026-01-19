@@ -94,6 +94,7 @@ const siteDetailRoute = createRoute({
       to: z.string().optional(),
       fromTime: z.string().optional(),
       toTime: z.string().optional(),
+      statsBucket: z.enum(['daily', 'hourly']).optional(),
       eventsPage: z.string().optional(),
       topPagesPage: z.string().optional(),
       referrersPage: z.string().optional(),

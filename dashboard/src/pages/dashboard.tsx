@@ -29,6 +29,9 @@ const FIRST_PAGE = 1;
 const PAGE_INDEX_OFFSET = 1;
 const DASHBOARD_POLL_INTERVAL_MS = 60000;
 const REALTIME_POLL_INTERVAL_MS = 5000;
+const DEFAULT_STATS_BUCKET = 'daily';
+const DAILY_STATS_LIMIT = 365;
+const HOURLY_STATS_LIMIT = 168;
 
 type PageValue = string | string[] | undefined;
 
@@ -71,6 +74,11 @@ function buildFilters(search: Record<string, string | string[] | undefined>): {
   return { referrers, devices, pages, countries, decodedSearch, filter };
 }
 
+function normalizeStatsBucket(value: PageValue): 'daily' | 'hourly' {
+  const raw = Array.isArray(value) ? value[FIRST_INDEX] : value;
+  return raw === 'hourly' ? 'hourly' : 'daily';
+}
+
 // eslint-disable-next-line complexity -- DashboardPage orchestrates multiple sections and filters.
 export function DashboardPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
@@ -82,6 +90,7 @@ export function DashboardPage(): React.JSX.Element {
   const referrersPage = useMemo(() => parsePage(search.referrersPage), [search.referrersPage]);
   const devicesPage = useMemo(() => parsePage(search.devicesPage), [search.devicesPage]);
   const countriesPage = useMemo(() => parsePage(search.countriesPage), [search.countriesPage]);
+  const statsBucket = useMemo(() => normalizeStatsBucket(search.statsBucket), [search.statsBucket]);
 
   const hasSiteId = siteId !== '';
   const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
@@ -127,11 +136,43 @@ export function DashboardPage(): React.JSX.Element {
     });
   };
 
+  const setStatsBucket = (bucket: 'daily' | 'hourly'): void => {
+    void navigate({
+      resetScroll:false,
+      to: '/sites/$siteId',
+      params: { siteId },
+      search: (prev) => ({
+        ...(prev as Record<string, unknown>),
+        statsBucket: bucket === DEFAULT_STATS_BUCKET ? undefined : bucket,
+      }),
+    });
+  };
+
+  const dailyStatsLimit = statsBucket === 'hourly' ? HOURLY_STATS_LIMIT : DAILY_STATS_LIMIT;
+
   const { data: dashboardData, loading: dashboardLoading } = useQuery(DashboardDocument, {
     variables: {
       siteId,
       dateRange: dateRange ?? null,
       filter: Object.keys(filter).length > EMPTY_COUNT ? filter : null,
+      topPagesPaging: {
+        limit: TOP_PAGES_PAGE_SIZE,
+        offset: (topPagesPage - PAGE_INDEX_OFFSET) * TOP_PAGES_PAGE_SIZE,
+      },
+      referrersPaging: {
+        limit: REFERRERS_PAGE_SIZE,
+        offset: (referrersPage - PAGE_INDEX_OFFSET) * REFERRERS_PAGE_SIZE,
+      },
+      devicesPaging: {
+        limit: DEVICES_PAGE_SIZE,
+        offset: (devicesPage - PAGE_INDEX_OFFSET) * DEVICES_PAGE_SIZE,
+      },
+      countriesPaging: {
+        limit: COUNTRIES_PAGE_SIZE,
+        offset: (countriesPage - PAGE_INDEX_OFFSET) * COUNTRIES_PAGE_SIZE,
+      },
+      dailyStatsBucket: statsBucket === 'hourly' ? 'HOURLY' : 'DAILY',
+      dailyStatsLimit,
     },
     skip: !hasSiteId,
     pollInterval: DASHBOARD_POLL_INTERVAL_MS,
@@ -174,28 +215,16 @@ export function DashboardPage(): React.JSX.Element {
   const realtime = realtimeData?.realtime;
   const eventsResult = eventsData?.events;
   const eventsCounts = eventsCountsData?.events.events ?? [];
-  const topPages = stats?.topPages ?? [];
-  const referrersAll = stats?.topReferrers ?? [];
-  const devicesAll = stats?.devices ?? [];
-  const countriesAll = stats?.countries ?? [];
-  const devicesTotalVisitors = devicesAll.reduce((sum, device) => sum + device.visitors, EMPTY_COUNT);
-  const countriesTotalVisitors = countriesAll.reduce((sum, country) => sum + country.visitors, EMPTY_COUNT);
-  const topPagesSlice = topPages.slice(
-    (topPagesPage - PAGE_INDEX_OFFSET) * TOP_PAGES_PAGE_SIZE,
-    topPagesPage * TOP_PAGES_PAGE_SIZE
-  );
-  const referrersSlice = referrersAll.slice(
-    (referrersPage - PAGE_INDEX_OFFSET) * REFERRERS_PAGE_SIZE,
-    referrersPage * REFERRERS_PAGE_SIZE
-  );
-  const devicesSlice = devicesAll.slice(
-    (devicesPage - PAGE_INDEX_OFFSET) * DEVICES_PAGE_SIZE,
-    devicesPage * DEVICES_PAGE_SIZE
-  );
-  const countriesSlice = countriesAll.slice(
-    (countriesPage - PAGE_INDEX_OFFSET) * COUNTRIES_PAGE_SIZE,
-    countriesPage * COUNTRIES_PAGE_SIZE
-  );
+  const topPagesResult = stats?.topPages;
+  const referrersResult = stats?.topReferrers;
+  const devicesResult = stats?.devices;
+  const countriesResult = stats?.countries;
+  const topPages = topPagesResult?.items ?? [];
+  const referrersItems = referrersResult?.items ?? [];
+  const devicesItems = devicesResult?.items ?? [];
+  const countriesItems = countriesResult?.items ?? [];
+  const devicesTotalVisitors = devicesResult?.totalVisitors ?? EMPTY_COUNT;
+  const countriesTotalVisitors = countriesResult?.totalVisitors ?? EMPTY_COUNT;
 
   if (site === null || site === undefined) {
     return <DashboardNotFound />;
@@ -223,6 +252,8 @@ export function DashboardPage(): React.JSX.Element {
         <AnalyticsContent
           siteId={siteId}
           stats={stats}
+          chartBucket={statsBucket}
+          onChartBucketChange={setStatsBucket}
           realtime={realtime}
           eventsLoading={eventsLoading}
           eventsResult={eventsResult}
@@ -232,30 +263,30 @@ export function DashboardPage(): React.JSX.Element {
           onEventsPageChange={(page) => {
             setPage('eventsPage', page);
           }}
-          topPages={topPagesSlice}
-          topPagesTotal={topPages.length}
+          topPages={topPages}
+          topPagesTotal={topPagesResult?.total ?? EMPTY_COUNT}
           topPagesPage={topPagesPage}
           topPagesPageSize={TOP_PAGES_PAGE_SIZE}
           onTopPagesPageChange={(page) => {
             setPage('topPagesPage', page);
           }}
-          referrers={referrersSlice}
-          referrersTotal={referrersAll.length}
+          referrers={referrersItems}
+          referrersTotal={referrersResult?.total ?? EMPTY_COUNT}
           referrersPage={referrersPage}
           referrersPageSize={REFERRERS_PAGE_SIZE}
           onReferrersPageChange={(page) => {
             setPage('referrersPage', page);
           }}
-          countries={countriesSlice}
-          countriesTotal={countriesAll.length}
+          countries={countriesItems}
+          countriesTotal={countriesResult?.total ?? EMPTY_COUNT}
           countriesTotalVisitors={countriesTotalVisitors}
           countriesPage={countriesPage}
           countriesPageSize={COUNTRIES_PAGE_SIZE}
           onCountriesPageChange={(page) => {
             setPage('countriesPage', page);
           }}
-          devices={devicesSlice}
-          devicesTotal={devicesAll.length}
+          devices={devicesItems}
+          devicesTotal={devicesResult?.total ?? EMPTY_COUNT}
           devicesTotalVisitors={devicesTotalVisitors}
           devicesPage={devicesPage}
           devicesPageSize={DEVICES_PAGE_SIZE}

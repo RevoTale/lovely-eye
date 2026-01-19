@@ -281,19 +281,20 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 	return s.analyticsRepo.CreateEvent(ctx, event)
 }
 
-type DashboardStats struct {
-	Visitors     int
-	PageViews    int
-	Sessions     int
-	BounceRate   float64
-	AvgDuration  float64
-	TopPages     []repository.PageStats
-	TopReferrers []repository.ReferrerStats
-	Browsers     []repository.BrowserStats
-	Devices      []repository.DeviceStats
-	Countries    []repository.CountryStats
-	DailyStats   []repository.DailyVisitorStats
+type DashboardOverview struct {
+	Visitors    int
+	PageViews   int
+	Sessions    int
+	BounceRate  float64
+	AvgDuration float64
 }
+
+type TimeBucket = repository.TimeBucket
+
+const (
+	TimeBucketDaily  = repository.TimeBucketDaily
+	TimeBucketHourly = repository.TimeBucketHourly
+)
 
 type DashboardFilter struct {
 	Referrer []string
@@ -302,8 +303,8 @@ type DashboardFilter struct {
 	Country  []string
 }
 
-func (s *AnalyticsService) GetDashboardStats(ctx context.Context, siteID int64, from, to time.Time) (*DashboardStats, error) {
-	return s.GetDashboardStatsWithFilter(ctx, siteID, from, to, DashboardFilter{})
+func (s *AnalyticsService) GetDashboardOverview(ctx context.Context, siteID int64, from, to time.Time) (*DashboardOverview, error) {
+	return s.GetDashboardOverviewWithFilter(ctx, siteID, from, to, DashboardFilter{})
 }
 
 func (s *AnalyticsService) SyncGeoIPRequirement(ctx context.Context) error {
@@ -343,32 +344,44 @@ func (s *AnalyticsService) RefreshGeoIPDatabase(ctx context.Context) (GeoIPStatu
 	return s.geoIPService.Status(), err
 }
 
-func (s *AnalyticsService) GetDashboardStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, filter DashboardFilter) (*DashboardStats, error) {
+func (s *AnalyticsService) GetDashboardOverviewWithFilter(ctx context.Context, siteID int64, from, to time.Time, filter DashboardFilter) (*DashboardOverview, error) {
 	visitors, _ := s.analyticsRepo.GetVisitorCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
 	pageViews, _ := s.analyticsRepo.GetPageViewCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
 	sessions, _ := s.analyticsRepo.GetSessionCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
 	bounceRate, _ := s.analyticsRepo.GetBounceRateWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
 	avgDuration, _ := s.analyticsRepo.GetAvgSessionDurationWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
-	topPages, _ := s.analyticsRepo.GetTopPagesWithFilter(ctx, siteID, from, to, 10, filter.Referrer, filter.Device, filter.Page, filter.Country)
-	topReferrers, _ := s.analyticsRepo.GetTopReferrersWithFilter(ctx, siteID, from, to, 10, filter.Referrer, filter.Device, filter.Page, filter.Country)
-	browsers, _ := s.analyticsRepo.GetBrowserStatsWithFilter(ctx, siteID, from, to, 10, filter.Referrer, filter.Device, filter.Page, filter.Country)
-	devices, _ := s.analyticsRepo.GetDeviceStatsWithFilter(ctx, siteID, from, to, 10, filter.Referrer, filter.Device, filter.Page, filter.Country)
-	countries, _ := s.analyticsRepo.GetCountryStatsWithFilter(ctx, siteID, from, to, 10, filter.Referrer, filter.Device, filter.Page, filter.Country)
-	dailyStats, _ := s.analyticsRepo.GetDailyStatsWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
 
-	return &DashboardStats{
-		Visitors:     visitors,
-		PageViews:    pageViews,
-		Sessions:     sessions,
-		BounceRate:   bounceRate,
-		AvgDuration:  avgDuration,
-		TopPages:     topPages,
-		TopReferrers: topReferrers,
-		Browsers:     browsers,
-		Devices:      devices,
-		Countries:    countries,
-		DailyStats:   dailyStats,
+	return &DashboardOverview{
+		Visitors:    visitors,
+		PageViews:   pageViews,
+		Sessions:    sessions,
+		BounceRate:  bounceRate,
+		AvgDuration: avgDuration,
 	}, nil
+}
+
+func (s *AnalyticsService) GetTopPagesWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.PageStats, int, error) {
+	return s.analyticsRepo.GetTopPagesWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+}
+
+func (s *AnalyticsService) GetTopReferrersWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.ReferrerStats, int, error) {
+	return s.analyticsRepo.GetTopReferrersWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+}
+
+func (s *AnalyticsService) GetDeviceStatsWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.DeviceStats, int, int, error) {
+	return s.analyticsRepo.GetDeviceStatsWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+}
+
+func (s *AnalyticsService) GetCountryStatsWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.CountryStats, int, int, error) {
+	return s.analyticsRepo.GetCountryStatsWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+}
+
+func (s *AnalyticsService) GetBrowserStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit int, filter DashboardFilter) ([]repository.BrowserStats, error) {
+	return s.analyticsRepo.GetBrowserStatsWithFilter(ctx, siteID, from, to, limit, filter.Referrer, filter.Device, filter.Page, filter.Country)
+}
+
+func (s *AnalyticsService) GetTimeSeriesStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, bucket TimeBucket, limit int, filter DashboardFilter) ([]repository.DailyVisitorStats, error) {
+	return s.analyticsRepo.GetTimeSeriesStatsWithFilter(ctx, siteID, from, to, bucket, limit, filter.Referrer, filter.Device, filter.Page, filter.Country)
 }
 
 func (s *AnalyticsService) GetRealtimeVisitors(ctx context.Context, siteID int64) (int, error) {

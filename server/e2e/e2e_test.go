@@ -297,6 +297,7 @@ func TestStatsCollection(t *testing.T) {
 func TestDashboardAuthorization(t *testing.T) {
 	ts := newTestServer(t)
 	ctx := context.Background()
+	defaultPaging := operations.PagingInput{Limit: 50, Offset: 0}
 
 	_, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "admin",
@@ -315,13 +316,13 @@ func TestDashboardAuthorization(t *testing.T) {
 	siteID := siteResp.CreateSite.Id
 
 	t.Run("authenticated user can view dashboard", func(t *testing.T) {
-		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil, nil)
+		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, resp.Dashboard.Visitors)
 	})
 
 	t.Run("unauthenticated user cannot view dashboard", func(t *testing.T) {
-		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil, nil)
+		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.Error(t, err)
 	})
 

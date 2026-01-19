@@ -24,6 +24,8 @@ const SECONDS_PER_MINUTE = 60;
 interface AnalyticsContentProps {
   siteId: string;
   stats: DashboardStats;
+  chartBucket: 'daily' | 'hourly';
+  onChartBucketChange: (bucket: 'daily' | 'hourly') => void;
   realtime: RealtimeStats | undefined;
   eventsLoading: boolean;
   eventsResult: EventsResult | undefined;
@@ -67,6 +69,8 @@ function formatDuration(seconds: number): string {
 export function AnalyticsContent({
   siteId,
   stats,
+  chartBucket,
+  onChartBucketChange,
   realtime,
   eventsLoading,
   eventsResult,
@@ -125,7 +129,11 @@ export function AnalyticsContent({
         />
       </div>
 
-      <OverviewChartSection dailyStats={stats.dailyStats} />
+      <OverviewChartSection
+        dailyStats={stats.dailyStats}
+        bucket={chartBucket}
+        onBucketChange={onChartBucketChange}
+      />
 
       {hasActivePages ? (
         <ActivePagesCard activePages={activePages} />

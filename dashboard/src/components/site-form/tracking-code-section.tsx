@@ -31,15 +31,24 @@ export function TrackingCodeSection({
     }
   };
 
-  const trackingScript = React.useMemo(() => {
+  const { trackingScript, trackingSnippet } = React.useMemo(() => {
     const basePath = window.__ENV__?.BASE_PATH ?? '';
     const trackerUrl = `${window.location.origin}${basePath}/tracker.js`;
 
-    return `<script
+    const scriptTag = `<script
   defer
   src="${trackerUrl}"
   data-site-key="${publicKey}"
 ></script>`;
+    const scriptSnippet = `(function () {
+  var script = document.createElement('script');
+  script.defer = true;
+  script.src = '${trackerUrl}';
+  script.dataset.siteKey = '${publicKey}';
+  document.head.appendChild(script);
+})();`;
+
+    return { trackingScript: scriptTag, trackingSnippet: scriptSnippet };
   }, [publicKey]);
 
   return (
@@ -47,6 +56,7 @@ export function TrackingCodeSection({
       <TrackingCodeCard
         publicKey={publicKey}
         trackingScript={trackingScript}
+        trackingSnippet={trackingSnippet}
         regenerating={regenerating}
         confirmingRegenerate={confirmingRegenerate}
         onRegenerateRequest={() => {

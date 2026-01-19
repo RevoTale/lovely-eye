@@ -1,32 +1,56 @@
-query Dashboard($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput) {
+query Dashboard(
+  $siteId: ID!
+  $dateRange: DateRangeInput
+  $filter: FilterInput
+  $topPagesPaging: PagingInput!
+  $referrersPaging: PagingInput!
+  $devicesPaging: PagingInput!
+  $countriesPaging: PagingInput!
+  $dailyStatsBucket: TimeBucket
+  $dailyStatsLimit: Int
+) {
   dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
     visitors
     pageViews
     sessions
     bounceRate
     avgDuration
-    topPages {
-      path
-      views
-      visitors
+    topPages(paging: $topPagesPaging) {
+      total
+      items {
+        path
+        views
+        visitors
+      }
     }
-    topReferrers {
-      referrer
-      visitors
+    topReferrers(paging: $referrersPaging) {
+      total
+      items {
+        referrer
+        visitors
+      }
     }
     browsers {
       browser
       visitors
     }
-    devices {
-      device
-      visitors
+    devices(paging: $devicesPaging) {
+      total
+      totalVisitors
+      items {
+        device
+        visitors
+      }
     }
-    countries {
-      country
-      visitors
+    countries(paging: $countriesPaging) {
+      total
+      totalVisitors
+      items {
+        country
+        visitors
+      }
     }
-    dailyStats {
+    dailyStats(bucket: $dailyStatsBucket, limit: $dailyStatsLimit) {
       date
       visitors
       pageViews

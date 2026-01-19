@@ -57,13 +57,13 @@ type DashboardDashboardDashboardStats struct {
 	Sessions   int     `json:"sessions"`
 	BounceRate float64 `json:"bounceRate"`
 	// Average session duration in seconds
-	AvgDuration  float64                                                     `json:"avgDuration"`
-	TopPages     []DashboardDashboardDashboardStatsTopPagesPageStats         `json:"topPages"`
-	TopReferrers []DashboardDashboardDashboardStatsTopReferrersReferrerStats `json:"topReferrers"`
-	Browsers     []DashboardDashboardDashboardStatsBrowsersBrowserStats      `json:"browsers"`
-	Devices      []DashboardDashboardDashboardStatsDevicesDeviceStats        `json:"devices"`
-	Countries    []DashboardDashboardDashboardStatsCountriesCountryStats     `json:"countries"`
-	DailyStats   []DashboardDashboardDashboardStatsDailyStats                `json:"dailyStats"`
+	AvgDuration  float64                                                        `json:"avgDuration"`
+	TopPages     DashboardDashboardDashboardStatsTopPagesPagedPageStats         `json:"topPages"`
+	TopReferrers DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats `json:"topReferrers"`
+	Browsers     []DashboardDashboardDashboardStatsBrowsersBrowserStats         `json:"browsers"`
+	Devices      DashboardDashboardDashboardStatsDevicesPagedDeviceStats        `json:"devices"`
+	Countries    DashboardDashboardDashboardStatsCountriesPagedCountryStats     `json:"countries"`
+	DailyStats   []DashboardDashboardDashboardStatsDailyStats                   `json:"dailyStats"`
 }
 
 // GetVisitors returns DashboardDashboardDashboardStats.Visitors, and is useful for accessing the field via an interface.
@@ -82,12 +82,12 @@ func (v *DashboardDashboardDashboardStats) GetBounceRate() float64 { return v.Bo
 func (v *DashboardDashboardDashboardStats) GetAvgDuration() float64 { return v.AvgDuration }
 
 // GetTopPages returns DashboardDashboardDashboardStats.TopPages, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStats) GetTopPages() []DashboardDashboardDashboardStatsTopPagesPageStats {
+func (v *DashboardDashboardDashboardStats) GetTopPages() DashboardDashboardDashboardStatsTopPagesPagedPageStats {
 	return v.TopPages
 }
 
 // GetTopReferrers returns DashboardDashboardDashboardStats.TopReferrers, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStats) GetTopReferrers() []DashboardDashboardDashboardStatsTopReferrersReferrerStats {
+func (v *DashboardDashboardDashboardStats) GetTopReferrers() DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats {
 	return v.TopReferrers
 }
 
@@ -97,12 +97,12 @@ func (v *DashboardDashboardDashboardStats) GetBrowsers() []DashboardDashboardDas
 }
 
 // GetDevices returns DashboardDashboardDashboardStats.Devices, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStats) GetDevices() []DashboardDashboardDashboardStatsDevicesDeviceStats {
+func (v *DashboardDashboardDashboardStats) GetDevices() DashboardDashboardDashboardStatsDevicesPagedDeviceStats {
 	return v.Devices
 }
 
 // GetCountries returns DashboardDashboardDashboardStats.Countries, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStats) GetCountries() []DashboardDashboardDashboardStatsCountriesCountryStats {
+func (v *DashboardDashboardDashboardStats) GetCountries() DashboardDashboardDashboardStatsCountriesPagedCountryStats {
 	return v.Countries
 }
 
@@ -123,17 +123,41 @@ func (v *DashboardDashboardDashboardStatsBrowsersBrowserStats) GetBrowser() stri
 // GetVisitors returns DashboardDashboardDashboardStatsBrowsersBrowserStats.Visitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsBrowsersBrowserStats) GetVisitors() int { return v.Visitors }
 
-// DashboardDashboardDashboardStatsCountriesCountryStats includes the requested fields of the GraphQL type CountryStats.
-type DashboardDashboardDashboardStatsCountriesCountryStats struct {
+// DashboardDashboardDashboardStatsCountriesPagedCountryStats includes the requested fields of the GraphQL type PagedCountryStats.
+type DashboardDashboardDashboardStatsCountriesPagedCountryStats struct {
+	Total         int                                                                           `json:"total"`
+	TotalVisitors int                                                                           `json:"totalVisitors"`
+	Items         []DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats `json:"items"`
+}
+
+// GetTotal returns DashboardDashboardDashboardStatsCountriesPagedCountryStats.Total, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStats) GetTotal() int { return v.Total }
+
+// GetTotalVisitors returns DashboardDashboardDashboardStatsCountriesPagedCountryStats.TotalVisitors, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStats) GetTotalVisitors() int {
+	return v.TotalVisitors
+}
+
+// GetItems returns DashboardDashboardDashboardStatsCountriesPagedCountryStats.Items, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStats) GetItems() []DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats {
+	return v.Items
+}
+
+// DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats includes the requested fields of the GraphQL type CountryStats.
+type DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats struct {
 	Country  string `json:"country"`
 	Visitors int    `json:"visitors"`
 }
 
-// GetCountry returns DashboardDashboardDashboardStatsCountriesCountryStats.Country, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStatsCountriesCountryStats) GetCountry() string { return v.Country }
+// GetCountry returns DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats.Country, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats) GetCountry() string {
+	return v.Country
+}
 
-// GetVisitors returns DashboardDashboardDashboardStatsCountriesCountryStats.Visitors, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStatsCountriesCountryStats) GetVisitors() int { return v.Visitors }
+// GetVisitors returns DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats.Visitors, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats) GetVisitors() int {
+	return v.Visitors
+}
 
 // DashboardDashboardDashboardStatsDailyStats includes the requested fields of the GraphQL type DailyStats.
 type DashboardDashboardDashboardStatsDailyStats struct {
@@ -155,47 +179,107 @@ func (v *DashboardDashboardDashboardStatsDailyStats) GetPageViews() int { return
 // GetSessions returns DashboardDashboardDashboardStatsDailyStats.Sessions, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDailyStats) GetSessions() int { return v.Sessions }
 
-// DashboardDashboardDashboardStatsDevicesDeviceStats includes the requested fields of the GraphQL type DeviceStats.
-type DashboardDashboardDashboardStatsDevicesDeviceStats struct {
+// DashboardDashboardDashboardStatsDevicesPagedDeviceStats includes the requested fields of the GraphQL type PagedDeviceStats.
+type DashboardDashboardDashboardStatsDevicesPagedDeviceStats struct {
+	Total         int                                                                       `json:"total"`
+	TotalVisitors int                                                                       `json:"totalVisitors"`
+	Items         []DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats `json:"items"`
+}
+
+// GetTotal returns DashboardDashboardDashboardStatsDevicesPagedDeviceStats.Total, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStats) GetTotal() int { return v.Total }
+
+// GetTotalVisitors returns DashboardDashboardDashboardStatsDevicesPagedDeviceStats.TotalVisitors, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStats) GetTotalVisitors() int {
+	return v.TotalVisitors
+}
+
+// GetItems returns DashboardDashboardDashboardStatsDevicesPagedDeviceStats.Items, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStats) GetItems() []DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats {
+	return v.Items
+}
+
+// DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats includes the requested fields of the GraphQL type DeviceStats.
+type DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats struct {
 	Device   string `json:"device"`
 	Visitors int    `json:"visitors"`
 }
 
-// GetDevice returns DashboardDashboardDashboardStatsDevicesDeviceStats.Device, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStatsDevicesDeviceStats) GetDevice() string { return v.Device }
+// GetDevice returns DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats.Device, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats) GetDevice() string {
+	return v.Device
+}
 
-// GetVisitors returns DashboardDashboardDashboardStatsDevicesDeviceStats.Visitors, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStatsDevicesDeviceStats) GetVisitors() int { return v.Visitors }
+// GetVisitors returns DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats.Visitors, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats) GetVisitors() int {
+	return v.Visitors
+}
 
-// DashboardDashboardDashboardStatsTopPagesPageStats includes the requested fields of the GraphQL type PageStats.
-type DashboardDashboardDashboardStatsTopPagesPageStats struct {
+// DashboardDashboardDashboardStatsTopPagesPagedPageStats includes the requested fields of the GraphQL type PagedPageStats.
+type DashboardDashboardDashboardStatsTopPagesPagedPageStats struct {
+	Total int                                                                    `json:"total"`
+	Items []DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats `json:"items"`
+}
+
+// GetTotal returns DashboardDashboardDashboardStatsTopPagesPagedPageStats.Total, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsTopPagesPagedPageStats) GetTotal() int { return v.Total }
+
+// GetItems returns DashboardDashboardDashboardStatsTopPagesPagedPageStats.Items, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsTopPagesPagedPageStats) GetItems() []DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats {
+	return v.Items
+}
+
+// DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats includes the requested fields of the GraphQL type PageStats.
+type DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats struct {
 	Path     string `json:"path"`
 	Views    int    `json:"views"`
 	Visitors int    `json:"visitors"`
 }
 
-// GetPath returns DashboardDashboardDashboardStatsTopPagesPageStats.Path, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStatsTopPagesPageStats) GetPath() string { return v.Path }
+// GetPath returns DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats.Path, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats) GetPath() string {
+	return v.Path
+}
 
-// GetViews returns DashboardDashboardDashboardStatsTopPagesPageStats.Views, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStatsTopPagesPageStats) GetViews() int { return v.Views }
+// GetViews returns DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats.Views, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats) GetViews() int {
+	return v.Views
+}
 
-// GetVisitors returns DashboardDashboardDashboardStatsTopPagesPageStats.Visitors, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStatsTopPagesPageStats) GetVisitors() int { return v.Visitors }
+// GetVisitors returns DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats.Visitors, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats) GetVisitors() int {
+	return v.Visitors
+}
 
-// DashboardDashboardDashboardStatsTopReferrersReferrerStats includes the requested fields of the GraphQL type ReferrerStats.
-type DashboardDashboardDashboardStatsTopReferrersReferrerStats struct {
+// DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats includes the requested fields of the GraphQL type PagedReferrerStats.
+type DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats struct {
+	Total int                                                                                `json:"total"`
+	Items []DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats `json:"items"`
+}
+
+// GetTotal returns DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats.Total, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats) GetTotal() int {
+	return v.Total
+}
+
+// GetItems returns DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats.Items, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats) GetItems() []DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats {
+	return v.Items
+}
+
+// DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats includes the requested fields of the GraphQL type ReferrerStats.
+type DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats struct {
 	Referrer string `json:"referrer"`
 	Visitors int    `json:"visitors"`
 }
 
-// GetReferrer returns DashboardDashboardDashboardStatsTopReferrersReferrerStats.Referrer, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStatsTopReferrersReferrerStats) GetReferrer() string {
+// GetReferrer returns DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats.Referrer, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats) GetReferrer() string {
 	return v.Referrer
 }
 
-// GetVisitors returns DashboardDashboardDashboardStatsTopReferrersReferrerStats.Visitors, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStatsTopReferrersReferrerStats) GetVisitors() int {
+// GetVisitors returns DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats.Visitors, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats) GetVisitors() int {
 	return v.Visitors
 }
 
@@ -208,8 +292,8 @@ type DashboardResponse struct {
 func (v *DashboardResponse) GetDashboard() DashboardDashboardDashboardStats { return v.Dashboard }
 
 type DateRangeInput struct {
-	From time.Time `json:"from,omitempty"`
-	To   time.Time `json:"to,omitempty"`
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
 }
 
 // GetFrom returns DateRangeInput.From, and is useful for accessing the field via an interface.
@@ -335,13 +419,13 @@ func (v *EventsResponse) GetEvents() EventsEventsEventsResult { return v.Events 
 
 type FilterInput struct {
 	// Filter by specific referrer
-	Referrer []string `json:"referrer,omitempty"`
+	Referrer []string `json:"referrer"`
 	// Filter by device type (desktop, mobile, tablet)
-	Device []string `json:"device,omitempty"`
+	Device []string `json:"device"`
 	// Filter by page path
-	Page []string `json:"page,omitempty"`
+	Page []string `json:"page"`
 	// Filter by country (stored country name)
-	Country []string `json:"country,omitempty"`
+	Country []string `json:"country"`
 }
 
 // GetReferrer returns FilterInput.Referrer, and is useful for accessing the field via an interface.
@@ -431,6 +515,17 @@ type MeResponse struct {
 
 // GetMe returns MeResponse.Me, and is useful for accessing the field via an interface.
 func (v *MeResponse) GetMe() *MeMeUser { return v.Me }
+
+type PagingInput struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
+// GetLimit returns PagingInput.Limit, and is useful for accessing the field via an interface.
+func (v *PagingInput) GetLimit() int { return v.Limit }
+
+// GetOffset returns PagingInput.Offset, and is useful for accessing the field via an interface.
+func (v *PagingInput) GetOffset() int { return v.Offset }
 
 // RealtimeRealtimeRealtimeStats includes the requested fields of the GraphQL type RealtimeStats.
 type RealtimeRealtimeRealtimeStats struct {
@@ -553,6 +648,18 @@ func (v *SitesSitesSite) GetName() string { return v.Name }
 // GetPublicKey returns SitesSitesSite.PublicKey, and is useful for accessing the field via an interface.
 func (v *SitesSitesSite) GetPublicKey() string { return v.PublicKey }
 
+type TimeBucket string
+
+const (
+	TimeBucketDaily  TimeBucket = "DAILY"
+	TimeBucketHourly TimeBucket = "HOURLY"
+)
+
+var AllTimeBucket = []TimeBucket{
+	TimeBucketDaily,
+	TimeBucketHourly,
+}
+
 // UpsertEventDefinitionResponse is returned by UpsertEventDefinition on success.
 type UpsertEventDefinitionResponse struct {
 	UpsertEventDefinition UpsertEventDefinitionUpsertEventDefinition `json:"upsertEventDefinition"`
@@ -625,9 +732,15 @@ func (v *__CreateSiteInput) GetInput() CreateSiteInput { return v.Input }
 
 // __DashboardInput is used internally by genqlient
 type __DashboardInput struct {
-	SiteId    string          `json:"siteId,omitempty"`
-	DateRange *DateRangeInput `json:"dateRange,omitempty"`
-	Filter    *FilterInput    `json:"filter,omitempty"`
+	SiteId           string          `json:"siteId"`
+	DateRange        *DateRangeInput `json:"dateRange"`
+	Filter           *FilterInput    `json:"filter,omitempty"`
+	TopPagesPaging   PagingInput     `json:"topPagesPaging"`
+	ReferrersPaging  PagingInput     `json:"referrersPaging"`
+	DevicesPaging    PagingInput     `json:"devicesPaging"`
+	CountriesPaging  PagingInput     `json:"countriesPaging"`
+	DailyStatsBucket *TimeBucket     `json:"dailyStatsBucket"`
+	DailyStatsLimit  *int            `json:"dailyStatsLimit"`
 }
 
 // GetSiteId returns __DashboardInput.SiteId, and is useful for accessing the field via an interface.
@@ -638,6 +751,24 @@ func (v *__DashboardInput) GetDateRange() *DateRangeInput { return v.DateRange }
 
 // GetFilter returns __DashboardInput.Filter, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetFilter() *FilterInput { return v.Filter }
+
+// GetTopPagesPaging returns __DashboardInput.TopPagesPaging, and is useful for accessing the field via an interface.
+func (v *__DashboardInput) GetTopPagesPaging() PagingInput { return v.TopPagesPaging }
+
+// GetReferrersPaging returns __DashboardInput.ReferrersPaging, and is useful for accessing the field via an interface.
+func (v *__DashboardInput) GetReferrersPaging() PagingInput { return v.ReferrersPaging }
+
+// GetDevicesPaging returns __DashboardInput.DevicesPaging, and is useful for accessing the field via an interface.
+func (v *__DashboardInput) GetDevicesPaging() PagingInput { return v.DevicesPaging }
+
+// GetCountriesPaging returns __DashboardInput.CountriesPaging, and is useful for accessing the field via an interface.
+func (v *__DashboardInput) GetCountriesPaging() PagingInput { return v.CountriesPaging }
+
+// GetDailyStatsBucket returns __DashboardInput.DailyStatsBucket, and is useful for accessing the field via an interface.
+func (v *__DashboardInput) GetDailyStatsBucket() *TimeBucket { return v.DailyStatsBucket }
+
+// GetDailyStatsLimit returns __DashboardInput.DailyStatsLimit, and is useful for accessing the field via an interface.
+func (v *__DashboardInput) GetDailyStatsLimit() *int { return v.DailyStatsLimit }
 
 // __DeleteSiteInput is used internally by genqlient
 type __DeleteSiteInput struct {
@@ -750,35 +881,49 @@ func CreateSite(
 
 // The query executed by Dashboard.
 const Dashboard_Operation = `
-query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput) {
+query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $topPagesPaging: PagingInput!, $referrersPaging: PagingInput!, $devicesPaging: PagingInput!, $countriesPaging: PagingInput!, $dailyStatsBucket: TimeBucket, $dailyStatsLimit: Int) {
 	dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
 		visitors
 		pageViews
 		sessions
 		bounceRate
 		avgDuration
-		topPages {
-			path
-			views
-			visitors
+		topPages(paging: $topPagesPaging) {
+			total
+			items {
+				path
+				views
+				visitors
+			}
 		}
-		topReferrers {
-			referrer
-			visitors
+		topReferrers(paging: $referrersPaging) {
+			total
+			items {
+				referrer
+				visitors
+			}
 		}
 		browsers {
 			browser
 			visitors
 		}
-		devices {
-			device
-			visitors
+		devices(paging: $devicesPaging) {
+			total
+			totalVisitors
+			items {
+				device
+				visitors
+			}
 		}
-		countries {
-			country
-			visitors
+		countries(paging: $countriesPaging) {
+			total
+			totalVisitors
+			items {
+				country
+				visitors
+			}
 		}
-		dailyStats {
+		dailyStats(bucket: $dailyStatsBucket, limit: $dailyStatsLimit) {
 			date
 			visitors
 			pageViews
@@ -794,14 +939,26 @@ func Dashboard(
 	siteId string,
 	dateRange *DateRangeInput,
 	filter *FilterInput,
+	topPagesPaging PagingInput,
+	referrersPaging PagingInput,
+	devicesPaging PagingInput,
+	countriesPaging PagingInput,
+	dailyStatsBucket *TimeBucket,
+	dailyStatsLimit *int,
 ) (data_ *DashboardResponse, err_ error) {
 	req_ := &graphql.Request{
 		OpName: "Dashboard",
 		Query:  Dashboard_Operation,
 		Variables: &__DashboardInput{
-			SiteId:    siteId,
-			DateRange: dateRange,
-			Filter:    filter,
+			SiteId:           siteId,
+			DateRange:        dateRange,
+			Filter:           filter,
+			TopPagesPaging:   topPagesPaging,
+			ReferrersPaging:  referrersPaging,
+			DevicesPaging:    devicesPaging,
+			CountriesPaging:  countriesPaging,
+			DailyStatsBucket: dailyStatsBucket,
+			DailyStatsLimit:  dailyStatsLimit,
 		},
 	}
 

@@ -1,11 +1,13 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, type ChartConfig } from '@/components/ui';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import type { DailyStats } from '@/gql/graphql';
 
 interface OverviewChartSectionProps {
   dailyStats: DailyStats[];
+  bucket: 'daily' | 'hourly';
+  onBucketChange: (bucket: 'daily' | 'hourly') => void;
 }
 
 const EMPTY_COUNT = 0;
@@ -21,20 +23,45 @@ const CHART_MARGIN = {
 };
 const TICK_MARGIN = 8;
 
-export function OverviewChartSection({ dailyStats }: OverviewChartSectionProps): React.JSX.Element | null {
+export function OverviewChartSection({ dailyStats, bucket, onBucketChange }: OverviewChartSectionProps): React.JSX.Element | null {
   if (dailyStats.length === EMPTY_COUNT) {
     return null;
   }
 
+  const formatLabel = (value: string): string => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    if (bucket === 'hourly') {
+      return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' });
+    }
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
   return (
     <Card className="hover:shadow-md transition-shadow">
-      <CardHeader>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
             <TrendingUp className="h-4 w-4 text-primary" />
           </div>
           Analytics Overview
         </CardTitle>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Granularity</span>
+          <Select value={bucket} onValueChange={(value) => {
+            if (value === 'daily' || value === 'hourly') {
+              onBucketChange(value);
+            }
+          }}>
+            <SelectTrigger className="h-8 w-[140px]">
+              <SelectValue placeholder="Daily" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="daily">Daily</SelectItem>
+              <SelectItem value="hourly">Hourly</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
         <ChartContainer
@@ -56,7 +83,7 @@ export function OverviewChartSection({ dailyStats }: OverviewChartSectionProps):
         >
           <AreaChart
             data={dailyStats.map(stat => ({
-              date: new Date(stat.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              date: formatLabel(stat.date),
               visitors: stat.visitors,
               pageViews: stat.pageViews,
               sessions: stat.sessions,

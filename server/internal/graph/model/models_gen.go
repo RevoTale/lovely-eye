@@ -3,6 +3,10 @@
 package model
 
 import (
+	"bytes"
+	"fmt"
+	"io"
+	"strconv"
 	"time"
 )
 
@@ -39,6 +43,33 @@ type GeoIPStatus struct {
 type Mutation struct {
 }
 
+type PagedCountryStats struct {
+	Items         []*CountryStats `json:"items"`
+	Total         int             `json:"total"`
+	TotalVisitors int             `json:"totalVisitors"`
+}
+
+type PagedDeviceStats struct {
+	Items         []*DeviceStats `json:"items"`
+	Total         int            `json:"total"`
+	TotalVisitors int            `json:"totalVisitors"`
+}
+
+type PagedPageStats struct {
+	Items []*PageStats `json:"items"`
+	Total int          `json:"total"`
+}
+
+type PagedReferrerStats struct {
+	Items []*ReferrerStats `json:"items"`
+	Total int              `json:"total"`
+}
+
+type PagingInput struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+}
+
 type Query struct {
 }
 
@@ -46,4 +77,59 @@ type Session struct {
 	ID string `json:"id"`
 	// True when created from an event without a page view; flipped to false after a page view arrives.
 	EventOnly bool `json:"eventOnly"`
+}
+
+type TimeBucket string
+
+const (
+	TimeBucketDaily  TimeBucket = "DAILY"
+	TimeBucketHourly TimeBucket = "HOURLY"
+)
+
+var AllTimeBucket = []TimeBucket{
+	TimeBucketDaily,
+	TimeBucketHourly,
+}
+
+func (e TimeBucket) IsValid() bool {
+	switch e {
+	case TimeBucketDaily, TimeBucketHourly:
+		return true
+	}
+	return false
+}
+
+func (e TimeBucket) String() string {
+	return string(e)
+}
+
+func (e *TimeBucket) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = TimeBucket(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid TimeBucket", str)
+	}
+	return nil
+}
+
+func (e TimeBucket) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *TimeBucket) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e TimeBucket) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }

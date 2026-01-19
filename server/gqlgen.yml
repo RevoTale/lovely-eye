@@ -19,6 +19,9 @@ autobind:
   - github.com/lovely-eye/server/internal/graph/model
 
 models:
+  DashboardStats:
+    model:
+      - github.com/lovely-eye/server/internal/graph/model.DashboardStats
   ID:
     model:
       - github.com/99designs/gqlgen/graphql.ID

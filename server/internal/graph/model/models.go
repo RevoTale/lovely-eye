@@ -32,20 +32,6 @@ type TokenPayload struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-type DashboardStats struct {
-	Visitors     int              `json:"visitors"`
-	PageViews    int              `json:"pageViews"`
-	Sessions     int              `json:"sessions"`
-	BounceRate   float64          `json:"bounceRate"`
-	AvgDuration  float64          `json:"avgDuration"`
-	TopPages     []*PageStats     `json:"topPages"`
-	TopReferrers []*ReferrerStats `json:"topReferrers"`
-	Browsers     []*BrowserStats  `json:"browsers"`
-	Devices      []*DeviceStats   `json:"devices"`
-	Countries    []*CountryStats  `json:"countries"`
-	DailyStats   []*DailyStats    `json:"dailyStats"`
-}
-
 type PageStats struct {
 	Path     string `json:"path"`
 	Views    int    `json:"views"`

@@ -1,10 +1,17 @@
-# @genqlient(omitempty: true)
 query Dashboard(
   $siteId: ID!,
   # @genqlient(pointer: true)
   $dateRange: DateRangeInput,
   # @genqlient(pointer: true, omitempty: true)
   $filter: FilterInput,
+  $topPagesPaging: PagingInput!,
+  $referrersPaging: PagingInput!,
+  $devicesPaging: PagingInput!,
+  $countriesPaging: PagingInput!,
+  # @genqlient(pointer: true)
+  $dailyStatsBucket: TimeBucket,
+  # @genqlient(pointer: true)
+  $dailyStatsLimit: Int,
 ) {
   dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
     visitors
@@ -12,28 +19,42 @@ query Dashboard(
     sessions
     bounceRate
     avgDuration
-    topPages {
-      path
-      views
-      visitors
+    topPages(paging: $topPagesPaging) {
+      total
+      items {
+        path
+        views
+        visitors
+      }
     }
-    topReferrers {
-      referrer
-      visitors
+    topReferrers(paging: $referrersPaging) {
+      total
+      items {
+        referrer
+        visitors
+      }
     }
     browsers {
       browser
       visitors
     }
-    devices {
-      device
-      visitors
+    devices(paging: $devicesPaging) {
+      total
+      totalVisitors
+      items {
+        device
+        visitors
+      }
     }
-    countries {
-      country
-      visitors
+    countries(paging: $countriesPaging) {
+      total
+      totalVisitors
+      items {
+        country
+        visitors
+      }
     }
-    dailyStats {
+    dailyStats(bucket: $dailyStatsBucket, limit: $dailyStatsLimit) {
       date
       visitors
       pageViews
