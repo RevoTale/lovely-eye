@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -14,10 +15,11 @@ type Config struct {
 	Server                 ServerConfig
 	Database               DatabaseConfig
 	Auth                   AuthConfig
-	GeoIPDBPath            string // Optional: path to GeoLite2-Country.mmdb for IP geolocation
-	GeoIPDownloadURL       string // Optional: custom GeoIP download URL (mmdb or tar.gz)
-	GeoIPMaxMindLicenseKey string // Optional: MaxMind license key for GeoLite2 download
-	TrackerJS              []byte // Optional: for testing, to avoid loading from file
+	LogLevel               slog.Level // Log level: DEBUG(-4), INFO(0), WARN(4), ERROR(8) - default: WARN
+	GeoIPDBPath            string     // Optional: path to GeoLite2-Country.mmdb for IP geolocation
+	GeoIPDownloadURL       string     // Optional: custom GeoIP download URL (mmdb or tar.gz)
+	GeoIPMaxMindLicenseKey string     // Optional: MaxMind license key for GeoLite2 download
+	TrackerJS              []byte     // Optional: for testing, to avoid loading from file
 }
 
 type ServerConfig struct {
@@ -79,6 +81,7 @@ func Load() *Config {
 			InitialAdminUsername: getEnv("INITIAL_ADMIN_USERNAME", ""),
 			InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
 		},
+		LogLevel:               getEnvLogLevel("LOG_LEVEL", slog.LevelWarn),
 		GeoIPDBPath:            getEnv("GEOIP_DB_PATH", "/data/GeoLite2-Country.mmdb"),
 		GeoIPDownloadURL:       downloadURL,
 		GeoIPMaxMindLicenseKey: maxMindKey,
@@ -122,4 +125,20 @@ func getEnvBool(key string, defaultValue bool) bool {
 		return value == "true" || value == "1" || value == "yes"
 	}
 	return defaultValue
+}
+
+func getEnvLogLevel(key string, defaultValue slog.Level) slog.Level {
+	value := strings.ToLower(os.Getenv(key))
+	switch value {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn", "warning":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return defaultValue
+	}
 }

@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -32,12 +32,24 @@ func Logging(next http.Handler) http.Handler {
 
 		next.ServeHTTP(wrapped, r)
 
-		log.Printf(
-			"%s %s %d %s",
-			r.Method,
-			r.URL.Path,
-			wrapped.status,
-			time.Since(start),
+		duration := time.Since(start)
+
+		// Log at INFO level for successful requests (2xx, 3xx)
+		// Log at WARN level for client errors (4xx)
+		// Log at ERROR level for server errors (5xx)
+		level := slog.LevelInfo
+		if wrapped.status >= 500 {
+			level = slog.LevelError
+		} else if wrapped.status >= 400 {
+			level = slog.LevelInfo
+		}
+
+		slog.Log(r.Context(), level, "HTTP request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", wrapped.status,
+			"duration", duration,
+			"ip", r.RemoteAddr,
 		)
 	})
 }

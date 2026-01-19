@@ -23,6 +23,13 @@ import (
 func main() {
 	cfg := config.Load()
 
+	// Initialize structured logger with configured log level
+	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: cfg.LogLevel,
+	})
+	logger := slog.New(logHandler)
+	slog.SetDefault(logger)
+
 	srv, err := server.New(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
