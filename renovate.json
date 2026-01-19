@@ -2,5 +2,9 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "local>RevoTale/.github:renovate-config"
-  ]
+  ],
+  "postUpdateOptions": [
+    "goGenerate"
+  ],
+  "gomodTidy": true
 }
