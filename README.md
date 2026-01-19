@@ -2,7 +2,7 @@
 
 Privacy-focused web analytics. A simple, blazingly fast, self-hosted alternative to Google Analytics, Umami and Plausible. Designed to work well with low resource systems.
 Written in Go programming language. 
-
+![Lovely Eye Logo Banner](./preview.png "Lovely Eye")
 > [!WARNING]
 > Work in progress
 
