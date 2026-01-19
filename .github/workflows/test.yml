@@ -53,8 +53,8 @@ jobs:
         run: bun run codegen --check
       - name: Lint
         run: bun run lint
-      - name: Validate configuration
-        run: bun run validate
+      - name: Typecheck
+        run: bun run tsc
 
   production-setup-test:
     runs-on: ubuntu-latest
