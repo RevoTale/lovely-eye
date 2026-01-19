@@ -38,7 +38,7 @@ export function TrackingCodeSection({
     const scriptTag = `<script
   defer
   src="${trackerUrl}"
-  data-site-key="${publicKey}"
+  data-site-id="${publicKey}"
 ></script>`;
     const scriptSnippet = `(function () {
   var script = document.createElement('script');
