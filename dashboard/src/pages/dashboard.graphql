@@ -1,0 +1,86 @@
+query Dashboard(
+  $siteId: ID!
+  $dateRange: DateRangeInput
+  $filter: FilterInput
+  $topPagesPaging: PagingInput!
+  $referrersPaging: PagingInput!
+  $devicesPaging: PagingInput!
+  $countriesPaging: PagingInput!
+  $dailyStatsBucket: TimeBucket
+  $dailyStatsLimit: Int
+) {
+  dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
+    visitors
+    pageViews
+    sessions
+    bounceRate
+    avgDuration
+    topPages(paging: $topPagesPaging) {
+      total
+      items {
+        path
+        views
+        visitors
+      }
+    }
+    topReferrers(paging: $referrersPaging) {
+      total
+      items {
+        referrer
+        visitors
+      }
+    }
+    browsers {
+      browser
+      visitors
+    }
+    devices(paging: $devicesPaging) {
+      total
+      totalVisitors
+      items {
+        device
+        visitors
+      }
+    }
+    countries(paging: $countriesPaging) {
+      total
+      totalVisitors
+      items {
+        country
+        visitors
+      }
+    }
+    dailyStats(bucket: $dailyStatsBucket, limit: $dailyStatsLimit) {
+      date
+      visitors
+      pageViews
+      sessions
+    }
+  }
+}
+
+query Realtime($siteId: ID!) {
+  realtime(siteId: $siteId) {
+    visitors
+    activePages {
+      path
+      visitors
+    }
+  }
+}
+
+query Events($siteId: ID!, $dateRange: DateRangeInput, $limit: Int, $offset: Int) {
+  events(siteId: $siteId, dateRange: $dateRange, limit: $limit, offset: $offset) {
+    total
+    events {
+      id
+      name
+      path
+      createdAt
+      properties {
+        key
+        value
+      }
+    }
+  }
+}

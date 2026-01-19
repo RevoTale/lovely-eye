@@ -1,0 +1,49 @@
+# @genqlient
+mutation CreateSite($input: CreateSiteInput!) {
+  createSite(input: $input) {
+    id
+    domains
+    name
+    publicKey
+  }
+}
+
+# @genqlient
+query Sites {
+  sites {
+    id
+    domains
+    name
+    publicKey
+  }
+}
+
+# @genqlient
+query Site($id: ID!) {
+  site(id: $id) {
+    id
+    domains
+    name
+    publicKey
+  }
+}
+
+# @genqlient
+mutation DeleteSite($id: ID!) {
+  deleteSite(id: $id)
+}
+
+# @genqlient
+mutation UpsertEventDefinition($siteId: ID!, $input: EventDefinitionInput!) {
+  upsertEventDefinition(siteId: $siteId, input: $input) {
+    id
+    name
+    fields {
+      id
+      key
+      type
+      required
+      maxLength
+    }
+  }
+}

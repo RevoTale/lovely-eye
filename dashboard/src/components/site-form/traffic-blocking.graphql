@@ -1,0 +1,6 @@
+query GeoIPCountries($search: String) {
+  geoIPCountries(search: $search) {
+    code
+    name
+  }
+}

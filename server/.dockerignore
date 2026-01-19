@@ -1,0 +1,37 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Build artifacts
+server
+*.exe
+*.db
+*.db-journal
+
+# Test files
+*_test.go
+**/*_test.go
+
+# Documentation
+*.md
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Misc
+.env
+.env.*
+*.log
+bin
+data
+
+# Development symlinks for dashboard files
+dashboard
+e2e/dashboard

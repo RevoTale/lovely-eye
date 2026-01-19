@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Soft ambient glow -->
+  <circle cx="32" cy="32" r="30" fill="url(#ambientGlow)"/>
+  <!-- Eye iris - enlarged smooth ellipse -->
+  <ellipse cx="32" cy="32" rx="26" ry="30" fill="url(#irisGradient)"/>
+  <!-- Iris detail ring -->
+  <ellipse cx="32" cy="32" rx="26" ry="30" fill="none" stroke="#fda4af" stroke-width="0.8" opacity="0.4"/>
+  <!-- Heart pupil - lovely deep rose, enlarged -->
+  <path d="M32 8
+           C25 8, 16 15, 16 24
+           C16 36, 32 54, 32 54
+           C32 54, 48 36, 48 24
+           C48 15, 39 8, 32 8Z" 
+        fill="#be123c"/>
+  <path d="M32 13
+           C27 13, 20 18, 20 26
+           C20 36, 32 50, 32 50
+           C32 50, 44 36, 44 26
+           C44 18, 37 13, 32 13Z" 
+        fill="#9f1239"/>
+  <!-- Inner heart glow -->
+  <path d="M32 20
+           C28 20, 24 24, 24 30
+           C24 38, 32 45, 32 45
+           C32 45, 40 38, 40 30
+           C40 24, 36 20, 32 20Z" 
+        fill="url(#heartGlow)" opacity="0.9"/>
+  <!-- Soft specular highlights -->
+  <ellipse cx="24" cy="20" rx="5" ry="6" fill="url(#highlight)" opacity="0.5"/>
+  <circle cx="27" cy="32" r="2.5" fill="#fff" opacity="0.25"/>
+  <defs>
+    <!-- Smooth iris gradient - lovely warm tones -->
+    <radialGradient id="irisGradient" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#fde68a"/>
+      <stop offset="25%" stop-color="#fdba74"/>
+      <stop offset="45%" stop-color="#fb7185"/>
+      <stop offset="70%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#be123c"/>
+    </radialGradient>
+    <!-- Ambient glow -->
+    <radialGradient id="ambientGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fda4af" stop-opacity="0.8"/>
+      <stop offset="50%" stop-color="#fb923c" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#fda4af" stop-opacity="0.1"/>
+    </radialGradient>
+    <!-- Heart inner glow -->
+    <radialGradient id="heartGlow" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#fef9c3"/>
+      <stop offset="40%" stop-color="#fecdd3"/>
+      <stop offset="100%" stop-color="#fb7185"/>
+    </radialGradient>
+    <!-- Highlight gradient -->
+    <radialGradient id="highlight" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

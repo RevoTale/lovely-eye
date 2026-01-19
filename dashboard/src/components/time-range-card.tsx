@@ -1,0 +1,163 @@
+import React, { useMemo, useState } from 'react';
+import { Button, Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger, Label } from '@/components/ui';
+import type { DatePreset } from '@/lib/date-range';
+import { formatDateInput, isDatePreset, isValidDateInput, isValidTimeInput, normalizeTimeInput } from '@/lib/date-range';
+import { DateTimePicker } from '@/components/ui/datetime-picker';
+
+interface TimeRangeCardProps {
+  preset: DatePreset;
+  fromDate: string;
+  toDate: string;
+  fromTime: string;
+  toTime: string;
+  onPresetChange: (preset: DatePreset) => void;
+  onApplyRange: (range: { fromDate: string; toDate: string; fromTime: string; toTime: string }) => boolean;
+}
+
+const EMPTY_STRING = '';
+const PAD_LENGTH = 2;
+
+const parseDraft = (dateValue: string, timeValue: string): Date | undefined => {
+  if (!isValidDateInput(dateValue) || !isValidTimeInput(timeValue)) return undefined;
+  const candidate = new Date(`${dateValue}T${timeValue}:00`);
+  return Number.isNaN(candidate.getTime()) ? undefined : candidate;
+};
+
+export function TimeRangeCard({
+  preset,
+  fromDate,
+  toDate,
+  fromTime,
+  toTime,
+  onPresetChange,
+  onApplyRange,
+}: TimeRangeCardProps): React.JSX.Element {
+  const isCustom = preset === 'custom';
+  const displayFromTime = normalizeTimeInput(fromTime, '00:00');
+  const displayToTime = normalizeTimeInput(toTime, '23:59');
+
+  const propFromDate = useMemo(() => parseDraft(fromDate, fromTime), [fromDate, fromTime]);
+  const propToDate = useMemo(() => parseDraft(toDate, toTime), [toDate, toTime]);
+
+  const [draftFromDate, setDraftFromDate] = useState<Date | undefined>(propFromDate);
+  const [draftToDate, setDraftToDate] = useState<Date | undefined>(propToDate);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [lastSyncKey, setLastSyncKey] = useState(`${fromDate}-${fromTime}-${toDate}-${toTime}-${preset}`);
+
+  const syncKey = `${fromDate}-${fromTime}-${toDate}-${toTime}-${preset}`;
+  if (syncKey !== lastSyncKey) {
+    setLastSyncKey(syncKey);
+    setDraftFromDate(propFromDate);
+    setDraftToDate(propToDate);
+    setSubmitAttempted(false);
+  }
+
+  const applied =
+    propFromDate?.toDateString() === draftFromDate?.toDateString() &&
+    propToDate?.toDateString() === draftToDate?.toDateString();
+  const showRange = fromDate !== EMPTY_STRING && toDate !== EMPTY_STRING;
+  const draftHasValidInputs = draftFromDate !== undefined && draftToDate !== undefined;
+  const draftRangeValid = useMemo(() => {
+    if (draftFromDate === undefined || draftToDate === undefined) return false;
+    return draftFromDate.getTime() <= draftToDate.getTime();
+  }, [draftFromDate, draftToDate]);
+  const canApply = draftHasValidInputs && draftRangeValid;
+  const getDraftDates = (): { from: Date; to: Date } | null => {
+    if (draftFromDate === undefined || draftToDate === undefined) return null;
+    return { from: draftFromDate, to: draftToDate };
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm">Time Range</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground">Quick presets</label>
+          <div className="flex flex-wrap items-center gap-3">
+            <Tabs value={preset} onValueChange={(value) => {
+              if (isDatePreset(value)) {
+                onPresetChange(value);
+              }
+            }}>
+              <TabsList className="h-auto flex flex-wrap max-w-full">
+                <TabsTrigger value="all">All time</TabsTrigger>
+                <TabsTrigger value="7d">7d</TabsTrigger>
+                <TabsTrigger value="30d">30d</TabsTrigger>
+                <TabsTrigger value="90d">90d</TabsTrigger>
+                <TabsTrigger value="custom">Custom</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          {showRange ? (
+            <p className="text-xs text-muted-foreground">
+              Showing {fromDate} {displayFromTime} → {toDate} {displayToTime}
+            </p>
+          ) : null}
+        </div>
+        <div className={`overflow-hidden transition-all duration-200 ${isCustom ? 'max-h-[420px] opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="mt-4 max-w-3xl space-y-4 rounded-lg border bg-muted/30 p-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-3">
+                <Label htmlFor="date-from" className="px-1">
+                  From date
+                </Label>
+                <DateTimePicker
+                  {...(draftFromDate === undefined ? {} : { value: draftFromDate })}
+                  onChange={setDraftFromDate}
+                  className="w-full"
+                  granularity="minute"
+                />
+              </div>
+              <div className="space-y-3">
+                <Label htmlFor="date-to" className="px-1">
+                  To date
+                </Label>
+                <DateTimePicker
+                  {...(draftToDate === undefined ? {} : { value: draftToDate })}
+                  onChange={setDraftToDate}
+                  className="w-full"
+                  granularity="minute"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-muted-foreground">
+                Use 24-hour time. Example: 2025-01-10 09:30.
+              </div>
+              <Button
+                type="button"
+                onClick={() => {
+                  setSubmitAttempted(true);
+                  if (!canApply) return;
+                  const draftDates = getDraftDates();
+                  if (draftDates === null) return;
+                  const { from: fromDateValue, to: toDateValue } = draftDates;
+                  const didApply = onApplyRange({
+                    fromDate: formatDateInput(fromDateValue),
+                    toDate: formatDateInput(toDateValue),
+                    fromTime: `${String(fromDateValue.getHours()).padStart(PAD_LENGTH, '0')}:${String(fromDateValue.getMinutes()).padStart(PAD_LENGTH, '0')}`,
+                    toTime: `${String(toDateValue.getHours()).padStart(PAD_LENGTH, '0')}:${String(toDateValue.getMinutes()).padStart(PAD_LENGTH, '0')}`,
+                  });
+                  if (didApply) {
+                    setSubmitAttempted(false);
+                  }
+                }}
+                disabled={!canApply || applied}
+              >
+                {applied ? 'Applied' : 'Apply range'}
+              </Button>
+            </div>
+          </div>
+        </div>
+        {submitAttempted && !draftHasValidInputs ? (
+          <p className="text-xs text-destructive">Select both start and end dates before applying.</p>
+        ) : null}
+        {submitAttempted && draftHasValidInputs && !draftRangeValid ? (
+          <p className="text-xs text-destructive">Start date/time must be before end date/time.</p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}

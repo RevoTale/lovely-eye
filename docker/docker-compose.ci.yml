@@ -1,0 +1,15 @@
+services:
+  lovely-eye:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - JWT_SECRET=ci-test-secret-key-for-testing-only
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 5s

@@ -1,0 +1,275 @@
+type User {
+  id: ID!
+  username: String!
+  role: String!
+  createdAt: Time!
+  sites: [Site!]
+}
+
+type Site {
+  id: ID!
+  """All tracked domains (includes primary)"""
+  domains: [String!]!
+  name: String!
+  """Used in tracking script"""
+  publicKey: String!
+  """Enable country tracking (requires GeoIP database)"""
+  trackCountry: Boolean!
+  """IP addresses blocked from tracking"""
+  blockedIPs: [String!]!
+  """ISO country codes blocked from tracking"""
+  blockedCountries: [String!]!
+  createdAt: Time!
+}
+
+type AuthPayload {
+  user: User!
+  # Modern auth: uses HttpOnly cookies with SameSite
+  # See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
+}
+
+type TokenPayload {
+  accessToken: String!
+  refreshToken: String!
+}
+
+type DashboardStats {
+  visitors: Int!
+  pageViews: Int!
+  sessions: Int!
+  bounceRate: Float!
+  """Average session duration in seconds"""
+  avgDuration: Float!
+  topPages(paging: PagingInput!): PagedPageStats!
+  topReferrers(paging: PagingInput!): PagedReferrerStats!
+  browsers: [BrowserStats!]!
+  devices(paging: PagingInput!): PagedDeviceStats!
+  countries(paging: PagingInput!): PagedCountryStats!
+  dailyStats(bucket: TimeBucket = DAILY, limit: Int): [DailyStats!]!
+}
+
+type PageStats {
+  path: String!
+  views: Int!
+  visitors: Int!
+}
+
+type ReferrerStats {
+  referrer: String!
+  visitors: Int!
+}
+
+type BrowserStats {
+  browser: String!
+  visitors: Int!
+}
+
+type DeviceStats {
+  device: String!
+  visitors: Int!
+}
+
+type CountryStats {
+  country: String!
+  visitors: Int!
+}
+
+type DailyStats {
+  date: Time!
+  visitors: Int!
+  pageViews: Int!
+  sessions: Int!
+}
+
+type PagedPageStats {
+  items: [PageStats!]!
+  total: Int!
+}
+
+type PagedReferrerStats {
+  items: [ReferrerStats!]!
+  total: Int!
+}
+
+type PagedDeviceStats {
+  items: [DeviceStats!]!
+  total: Int!
+  totalVisitors: Int!
+}
+
+type PagedCountryStats {
+  items: [CountryStats!]!
+  total: Int!
+  totalVisitors: Int!
+}
+
+input PagingInput {
+  limit: Int!
+  offset: Int!
+}
+
+enum TimeBucket {
+  DAILY
+  HOURLY
+}
+
+type Session {
+  id: ID!
+  """True when created from an event without a page view; flipped to false after a page view arrives."""
+  eventOnly: Boolean!
+}
+
+type RealtimeStats {
+  """Visitors active in last 5 minutes"""
+  visitors: Int!
+  """Active pages with visitor count"""
+  activePages: [ActivePageStats!]!
+}
+
+type GeoIPStatus {
+  state: String!
+  dbPath: String!
+  source: String
+  lastError: String
+  updatedAt: Time
+}
+
+type GeoIPCountry {
+  code: String!
+  name: String!
+}
+
+type ActivePageStats {
+  path: String!
+  """Number of visitors currently viewing this page"""
+  visitors: Int!
+}
+
+type Event {
+  id: ID!
+  name: String!
+  path: String!
+  """Key-value properties associated with the event"""
+  properties: [EventProperty!]!
+  createdAt: Time!
+}
+
+type EventProperty {
+  key: String!
+  value: String!
+}
+
+type EventsResult {
+  events: [Event!]!
+  total: Int!
+}
+
+enum EventFieldType {
+  STRING
+  NUMBER
+  BOOLEAN
+}
+
+type EventDefinitionField {
+  id: ID!
+  key: String!
+  type: EventFieldType!
+  required: Boolean!
+  maxLength: Int!
+}
+
+type EventDefinition {
+  id: ID!
+  name: String!
+  fields: [EventDefinitionField!]!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+input RegisterInput {
+  username: String!
+  password: String!
+}
+
+input LoginInput {
+  username: String!
+  password: String!
+}
+
+input CreateSiteInput {
+  domains: [String!]!
+  name: String!
+}
+
+input UpdateSiteInput {
+  name: String!
+  trackCountry: Boolean
+  """Full list of tracked domains (includes primary)"""
+  domains: [String!]
+  """Full list of blocked IPs"""
+  blockedIPs: [String!]
+  """Full list of blocked country codes"""
+  blockedCountries: [String!]
+}
+
+input DateRangeInput {
+  from: Time
+  to: Time
+}
+
+input FilterInput {
+  """Filter by specific referrer"""
+  referrer: [String!]
+  """Filter by device type (desktop, mobile, tablet)"""
+  device: [String!]
+  """Filter by page path"""
+  page: [String!]
+  """Filter by country (stored country name)"""
+  country: [String!]
+}
+
+input EventDefinitionFieldInput {
+  key: String!
+  type: EventFieldType!
+  required: Boolean!
+  maxLength: Int
+}
+
+input EventDefinitionInput {
+  name: String!
+  fields: [EventDefinitionFieldInput!]!
+}
+
+scalar Time
+
+type Query {
+  me: User
+  sites: [Site!]!
+  site(id: ID!): Site
+  dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
+  realtime(siteId: ID!): RealtimeStats!
+  geoIPStatus: GeoIPStatus!
+  geoIPCountries(search: String): [GeoIPCountry!]!
+  """Get events for a site with pagination"""
+  events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!
+  """Get event definitions for a site"""
+  eventDefinitions(siteId: ID!): [EventDefinition!]!
+}
+
+type Mutation {
+  """First user becomes admin"""
+  register(input: RegisterInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  """Clears auth cookies"""
+  logout: Boolean!
+  refreshToken(refreshToken: String!): TokenPayload!
+  createSite(input: CreateSiteInput!): Site!
+  updateSite(id: ID!, input: UpdateSiteInput!): Site!
+  """Deletes site and all analytics data"""
+  deleteSite(id: ID!): Boolean!
+  """Invalidates old tracking scripts"""
+  regenerateSiteKey(id: ID!): Site!
+  refreshGeoIPDatabase: GeoIPStatus!
+  upsertEventDefinition(siteId: ID!, input: EventDefinitionInput!): EventDefinition!
+  deleteEventDefinition(siteId: ID!, name: String!): Boolean!
+}

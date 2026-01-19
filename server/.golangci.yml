@@ -1,0 +1,21 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - errcheck
+    - errorlint
+    - wrapcheck
+    - nilerr
+    - nilnil
+    - bodyclose
+    - rowserrcheck
+    - sqlclosecheck 
+    - gosec
+    - unparam
+    - unused
+    - nolintlint
+    - copyloopvar
+    - forcetypeassert
+    - contextcheck
+    - loggercheck

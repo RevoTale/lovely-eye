@@ -1,0 +1,40 @@
+services:
+  lovely-eye:
+    build: ../
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      - DB_DRIVER=postgres
+      - DB_DSN=postgres://${POSTGRES_USER:-lovely}:${POSTGRES_PASSWORD:-lovely}@postgres:5432/${POSTGRES_DB:-lovely_eye}?sslmode=disable
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
+      - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lovely-eye-net
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:18.1-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-lovely}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-lovely}
+      - POSTGRES_DB=${POSTGRES_DB:-lovely_eye}
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    networks:
+      - lovely-eye-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lovely} -d ${POSTGRES_DB:-lovely_eye}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+
+networks:
+  lovely-eye-net:

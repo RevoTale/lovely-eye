@@ -1,8 +1,15 @@
 {
     "name": "Lovely Eye analytics",
-    "image": "mcr.microsoft.com/devcontainers/go:2-1.25-bookworm",
+    "initializeCommand": "test -f .devcontainer/docker-compose.override.yml || cp .devcontainer/docker-compose.override.empty.yml .devcontainer/docker-compose.override.yml",
+    "dockerComposeFile": [
+        "docker-compose.yml",
+        "docker-compose.override.yml"
+    ],
+    "service": "app",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
     "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+        "ghcr.io/rails/devcontainer/features/bun:1.0.2": {}
     },
     "forwardPorts": [],
     "remoteUser": "root",
@@ -10,9 +17,6 @@
         "vscode": {
             "extensions": [
                 "golang.go",
-                "ms-azuretools.vscode-docker",
-                "ms-vscode.remote-repositories",
-                "GitHub.remotehub",
                 "GraphQL.vscode-graphql",
                 "GraphQL.vscode-graphql-syntax",
                 "-ms-vscode.azure-repos",
