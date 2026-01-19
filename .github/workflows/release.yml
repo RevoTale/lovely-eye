@@ -19,6 +19,7 @@ jobs:
         id: release
         with:
           release-type: simple
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
 
   test:
     uses: ./.github/workflows/test.yml
