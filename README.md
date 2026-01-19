@@ -45,38 +45,43 @@ services:
   lovely-eye:
     image: ghcr.io/revotale/lovely-eye:latest
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:8080"
     environment:
       - DB_DRIVER=postgres
-      - DB_DSN=postgres://lovely:lovely@postgres:5432/lovely_eye?sslmode=disable
-      - JWT_SECRET=your-secret-key-min-32-chars
-      # Optional: enable country stats with a MaxMind license key (auto-downloads to /data)
-      - GEOIP_MAXMIND_LICENSE_KEY=your-maxmind-license-key
+      - DB_DSN=postgres://${POSTGRES_USER:-lovely}:${POSTGRES_PASSWORD:-lovely}@lovely-eye-db:5432/${POSTGRES_DB:-lovely_eye}?sslmode=disable
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
+      - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
     depends_on:
-      postgres:
+      lovely-eye-db:
         condition: service_healthy
+    networks:
+      - lovely-eye-net
     restart: unless-stopped
-    volumes:
-      # Optional: mount /data once for GeoIP files
-      - ./data:/data
 
-  postgres:
+  lovely-eye-db:
     image: postgres:18.1-alpine
     environment:
-      - POSTGRES_USER=lovely
-      - POSTGRES_PASSWORD=lovely
-      - POSTGRES_DB=lovely_eye
+      - POSTGRES_USER=${POSTGRES_USER:-lovely}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-lovely}
+      - POSTGRES_DB=${POSTGRES_DB:-lovely_eye}
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - lovely-eye-data:/var/lib/postgresql
+    networks:
+      - lovely-eye-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lovely -d lovely_eye"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lovely} -d ${POSTGRES_DB:-lovely_eye}"]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
 volumes:
-  postgres-data:
+  lovely-eye-data:
+
+networks:
+  lovely-eye-net:
+
 ```
 
 ### From Source
