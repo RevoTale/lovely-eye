@@ -8,12 +8,18 @@ on:
     branches:
       - main
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Semver Release
+    types:
+      - completed
 permissions:
   contents: read
   pull-requests: read
 
 jobs:
   run-tests:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     uses: ./.github/workflows/test.yml
 
   test:
