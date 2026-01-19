@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
 	"testing"
@@ -77,7 +78,12 @@ func TestAuthFlowWithCookies(t *testing.T) {
 	// Make request (cookies will be auto-attached by jar)
 	meResp, err := client.Do(req)
 	require.NoError(t, err)
-	defer meResp.Body.Close()
+	defer func ()  {
+		err := meResp.Body.Close()
+		if nil != err {
+			slog.Error("body close err","error",err)
+		}
+	}()
 
 	meBody, _ := io.ReadAll(meResp.Body)
 	t.Logf("ME query status: %d", meResp.StatusCode)
@@ -117,7 +123,8 @@ func TestAuthFlowWithCookies(t *testing.T) {
 	resp2, err := client.Do(req2)
 	require.NoError(t, err)
 	body2, _ := io.ReadAll(resp2.Body)
-	resp2.Body.Close()
+	err = resp2.Body.Close()
+	require.NoError(t,err)
 
 	t.Logf("Mutation status: %d, body: %s", resp2.StatusCode, string(body2))
 	assert.Equal(t, http.StatusOK, resp2.StatusCode, "Authenticated mutation should succeed")
@@ -134,7 +141,12 @@ func mustGraphQL(t *testing.T, client *http.Client, url, query string) string {
 
 	resp, err := client.Do(req)
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func ()  {
+	err:=	resp.Body.Close()
+	if nil != err {
+		slog.Error("gql resp close failed","error",err)
+	}
+	}()
 
 	body, _ := io.ReadAll(resp.Body)
 	require.Equal(t, http.StatusOK, resp.StatusCode, "GraphQL request should succeed: %s", string(body))

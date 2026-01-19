@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"testing"
 
@@ -326,7 +327,10 @@ func newTestServerWithConfig(t *testing.T, cfg *config.Config) *testServer {
 
 	t.Cleanup(func() {
 		httpServer.Close()
-		srv.Close()
+		err := srv.Close()
+		if nil != err {
+			slog.Error("server close failed","error",err)
+		}
 	})
 
 	return &testServer{
@@ -342,10 +346,16 @@ func TestInitialAdminWithUnsetEnvVars(t *testing.T) {
 	origPassword := os.Getenv("INITIAL_ADMIN_PASSWORD")
 	defer func() {
 		if origUsername != "" {
-			os.Setenv("INITIAL_ADMIN_USERNAME", origUsername)
+			err := os.Setenv("INITIAL_ADMIN_USERNAME", origUsername)
+			if nil != err {
+				slog.Error("failed to set env","error",err)
+			}
 		}
 		if origPassword != "" {
-			os.Setenv("INITIAL_ADMIN_PASSWORD", origPassword)
+			err:=os.Setenv("INITIAL_ADMIN_PASSWORD", origPassword)
+				if nil != err {
+				slog.Error("failed to set env","error",err)
+			}
 		}
 	}()
 

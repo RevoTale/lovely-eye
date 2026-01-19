@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/lovely-eye/server/internal/config"
@@ -20,7 +21,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer database.Close(db)
+	defer func ()  {
+		err := database.Close(db)
+		if nil != err {
+			slog.Error("DB close error","err",err)
+		}
+	}()
 
 	migs, err := migrations.NewMigrations()
 	if err != nil {

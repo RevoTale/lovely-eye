@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,7 +27,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
-	defer srv.Close()
+	defer func ()  {
+		err:=srv.Close()
+		if nil != err {
+			slog.Error("server close failed","error",err)
+		}
+	}()
 
 	log.Println("Database migrations completed")
 

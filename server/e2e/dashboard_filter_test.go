@@ -92,7 +92,10 @@ func TestDashboardFiltering(t *testing.T) {
 
 		resp, err := ts.httpServer.Client().Do(req)
 		require.NoError(t, err)
-		resp.Body.Close()
+		err = resp.Body.Close()
+		if nil != err {
+			require.NoError(t,err)
+		}
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	}
 

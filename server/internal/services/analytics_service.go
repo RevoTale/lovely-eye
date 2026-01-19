@@ -331,7 +331,7 @@ func (s *AnalyticsService) GeoIPStatus() GeoIPStatus {
 
 func (s *AnalyticsService) GeoIPCountries(search string) ([]GeoIPCountry, error) {
 	if s.geoIPService == nil {
-		return []GeoIPCountry{}, nil
+		return []GeoIPCountry{}, errors.New("country service is nil")
 	}
 	return s.geoIPService.ListCountries(search)
 }

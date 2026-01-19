@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -57,7 +58,10 @@ func newTestServer(t *testing.T) *testServer {
 
 	t.Cleanup(func() {
 		httpServer.Close()
-		srv.Close()
+	err :=	srv.Close()
+if nil != err {
+		slog.Error("Server close failed","error",err)
+}
 	})
 
 	return &testServer{
@@ -237,7 +241,7 @@ func TestStatsCollection(t *testing.T) {
 	siteKey := siteResp.CreateSite.PublicKey
 
 	t.Run("collect page view", func(t *testing.T) {
-		payload := map[string]interface{}{
+		payload := map[string]any{
 			"site_key":     siteKey,
 			"path":         "/home",
 			"title":        "Home Page",
@@ -253,12 +257,17 @@ func TestStatsCollection(t *testing.T) {
 			"https://example.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp close failed","error",err)
+			}
+		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 
 	t.Run("collect custom event", func(t *testing.T) {
-		payload := map[string]interface{}{
+		payload := map[string]any{
 			"site_key":   siteKey,
 			"name":       "button_click",
 			"path":       "/home",
@@ -273,7 +282,12 @@ func TestStatsCollection(t *testing.T) {
 			"https://example.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+		err :=	resp.Body.Close()
+		if nil != err {
+			slog.Error("resp close","error",err)
+		}
+		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 
@@ -289,7 +303,12 @@ func TestStatsCollection(t *testing.T) {
 			bytes.NewReader(body),
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp body close failed","error",err)
+			}
+		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 }
@@ -448,7 +467,12 @@ func TestEventPropertiesValidation(t *testing.T) {
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+		err := resp.Body.Close()
+		if nil != err {
+			slog.Error("failed to close resp","error",err)
+		}	
+		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 
@@ -468,7 +492,12 @@ func TestEventPropertiesValidation(t *testing.T) {
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+		err :=  resp.Body.Close()
+		if nil != err {
+			slog.Error("resp body close failed","error",err)
+		}	
+		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
 
@@ -488,7 +517,12 @@ func TestEventPropertiesValidation(t *testing.T) {
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func ()  {
+		err := resp.Body.Close()
+		if nil != err {
+			slog.Error("resp body close failed", "error",err)
+		}	
+		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
