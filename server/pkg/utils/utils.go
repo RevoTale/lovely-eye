@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net"
 	"regexp"
 	"strings"
@@ -13,7 +14,7 @@ import (
 func GenerateRandomString(length int) (string, error) {
 	bytes := make([]byte, length/2)
 	if _, err := rand.Read(bytes); err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate random string: %w", err)
 	}
 	return hex.EncodeToString(bytes), nil
 }

@@ -56,12 +56,11 @@ func Handler(cfg Config) http.Handler {
 
 	// Read index.html and prepare it with base path replacements
 	indexPath := filepath.Join(cfg.DashboardPath, "index.html")
-	indexHTML, err := os.ReadFile(indexPath)
+	indexHTML, err := os.ReadFile(indexPath) // #nosec G304 -- indexPath is constructed from validated DashboardPath config
 	if err != nil {
 		// Return a minimal handler that serves a placeholder
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte("Dashboard not available"))
+			http.Error(w, "Dashboard not available", http.StatusServiceUnavailable)
 		})
 	}
 	// Replace {{BASE_PATH}} placeholder with actual base path
@@ -102,7 +101,9 @@ func Handler(cfg Config) http.Handler {
 			if urlPath == "index.html" {
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
 				w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-				w.Write([]byte(indexContent))
+				if _, err := w.Write([]byte(indexContent)); err != nil {
+					http.Error(w, "internal error", http.StatusInternalServerError)
+				}
 				return
 			}
 			// File exists, serve it normally
@@ -117,7 +118,9 @@ func Handler(cfg Config) http.Handler {
 			// Serve processed index.html for SPA routes
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-			w.Write([]byte(indexContent))
+			if _, err := w.Write([]byte(indexContent)); err != nil {
+				http.Error(w, "internal error", http.StatusInternalServerError)
+			}
 			return
 		}
 

@@ -19,14 +19,17 @@ func NewAnalyticsRepository(db *bun.DB) *AnalyticsRepository {
 
 func (r *AnalyticsRepository) CreateSession(ctx context.Context, session *models.Session) error {
 	_, err := r.db.NewInsert().Model(session).Exec(ctx)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create session: %w", err)
+	}
+	return nil
 }
 
 func (r *AnalyticsRepository) GetSession(ctx context.Context, id int64) (*models.Session, error) {
 	session := new(models.Session)
 	err := r.db.NewSelect().Model(session).Where("id = ?", id).Scan(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 	return session, nil
 }
@@ -42,19 +45,25 @@ func (r *AnalyticsRepository) GetSessionByVisitor(ctx context.Context, siteID in
 		Limit(1).
 		Scan(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get session by visitor: %w", err)
 	}
 	return session, nil
 }
 
 func (r *AnalyticsRepository) UpdateSession(ctx context.Context, session *models.Session) error {
 	_, err := r.db.NewUpdate().Model(session).WherePK().Exec(ctx)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to update session: %w", err)
+	}
+	return nil
 }
 
 func (r *AnalyticsRepository) CreatePageView(ctx context.Context, pageView *models.PageView) error {
 	_, err := r.db.NewInsert().Model(pageView).Exec(ctx)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create page view: %w", err)
+	}
+	return nil
 }
 
 func (r *AnalyticsRepository) GetPageViews(ctx context.Context, siteID int64, from, to time.Time, limit, offset int) ([]*models.PageView, error) {
@@ -68,7 +77,10 @@ func (r *AnalyticsRepository) GetPageViews(ctx context.Context, siteID int64, fr
 		Limit(limit).
 		Offset(offset).
 		Scan(ctx)
-	return pageViews, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get page views: %w", err)
+	}
+	return pageViews, nil
 }
 
 func (r *AnalyticsRepository) GetRecentPageView(ctx context.Context, siteID int64, visitorID, path string, since time.Time) (*models.PageView, error) {
@@ -83,14 +95,17 @@ func (r *AnalyticsRepository) GetRecentPageView(ctx context.Context, siteID int6
 		Limit(1).
 		Scan(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get recent page view: %w", err)
 	}
 	return pageView, nil
 }
 
 func (r *AnalyticsRepository) CreateEvent(ctx context.Context, event *models.Event) error {
 	_, err := r.db.NewInsert().Model(event).Exec(ctx)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to create event: %w", err)
+	}
+	return nil
 }
 
 func (r *AnalyticsRepository) GetEvents(ctx context.Context, siteID int64, from, to time.Time, limit, offset int) ([]*models.Event, error) {
@@ -104,7 +119,10 @@ func (r *AnalyticsRepository) GetEvents(ctx context.Context, siteID int64, from,
 		Limit(limit).
 		Offset(offset).
 		Scan(ctx)
-	return events, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get events: %w", err)
+	}
+	return events, nil
 }
 
 func (r *AnalyticsRepository) GetEventCount(ctx context.Context, siteID int64, from, to time.Time) (int, error) {
@@ -114,7 +132,10 @@ func (r *AnalyticsRepository) GetEventCount(ctx context.Context, siteID int64, f
 		Where("created_at >= ?", from).
 		Where("created_at <= ?", to).
 		Count(ctx)
-	return count, err
+	if err != nil {
+		return 0, fmt.Errorf("failed to get event count: %w", err)
+	}
+	return count, nil
 }
 
 func (r *AnalyticsRepository) GetVisitorCount(ctx context.Context, siteID int64, from, to time.Time) (int, error) {
@@ -127,7 +148,7 @@ func (r *AnalyticsRepository) GetVisitorCount(ctx context.Context, siteID int64,
 		Where("started_at <= ?", to).
 		Scan(ctx, &count)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to get visitor count: %w", err)
 	}
 	return count, nil
 }
@@ -139,7 +160,10 @@ func (r *AnalyticsRepository) GetPageViewCount(ctx context.Context, siteID int64
 		Where("created_at >= ?", from).
 		Where("created_at <= ?", to).
 		Count(ctx)
-	return count, err
+	if err != nil {
+		return 0, fmt.Errorf("failed to get page view count: %w", err)
+	}
+	return count, nil
 }
 
 func (r *AnalyticsRepository) GetSessionCount(ctx context.Context, siteID int64, from, to time.Time) (int, error) {
@@ -149,7 +173,10 @@ func (r *AnalyticsRepository) GetSessionCount(ctx context.Context, siteID int64,
 		Where("started_at >= ?", from).
 		Where("started_at <= ?", to).
 		Count(ctx)
-	return count, err
+	if err != nil {
+		return 0, fmt.Errorf("failed to get session count: %w", err)
+	}
+	return count, nil
 }
 
 func (r *AnalyticsRepository) GetBounceRate(ctx context.Context, siteID int64, from, to time.Time) (float64, error) {
@@ -165,8 +192,11 @@ func (r *AnalyticsRepository) GetBounceRate(ctx context.Context, siteID int64, f
 		Where("started_at >= ?", from).
 		Where("started_at <= ?", to).
 		Scan(ctx, &result)
-	if err != nil || result.Total == 0 {
-		return 0, err
+	if err != nil {
+		return 0, fmt.Errorf("failed to get bounce rate: %w", err)
+	}
+	if result.Total == 0 {
+		return 0, nil
 	}
 	return float64(result.Bounced) / float64(result.Total) * 100, nil
 }
@@ -181,7 +211,10 @@ func (r *AnalyticsRepository) GetAvgSessionDuration(ctx context.Context, siteID 
 		Where("started_at <= ?", to).
 		Where("is_bounce = false").
 		Scan(ctx, &avg)
-	return avg, err
+	if err != nil {
+		return 0, fmt.Errorf("failed to get average session duration: %w", err)
+	}
+	return avg, nil
 }
 
 type PageStats struct {
@@ -204,7 +237,10 @@ func (r *AnalyticsRepository) GetTopPages(ctx context.Context, siteID int64, fro
 		Order("views DESC").
 		Limit(limit).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get top pages: %w", err)
+	}
+	return stats, nil
 }
 
 type ReferrerStats struct {
@@ -225,7 +261,10 @@ func (r *AnalyticsRepository) GetTopReferrers(ctx context.Context, siteID int64,
 		Order("visitors DESC").
 		Limit(limit).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get top referrers: %w", err)
+	}
+	return stats, nil
 }
 
 type BrowserStats struct {
@@ -247,7 +286,10 @@ func (r *AnalyticsRepository) GetBrowserStats(ctx context.Context, siteID int64,
 		Order("visitors DESC").
 		Limit(limit).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get browser stats: %w", err)
+	}
+	return stats, nil
 }
 
 type DeviceStats struct {
@@ -269,7 +311,10 @@ func (r *AnalyticsRepository) GetDeviceStats(ctx context.Context, siteID int64, 
 		Order("visitors DESC").
 		Limit(limit).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get device stats: %w", err)
+	}
+	return stats, nil
 }
 
 type CountryStats struct {
@@ -290,7 +335,10 @@ func (r *AnalyticsRepository) GetCountryStats(ctx context.Context, siteID int64,
 		Order("visitors DESC").
 		Limit(limit).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get country stats: %w", err)
+	}
+	return stats, nil
 }
 
 type DailyVisitorStats struct {
@@ -314,7 +362,10 @@ func (r *AnalyticsRepository) GetDailyStats(ctx context.Context, siteID int64, f
 		Group("DATE(started_at)").
 		Order("date ASC").
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get daily stats: %w", err)
+	}
+	return stats, nil
 }
 
 type ActivePageStats struct {
@@ -334,7 +385,10 @@ func (r *AnalyticsRepository) GetActivePages(ctx context.Context, siteID int64, 
 		Order("visitors DESC").
 		Limit(10).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get active pages: %w", err)
+	}
+	return stats, nil
 }
 
 func applySessionFilters(q *bun.SelectQuery, referrer, device, page, country []string) *bun.SelectQuery {
@@ -417,7 +471,10 @@ func (r *AnalyticsRepository) GetVisitorCountWithFilter(ctx context.Context, sit
 		Where("started_at <= ?", to)
 	q = applySessionFilters(q, referrer, device, page, country)
 	err := q.Scan(ctx, &count)
-	return count, err
+	if err != nil {
+		return 0, fmt.Errorf("failed to get visitor count with filter: %w", err)
+	}
+	return count, nil
 }
 
 func (r *AnalyticsRepository) GetPageViewCountWithFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string) (int, error) {
@@ -428,7 +485,10 @@ func (r *AnalyticsRepository) GetPageViewCountWithFilter(ctx context.Context, si
 		Where("created_at <= ?", to)
 	q = applyPageViewFilters(q, referrer, device, page, country)
 	count, err := q.Count(ctx)
-	return count, err
+	if err != nil {
+		return 0, fmt.Errorf("failed to get page view count with filter: %w", err)
+	}
+	return count, nil
 }
 
 func (r *AnalyticsRepository) GetSessionCountWithFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string) (int, error) {
@@ -439,7 +499,10 @@ func (r *AnalyticsRepository) GetSessionCountWithFilter(ctx context.Context, sit
 		Where("started_at <= ?", to)
 	q = applySessionFilters(q, referrer, device, page, country)
 	count, err := q.Count(ctx)
-	return count, err
+	if err != nil {
+		return 0, fmt.Errorf("failed to get session count with filter: %w", err)
+	}
+	return count, nil
 }
 
 func (r *AnalyticsRepository) GetBounceRateWithFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string) (float64, error) {
@@ -456,8 +519,11 @@ func (r *AnalyticsRepository) GetBounceRateWithFilter(ctx context.Context, siteI
 		Where("started_at <= ?", to)
 	q = applySessionFilters(q, referrer, device, page, country)
 	err := q.Scan(ctx, &result)
-	if err != nil || result.Total == 0 {
-		return 0, err
+	if err != nil {
+		return 0, fmt.Errorf("failed to get bounce rate with filter: %w", err)
+	}
+	if result.Total == 0 {
+		return 0, nil
 	}
 	return float64(result.Bounced) / float64(result.Total) * 100, nil
 }
@@ -473,7 +539,10 @@ func (r *AnalyticsRepository) GetAvgSessionDurationWithFilter(ctx context.Contex
 		Where("is_bounce = false")
 	q = applySessionFilters(q, referrer, device, page, country)
 	err := q.Scan(ctx, &avg)
-	return avg, err
+	if err != nil {
+		return 0, fmt.Errorf("failed to get average session duration with filter: %w", err)
+	}
+	return avg, nil
 }
 
 func (r *AnalyticsRepository) GetTopPagesWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit int, referrer, device, page, country []string) ([]PageStats, error) {
@@ -491,7 +560,10 @@ func (r *AnalyticsRepository) GetTopPagesWithFilter(ctx context.Context, siteID 
 		Order("views DESC", "path ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get top pages with filter: %w", err)
+	}
+	return stats, nil
 }
 
 func (r *AnalyticsRepository) GetTopReferrersWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit int, referrer, device, page, country []string) ([]ReferrerStats, error) {
@@ -508,7 +580,10 @@ func (r *AnalyticsRepository) GetTopReferrersWithFilter(ctx context.Context, sit
 		Order("visitors DESC", "referrer ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get top referrers with filter: %w", err)
+	}
+	return stats, nil
 }
 
 func (r *AnalyticsRepository) GetBrowserStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit int, referrer, device, page, country []string) ([]BrowserStats, error) {
@@ -526,7 +601,10 @@ func (r *AnalyticsRepository) GetBrowserStatsWithFilter(ctx context.Context, sit
 		Order("visitors DESC", "browser ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get browser stats with filter: %w", err)
+	}
+	return stats, nil
 }
 
 func (r *AnalyticsRepository) GetDeviceStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit int, referrer, device, page, country []string) ([]DeviceStats, error) {
@@ -544,7 +622,10 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilter(ctx context.Context, site
 		Order("visitors DESC", "device ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get device stats with filter: %w", err)
+	}
+	return stats, nil
 }
 
 func (r *AnalyticsRepository) GetCountryStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit int, referrer, device, page, country []string) ([]CountryStats, error) {
@@ -561,7 +642,10 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilter(ctx context.Context, sit
 		Order("visitors DESC", "country ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get country stats with filter: %w", err)
+	}
+	return stats, nil
 }
 
 func (r *AnalyticsRepository) GetDailyStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string) ([]DailyVisitorStats, error) {
@@ -586,7 +670,7 @@ func (r *AnalyticsRepository) GetTopPagesWithFilterPaged(ctx context.Context, si
 		Offset(offset).
 		Scan(ctx, &stats)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to get top pages with filter paged: %w", err)
 	}
 
 	countQuery := r.db.NewSelect().
@@ -597,7 +681,10 @@ func (r *AnalyticsRepository) GetTopPagesWithFilterPaged(ctx context.Context, si
 		Where("created_at <= ?", to)
 	countQuery = applyPageViewFilters(countQuery, referrer, device, page, country)
 	err = countQuery.Scan(ctx, &total)
-	return stats, total, err
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count top pages with filter: %w", err)
+	}
+	return stats, total, nil
 }
 
 func (r *AnalyticsRepository) GetTopReferrersWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, referrer, device, page, country []string) ([]ReferrerStats, int, error) {
@@ -617,7 +704,7 @@ func (r *AnalyticsRepository) GetTopReferrersWithFilterPaged(ctx context.Context
 		Offset(offset).
 		Scan(ctx, &stats)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("failed to get top referrers with filter paged: %w", err)
 	}
 
 	countQuery := r.db.NewSelect().
@@ -628,7 +715,10 @@ func (r *AnalyticsRepository) GetTopReferrersWithFilterPaged(ctx context.Context
 		Where("started_at <= ?", to)
 	countQuery = applySessionFilters(countQuery, referrer, device, page, country)
 	err = countQuery.Scan(ctx, &total)
-	return stats, total, err
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count top referrers with filter: %w", err)
+	}
+	return stats, total, nil
 }
 
 func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, referrer, device, page, country []string) ([]DeviceStats, int, int, error) {
@@ -650,7 +740,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Offset(offset).
 		Scan(ctx, &stats)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, fmt.Errorf("failed to get device stats with filter paged: %w", err)
 	}
 
 	countQuery := r.db.NewSelect().
@@ -663,7 +753,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 	countQuery = applySessionFilters(countQuery, referrer, device, page, country)
 	err = countQuery.Scan(ctx, &total)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, fmt.Errorf("failed to count devices with filter: %w", err)
 	}
 
 	deviceCounts := r.db.NewSelect().
@@ -680,7 +770,10 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		TableExpr("(?) as device_counts", deviceCounts).
 		ColumnExpr("COALESCE(SUM(visitors), 0)").
 		Scan(ctx, &totalVisitors)
-	return stats, total, totalVisitors, err
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("failed to sum device visitors with filter: %w", err)
+	}
+	return stats, total, totalVisitors, nil
 }
 
 func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, referrer, device, page, country []string) ([]CountryStats, int, int, error) {
@@ -701,7 +794,7 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context
 		Offset(offset).
 		Scan(ctx, &stats)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, fmt.Errorf("failed to get country stats with filter paged: %w", err)
 	}
 
 	countQuery := r.db.NewSelect().
@@ -713,7 +806,7 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context
 	countQuery = applySessionFilters(countQuery, referrer, device, page, country)
 	err = countQuery.Scan(ctx, &total)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, fmt.Errorf("failed to count countries with filter: %w", err)
 	}
 
 	countryCounts := r.db.NewSelect().
@@ -729,7 +822,10 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context
 		TableExpr("(?) as country_counts", countryCounts).
 		ColumnExpr("COALESCE(SUM(visitors), 0)").
 		Scan(ctx, &totalVisitors)
-	return stats, total, totalVisitors, err
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("failed to sum country visitors with filter: %w", err)
+	}
+	return stats, total, totalVisitors, nil
 }
 
 type TimeBucket string
@@ -759,7 +855,10 @@ func (r *AnalyticsRepository) GetTimeSeriesStatsWithFilter(ctx context.Context, 
 		q = q.Order("date ASC")
 	}
 	err := q.Scan(ctx, &stats)
-	return stats, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get time series stats with filter: %w", err)
+	}
+	return stats, nil
 }
 
 func (r *AnalyticsRepository) timeBucketExpression(bucket TimeBucket) string {

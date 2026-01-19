@@ -52,7 +52,9 @@ func New(cfg *config.DatabaseConfig) (*bun.DB, error) {
 
 func Close(db *bun.DB) error {
 	if db != nil {
-		return db.Close()
+		if err := db.Close(); err != nil {
+			return fmt.Errorf("failed to close database: %w", err)
+		}
 	}
 	return nil
 }

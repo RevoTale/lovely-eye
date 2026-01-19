@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -89,7 +90,7 @@ func (s *jwtService) Register(ctx context.Context, input RegisterInput) (*User, 
 	}
 
 	if err := s.userRepo.Create(ctx, dbUser); err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
 	user := &User{
@@ -190,7 +191,10 @@ func (s *jwtService) CreateInitialAdmin(ctx context.Context, username, password 
 		Role:         "admin",
 	}
 
-	return s.userRepo.Create(ctx, user)
+	if err := s.userRepo.Create(ctx, user); err != nil {
+		return fmt.Errorf("failed to create initial admin user: %w", err)
+	}
+	return nil
 }
 
 func (s *jwtService) SetAuthCookies(w http.ResponseWriter, tokens *Tokens) {
@@ -258,7 +262,7 @@ func (s *jwtService) getTokensFromRequest(r *http.Request) (accessToken, refresh
 func (s *jwtService) isFirstUser(ctx context.Context) (bool, error) {
 	users, err := s.userRepo.List(ctx, 1, 0)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to list users: %w", err)
 	}
 	return len(users) == 0, nil
 }

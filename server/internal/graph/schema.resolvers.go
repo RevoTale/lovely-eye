@@ -8,6 +8,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -23,7 +24,7 @@ func (r *dashboardStatsResolver) TopPages(ctx context.Context, obj *model.Dashbo
 	limit, offset := normalizePaging(paging)
 	stats, total, err := r.AnalyticsService.GetTopPagesWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get top pages: %w", err)
 	}
 
 	items := make([]*model.PageStats, 0, len(stats))
@@ -46,7 +47,7 @@ func (r *dashboardStatsResolver) TopReferrers(ctx context.Context, obj *model.Da
 	limit, offset := normalizePaging(paging)
 	stats, total, err := r.AnalyticsService.GetTopReferrersWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get top referrers: %w", err)
 	}
 
 	items := make([]*model.ReferrerStats, 0, len(stats))
@@ -67,7 +68,7 @@ func (r *dashboardStatsResolver) TopReferrers(ctx context.Context, obj *model.Da
 func (r *dashboardStatsResolver) Browsers(ctx context.Context, obj *model.DashboardStats) ([]*model.BrowserStats, error) {
 	stats, err := r.AnalyticsService.GetBrowserStatsWithFilter(ctx, obj.SiteID, obj.From, obj.To, 10, obj.Filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get browser stats: %w", err)
 	}
 
 	items := make([]*model.BrowserStats, 0, len(stats))
@@ -85,7 +86,7 @@ func (r *dashboardStatsResolver) Devices(ctx context.Context, obj *model.Dashboa
 	limit, offset := normalizePaging(paging)
 	stats, total, totalVisitors, err := r.AnalyticsService.GetDeviceStatsWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get device stats: %w", err)
 	}
 
 	items := make([]*model.DeviceStats, 0, len(stats))
@@ -108,7 +109,7 @@ func (r *dashboardStatsResolver) Countries(ctx context.Context, obj *model.Dashb
 	limit, offset := normalizePaging(paging)
 	stats, total, totalVisitors, err := r.AnalyticsService.GetCountryStatsWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get country stats: %w", err)
 	}
 
 	items := make([]*model.CountryStats, 0, len(stats))
@@ -128,7 +129,7 @@ func (r *dashboardStatsResolver) Countries(ctx context.Context, obj *model.Dashb
 
 // DailyStats is the resolver for the dailyStats field.
 func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int) ([]*model.DailyStats, error) {
-	selectedBucket := services.TimeBucketDaily
+	var selectedBucket services.TimeBucket
 	switch bucketValue := bucketValueOrDefault(bucket); bucketValue {
 	case model.TimeBucketHourly:
 		selectedBucket = services.TimeBucketHourly
@@ -148,7 +149,7 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 
 	stats, err := r.AnalyticsService.GetTimeSeriesStatsWithFilter(ctx, obj.SiteID, obj.From, obj.To, selectedBucket, pointLimit, obj.Filter)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get time series stats: %w", err)
 	}
 
 	if pointLimit > 0 {
@@ -175,7 +176,7 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		Password: input.Password,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to register user: %w", err)
 	}
 
 	// Set auth cookies - tokens are in HttpOnly cookies, not response body
@@ -201,7 +202,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 		Password: input.Password,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to login: %w", err)
 	}
 
 	// Set auth cookies - tokens are in HttpOnly cookies, not response body
@@ -232,7 +233,7 @@ func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
 func (r *mutationResolver) RefreshToken(ctx context.Context, refreshToken string) (*model.TokenPayload, error) {
 	tokens, err := r.AuthService.RefreshTokens(ctx, refreshToken)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to refresh tokens: %w", err)
 	}
 
 	// Set auth cookies
@@ -259,7 +260,7 @@ func (r *mutationResolver) CreateSite(ctx context.Context, input model.CreateSit
 		UserID:  claims.UserID,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create site: %w", err)
 	}
 
 	return buildGraphQLSite(site), nil
@@ -285,7 +286,7 @@ func (r *mutationResolver) UpdateSite(ctx context.Context, id string, input mode
 		BlockedCountries: input.BlockedCountries,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to update site: %w", err)
 	}
 	_ = r.AnalyticsService.SyncGeoIPRequirement(ctx)
 
@@ -305,7 +306,7 @@ func (r *mutationResolver) DeleteSite(ctx context.Context, id string) (bool, err
 	}
 
 	if err := r.SiteService.Delete(ctx, siteID, claims.UserID); err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to delete site: %w", err)
 	}
 
 	return true, nil
@@ -325,7 +326,7 @@ func (r *mutationResolver) RegenerateSiteKey(ctx context.Context, id string) (*m
 
 	site, err := r.SiteService.RegeneratePublicKey(ctx, siteID, claims.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to regenerate site key: %w", err)
 	}
 
 	return buildGraphQLSite(site), nil
@@ -356,7 +357,7 @@ func (r *mutationResolver) UpsertEventDefinition(ctx context.Context, siteID str
 
 	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
 	fields := make([]services.EventFieldInput, 0, len(input.Fields))
@@ -374,7 +375,7 @@ func (r *mutationResolver) UpsertEventDefinition(ctx context.Context, siteID str
 		Fields: fields,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to upsert event definition: %w", err)
 	}
 
 	results := convertToGraphQLEventDefinitions([]*models.EventDefinition{definition})
@@ -395,11 +396,11 @@ func (r *mutationResolver) DeleteEventDefinition(ctx context.Context, siteID str
 
 	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to get site: %w", err)
 	}
 
 	if err := r.EventDefService.Delete(ctx, id, name); err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to delete event definition: %w", err)
 	}
 
 	return true, nil
@@ -409,12 +410,12 @@ func (r *mutationResolver) DeleteEventDefinition(ctx context.Context, siteID str
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // unauthenticated returns no user without error
 	}
 
 	user, err := r.AuthService.GetUserByID(ctx, claims.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	return &model.User{
@@ -434,7 +435,7 @@ func (r *queryResolver) Sites(ctx context.Context) ([]*model.Site, error) {
 
 	sites, err := r.SiteService.GetUserSites(ctx, claims.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user sites: %w", err)
 	}
 
 	var result []*model.Site
@@ -459,7 +460,7 @@ func (r *queryResolver) Site(ctx context.Context, id string) (*model.Site, error
 
 	site, err := r.SiteService.GetByID(ctx, siteID, claims.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
 	return buildGraphQLSite(site), nil
@@ -480,7 +481,7 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 	// Verify ownership
 	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
 	// Parse date range
@@ -512,7 +513,7 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 
 	stats, err := r.AnalyticsService.GetDashboardOverviewWithFilter(ctx, id, from, to, filterOpts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get dashboard overview: %w", err)
 	}
 
 	return &model.DashboardStats{
@@ -543,12 +544,12 @@ func (r *queryResolver) Realtime(ctx context.Context, siteID string) (*model.Rea
 	// Verify ownership
 	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
 	visitors, err := r.AnalyticsService.GetRealtimeVisitors(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get realtime visitors: %w", err)
 	}
 
 	return &model.RealtimeStats{
@@ -582,7 +583,7 @@ func (r *queryResolver) GeoIPCountries(ctx context.Context, search *string) ([]*
 
 	countries, err := r.AnalyticsService.GeoIPCountries(query)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get geoip countries: %w", err)
 	}
 
 	result := make([]*model.GeoIPCountry, 0, len(countries))
@@ -610,7 +611,7 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 	// Verify ownership
 	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
 	// Parse date range
@@ -628,7 +629,7 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 
 	events, total, err := r.AnalyticsService.GetEventsWithTotal(ctx, id, from, to, lim, off)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get events: %w", err)
 	}
 
 	return convertToGraphQLEvents(events, total), nil
@@ -648,12 +649,12 @@ func (r *queryResolver) EventDefinitions(ctx context.Context, siteID string) ([]
 
 	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
 	definitions, err := r.EventDefService.List(ctx, id)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list event definitions: %w", err)
 	}
 
 	return convertToGraphQLEventDefinitions(definitions), nil
@@ -663,7 +664,7 @@ func (r *queryResolver) EventDefinitions(ctx context.Context, siteID string) ([]
 func (r *realtimeStatsResolver) ActivePages(ctx context.Context, obj *model.RealtimeStats) ([]*model.ActivePageStats, error) {
 	activePages, err := r.AnalyticsService.GetActivePages(ctx, obj.SiteID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get active pages: %w", err)
 	}
 
 	// Convert to GraphQL model

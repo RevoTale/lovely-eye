@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/lovely-eye/server/internal/models"
@@ -26,7 +27,10 @@ func (r *EventDefinitionRepository) GetBySite(ctx context.Context, siteID int64)
 		Relation("Fields").
 		Order("name ASC").
 		Scan(ctx)
-	return defs, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to get event definitions by site: %w", err)
+	}
+	return defs, nil
 }
 
 func (r *EventDefinitionRepository) GetByName(ctx context.Context, siteID int64, name string) (*models.EventDefinition, error) {
@@ -38,7 +42,7 @@ func (r *EventDefinitionRepository) GetByName(ctx context.Context, siteID int64,
 		Relation("Fields").
 		Scan(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get event definition by name: %w", err)
 	}
 	return def, nil
 }
@@ -54,7 +58,7 @@ func (r *EventDefinitionRepository) Upsert(ctx context.Context, siteID int64, na
 			Scan(ctx)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
-				return err
+				return fmt.Errorf("select existing event definition: %w", err)
 			}
 			existing = nil
 		}
@@ -67,13 +71,13 @@ func (r *EventDefinitionRepository) Upsert(ctx context.Context, siteID int64, na
 				UpdatedAt: time.Now(),
 			}
 			if _, err := tx.NewInsert().Model(newDef).Exec(ctx); err != nil {
-				return err
+				return fmt.Errorf("insert event definition: %w", err)
 			}
 			def = newDef
 		} else {
 			existing.UpdatedAt = time.Now()
 			if _, err := tx.NewUpdate().Model(existing).Column("updated_at").WherePK().Exec(ctx); err != nil {
-				return err
+				return fmt.Errorf("failed to update event definition: %w", err)
 			}
 			def = existing
 		}
@@ -82,7 +86,7 @@ func (r *EventDefinitionRepository) Upsert(ctx context.Context, siteID int64, na
 			Model((*models.EventDefinitionField)(nil)).
 			Where("event_definition_id = ?", def.ID).
 			Exec(ctx); err != nil {
-			return err
+			return fmt.Errorf("failed to delete event definition fields: %w", err)
 		}
 
 		if len(fields) == 0 {
@@ -96,13 +100,13 @@ func (r *EventDefinitionRepository) Upsert(ctx context.Context, siteID int64, na
 		}
 
 		if _, err := tx.NewInsert().Model(&fields).Exec(ctx); err != nil {
-			return err
+			return fmt.Errorf("insert event definition fields: %w", err)
 		}
 
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to upsert event definition transaction: %w", err)
 	}
 
 	if def == nil {
@@ -120,12 +124,15 @@ func (r *EventDefinitionRepository) DeleteByName(ctx context.Context, siteID int
 		Where("name = ?", name).
 		Scan(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("select event definition: %w", err)
 	}
 
 	_, err = r.db.NewDelete().
 		Model((*models.EventDefinition)(nil)).
 		Where("id = ?", def.ID).
 		Exec(ctx)
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to delete event definition: %w", err)
+	}
+	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -119,7 +120,11 @@ func (g *GeoIPService) ListCountries(search string) ([]GeoIPCountry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open GeoIP database: %w", err)
 	}
-	defer reader.Close()
+	defer func() {
+		if err := reader.Close(); err != nil {
+			slog.Error("failed to close maxminddb reader", "error", err)
+		}
+	}()
 
 	type countryRecord struct {
 		Country struct {
@@ -278,7 +283,7 @@ func (g *GeoIPService) downloadAndLoad(ctx context.Context) error {
 }
 
 func (g *GeoIPService) downloadDatabase(ctx context.Context, url string) error {
-	if err := os.MkdirAll(filepath.Dir(g.dbPath), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(g.dbPath), 0o750); err != nil {
 		return fmt.Errorf("create GeoIP directory: %w", err)
 	}
 
@@ -291,7 +296,11 @@ func (g *GeoIPService) downloadDatabase(ctx context.Context, url string) error {
 	if err != nil {
 		return fmt.Errorf("download GeoIP database: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Error("failed to close response body", "error", err)
+		}
+	}()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("download GeoIP database: unexpected status %s", resp.Status)
@@ -325,17 +334,25 @@ func (g *GeoIPService) downloadDatabase(ctx context.Context, url string) error {
 }
 
 func (g *GeoIPService) extractTarGz(archivePath string) error {
-	file, err := os.Open(archivePath)
+	file, err := os.Open(archivePath) // #nosec G304 -- archivePath is constructed from validated dbPath
 	if err != nil {
 		return fmt.Errorf("open GeoIP archive: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.Error("failed to close archive file", "error", err)
+		}
+	}()
 
 	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
 		return fmt.Errorf("read GeoIP gzip: %w", err)
 	}
-	defer gzipReader.Close()
+	defer func() {
+		if err := gzipReader.Close(); err != nil {
+			slog.Error("failed to close gzip reader", "error", err)
+		}
+	}()
 
 	tarReader := tar.NewReader(gzipReader)
 	for {
@@ -354,10 +371,11 @@ func (g *GeoIPService) extractTarGz(archivePath string) error {
 		}
 
 		tmpPath := g.dbPath + ".tmp"
-		out, err := os.Create(tmpPath)
+		out, err := os.Create(tmpPath) // #nosec G304 -- tmpPath is constructed from validated dbPath
 		if err != nil {
 			return fmt.Errorf("create GeoIP database: %w", err)
 		}
+		// #nosec G110 -- GeoIP database files are from trusted sources (MaxMind)
 		if _, err := io.Copy(out, tarReader); err != nil {
 			_ = out.Close()
 			return fmt.Errorf("write GeoIP database: %w", err)
@@ -372,7 +390,7 @@ func (g *GeoIPService) extractTarGz(archivePath string) error {
 }
 
 func (g *GeoIPService) replaceDatabase(tempPath string) error {
-	if err := os.Chmod(tempPath, 0o644); err != nil {
+	if err := os.Chmod(tempPath, 0o600); err != nil {
 		return fmt.Errorf("set GeoIP database permissions: %w", err)
 	}
 	if err := os.Rename(tempPath, g.dbPath); err != nil {
@@ -396,23 +414,32 @@ func (g *GeoIPService) isGzip(url, contentType string) bool {
 }
 
 func (g *GeoIPService) extractGzip(archivePath string) error {
-	file, err := os.Open(archivePath)
+	file, err := os.Open(archivePath) // #nosec G304 -- archivePath is constructed from validated dbPath
 	if err != nil {
 		return fmt.Errorf("open GeoIP archive: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.Error("failed to close archive file", "error", err)
+		}
+	}()
 
 	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
 		return fmt.Errorf("read GeoIP gzip: %w", err)
 	}
-	defer gzipReader.Close()
+	defer func() {
+		if err := gzipReader.Close(); err != nil {
+			slog.Error("failed to close gzip reader", "error", err)
+		}
+	}()
 
 	tmpPath := g.dbPath + ".tmp"
-	out, err := os.Create(tmpPath)
+	out, err := os.Create(tmpPath) // #nosec G304 -- tmpPath is constructed from validated dbPath
 	if err != nil {
 		return fmt.Errorf("create GeoIP database: %w", err)
 	}
+	// #nosec G110 -- GeoIP database files are from trusted sources (MaxMind)
 	if _, err := io.Copy(out, gzipReader); err != nil {
 		_ = out.Close()
 		return fmt.Errorf("write GeoIP database: %w", err)
@@ -622,7 +649,9 @@ func (g *GeoIPService) Close() error {
 	defer g.mu.Unlock()
 
 	if g.reader != nil {
-		return g.reader.Close()
+		if err := g.reader.Close(); err != nil {
+			return fmt.Errorf("failed to close geoip reader: %w", err)
+		}
 	}
 	return nil
 }

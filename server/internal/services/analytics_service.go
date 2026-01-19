@@ -79,7 +79,7 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 
 	site, err := s.siteRepo.GetByPublicKey(ctx, input.SiteKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("get site by public key: %w", err)
 	}
 	if !IsAllowedDomain(input.Origin, input.Referer, site.Domains) {
 		return nil
@@ -137,7 +137,7 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 			EventOnly:   false,
 		}
 		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
-			return err
+			return fmt.Errorf("create session: %w", err)
 		}
 	} else {
 		// Update existing session
@@ -154,7 +154,7 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 			session.Country = country
 		}
 		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
-			return err
+			return fmt.Errorf("update session: %w", err)
 		}
 	}
 
@@ -176,7 +176,10 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		Referrer:  input.Referrer,
 	}
 
-	return s.analyticsRepo.CreatePageView(ctx, pageView)
+	if err := s.analyticsRepo.CreatePageView(ctx, pageView); err != nil {
+		return fmt.Errorf("create page view: %w", err)
+	}
+	return nil
 }
 
 // CollectEvent records a custom event
@@ -188,7 +191,7 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 
 	site, err := s.siteRepo.GetByPublicKey(ctx, input.SiteKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("get site by public key: %w", err)
 	}
 	if !IsAllowedDomain(input.Origin, input.Referer, site.Domains) {
 		return nil
@@ -206,12 +209,12 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil
 		}
-		return err
+		return fmt.Errorf("get event definition by name: %w", err)
 	}
 
 	sanitizedProps, ok, err := sanitizeEventProperties(input.Properties, definition.Fields)
 	if err != nil {
-		return err
+		return fmt.Errorf("sanitize event properties: %w", err)
 	}
 	if !ok {
 		return nil
@@ -256,7 +259,7 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 			EventOnly:  true,
 		}
 		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
-			return err
+			return fmt.Errorf("create session: %w", err)
 		}
 	} else {
 		session.LastSeenAt = now
@@ -265,7 +268,7 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		}
 		session.Duration = int(now.Sub(session.StartedAt).Seconds())
 		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
-			return err
+			return fmt.Errorf("update session: %w", err)
 		}
 	}
 
@@ -278,7 +281,10 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		Properties: sanitizedProps,
 	}
 
-	return s.analyticsRepo.CreateEvent(ctx, event)
+	if err := s.analyticsRepo.CreateEvent(ctx, event); err != nil {
+		return fmt.Errorf("create event: %w", err)
+	}
+	return nil
 }
 
 type DashboardOverview struct {
@@ -313,13 +319,16 @@ func (s *AnalyticsService) SyncGeoIPRequirement(ctx context.Context) error {
 	}
 	requires, err := s.siteRepo.AnyGeoIPRequirement(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("check geoip requirement: %w", err)
 	}
 	s.geoIPService.SetEnabled(requires)
 	if !requires {
 		return nil
 	}
-	return s.geoIPService.EnsureAvailable(ctx)
+	if err := s.geoIPService.EnsureAvailable(ctx); err != nil {
+		return fmt.Errorf("ensure geoip available: %w", err)
+	}
+	return nil
 }
 
 func (s *AnalyticsService) GeoIPStatus() GeoIPStatus {
@@ -340,8 +349,10 @@ func (s *AnalyticsService) RefreshGeoIPDatabase(ctx context.Context) (GeoIPStatu
 	if s.geoIPService == nil {
 		return GeoIPStatus{State: geoIPStateDisabled}, nil
 	}
-	err := s.geoIPService.EnsureAvailable(ctx)
-	return s.geoIPService.Status(), err
+	if err := s.geoIPService.EnsureAvailable(ctx); err != nil {
+		return s.geoIPService.Status(), fmt.Errorf("ensure geoip available: %w", err)
+	}
+	return s.geoIPService.Status(), nil
 }
 
 func (s *AnalyticsService) GetDashboardOverviewWithFilter(ctx context.Context, siteID int64, from, to time.Time, filter DashboardFilter) (*DashboardOverview, error) {
@@ -361,57 +372,93 @@ func (s *AnalyticsService) GetDashboardOverviewWithFilter(ctx context.Context, s
 }
 
 func (s *AnalyticsService) GetTopPagesWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.PageStats, int, error) {
-	return s.analyticsRepo.GetTopPagesWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, total, err := s.analyticsRepo.GetTopPagesWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get top pages with filter paged: %w", err)
+	}
+	return stats, total, nil
 }
 
 func (s *AnalyticsService) GetTopReferrersWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.ReferrerStats, int, error) {
-	return s.analyticsRepo.GetTopReferrersWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, total, err := s.analyticsRepo.GetTopReferrersWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get top referrers with filter paged: %w", err)
+	}
+	return stats, total, nil
 }
 
 func (s *AnalyticsService) GetDeviceStatsWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.DeviceStats, int, int, error) {
-	return s.analyticsRepo.GetDeviceStatsWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, total, totalVisitors, err := s.analyticsRepo.GetDeviceStatsWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("get device stats with filter paged: %w", err)
+	}
+	return stats, total, totalVisitors, nil
 }
 
 func (s *AnalyticsService) GetCountryStatsWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.CountryStats, int, int, error) {
-	return s.analyticsRepo.GetCountryStatsWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, total, totalVisitors, err := s.analyticsRepo.GetCountryStatsWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("get country stats with filter paged: %w", err)
+	}
+	return stats, total, totalVisitors, nil
 }
 
 func (s *AnalyticsService) GetBrowserStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit int, filter DashboardFilter) ([]repository.BrowserStats, error) {
-	return s.analyticsRepo.GetBrowserStatsWithFilter(ctx, siteID, from, to, limit, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, err := s.analyticsRepo.GetBrowserStatsWithFilter(ctx, siteID, from, to, limit, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	if err != nil {
+		return nil, fmt.Errorf("get browser stats with filter: %w", err)
+	}
+	return stats, nil
 }
 
 func (s *AnalyticsService) GetTimeSeriesStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, bucket TimeBucket, limit int, filter DashboardFilter) ([]repository.DailyVisitorStats, error) {
-	return s.analyticsRepo.GetTimeSeriesStatsWithFilter(ctx, siteID, from, to, bucket, limit, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, err := s.analyticsRepo.GetTimeSeriesStatsWithFilter(ctx, siteID, from, to, bucket, limit, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	if err != nil {
+		return nil, fmt.Errorf("get time series stats with filter: %w", err)
+	}
+	return stats, nil
 }
 
 func (s *AnalyticsService) GetRealtimeVisitors(ctx context.Context, siteID int64) (int, error) {
 	// Visitors active in last 5 minutes
 	from := time.Now().Add(-5 * time.Minute)
 	to := time.Now()
-	return s.analyticsRepo.GetVisitorCount(ctx, siteID, from, to)
+	count, err := s.analyticsRepo.GetVisitorCount(ctx, siteID, from, to)
+	if err != nil {
+		return 0, fmt.Errorf("get visitor count: %w", err)
+	}
+	return count, nil
 }
 
 func (s *AnalyticsService) GetActivePages(ctx context.Context, siteID int64) ([]repository.ActivePageStats, error) {
 	// Get pages viewed in last 5 minutes
 	since := time.Now().Add(-5 * time.Minute)
-	return s.analyticsRepo.GetActivePages(ctx, siteID, since)
+	stats, err := s.analyticsRepo.GetActivePages(ctx, siteID, since)
+	if err != nil {
+		return nil, fmt.Errorf("get active pages: %w", err)
+	}
+	return stats, nil
 }
 
 // GetEvents retrieves events for a site within a time range
 func (s *AnalyticsService) GetEvents(ctx context.Context, siteID int64, from, to time.Time, limit, offset int) ([]*models.Event, error) {
-	return s.analyticsRepo.GetEvents(ctx, siteID, from, to, limit, offset)
+	events, err := s.analyticsRepo.GetEvents(ctx, siteID, from, to, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("get events: %w", err)
+	}
+	return events, nil
 }
 
 // GetEventsWithTotal retrieves events with total count for pagination
 func (s *AnalyticsService) GetEventsWithTotal(ctx context.Context, siteID int64, from, to time.Time, limit, offset int) ([]*models.Event, int, error) {
 	events, err := s.analyticsRepo.GetEvents(ctx, siteID, from, to, limit, offset)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("get events: %w", err)
 	}
 
 	total, err := s.analyticsRepo.GetEventCount(ctx, siteID, from, to)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("get event count: %w", err)
 	}
 
 	return events, total, nil
@@ -450,7 +497,7 @@ func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionF
 	var props map[string]interface{}
 	if propsJSON != "" {
 		if err := json.Unmarshal([]byte(propsJSON), &props); err != nil {
-			return "", false, nil
+			return "", false, fmt.Errorf("unmarshal properties json: %w", err)
 		}
 	} else {
 		props = map[string]interface{}{}
@@ -508,7 +555,7 @@ func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionF
 
 	bytes, err := json.Marshal(sanitized)
 	if err != nil {
-		return "", false, err
+		return "", false, fmt.Errorf("marshal sanitized properties: %w", err)
 	}
 	return string(bytes), true, nil
 }

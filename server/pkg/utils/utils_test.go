@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -142,7 +143,7 @@ func TestValidateDomain(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ValidateDomain(tt.input)
-			if err != tt.wantError {
+			if !errors.Is(err, tt.wantError) {
 				t.Errorf("ValidateDomain() error = %v, wantError %v", err, tt.wantError)
 				return
 			}
@@ -219,7 +220,7 @@ func TestValidateSiteName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ValidateSiteName(tt.input)
-			if err != tt.wantError {
+			if !errors.Is(err, tt.wantError) {
 				t.Errorf("ValidateSiteName() error = %v, wantError %v", err, tt.wantError)
 				return
 			}

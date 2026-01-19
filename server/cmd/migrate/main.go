@@ -43,7 +43,10 @@ func main() {
 				Name:  "init",
 				Usage: "create migration tables in the database",
 				Action: func(ctx context.Context, c *cli.Command) error {
-					return migrator.Init(ctx)
+					if err := migrator.Init(ctx); err != nil {
+						return fmt.Errorf("failed to initialize migrator: %w", err)
+					}
+					return nil
 				},
 			},
 			{
@@ -51,13 +54,13 @@ func main() {
 				Usage: "apply all pending migrations",
 				Action: func(ctx context.Context, c *cli.Command) error {
 					if err := migrator.Lock(ctx); err != nil {
-						return err
+						return fmt.Errorf("failed to acquire lock: %w", err)
 					}
 					defer migrator.Unlock(ctx) //nolint:errcheck
 
 					group, err := migrator.Migrate(ctx)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to migrate: %w", err)
 					}
 					if group.IsZero() {
 						fmt.Printf("there are no new migrations to run (database is up to date)\n")
@@ -72,13 +75,13 @@ func main() {
 				Usage: "rollback the last migration group",
 				Action: func(ctx context.Context, c *cli.Command) error {
 					if err := migrator.Lock(ctx); err != nil {
-						return err
+						return fmt.Errorf("failed to acquire lock: %w", err)
 					}
 					defer migrator.Unlock(ctx) //nolint:errcheck
 
 					group, err := migrator.Rollback(ctx)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to rollback: %w", err)
 					}
 					if group.IsZero() {
 						fmt.Printf("there are no groups to roll back\n")
@@ -94,7 +97,7 @@ func main() {
 				Action: func(ctx context.Context, c *cli.Command) error {
 					ms, err := migrator.MigrationsWithStatus(ctx)
 					if err != nil {
-						return err
+						return fmt.Errorf("failed to get migration status: %w", err)
 					}
 					fmt.Printf("migrations: %s\n", ms)
 					fmt.Printf("unapplied migrations: %s\n", ms.Unapplied())

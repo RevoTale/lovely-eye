@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -79,41 +80,26 @@ func newTestHTTPServer(handler http.Handler) *httptest.Server {
 func postJSONWithOrigin(client *http.Client, url string, body []byte, origin string) (*http.Response, error) {
 	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if origin != "" {
 		req.Header.Set("Origin", origin)
 	}
-	return client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("do request: %w", err)
+	}
+	return resp, nil
 }
 
 func (ts *testServer) graphqlClient() graphql.Client {
 	return graphql.NewClient(ts.httpServer.URL+"/graphql", ts.httpServer.Client())
 }
 
-func (ts *testServer) bearerClient(accessToken string) graphql.Client {
-	httpClient := &http.Client{
-		Transport: &bearerTransport{
-			base:        ts.httpServer.Client().Transport,
-			accessToken: accessToken,
-		},
-	}
-	return graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
-}
-
-func (ts *testServer) cookieClient(accessToken string) graphql.Client {
-	httpClient := &http.Client{
-		Transport: &cookieTransport{
-			base:        ts.httpServer.Client().Transport,
-			accessToken: accessToken,
-		},
-	}
-	return graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
-}
-
 // authenticatedClient creates a client with a cookie jar and performs login
 // Returns the authenticated client that will use cookies for subsequent requests
+//nolint:unparam
 func (ts *testServer) authenticatedClient(ctx context.Context, t *testing.T, username, password string) graphql.Client {
 	t.Helper()
 	jar, err := cookiejar.New(nil)
@@ -129,26 +115,6 @@ func (ts *testServer) authenticatedClient(ctx context.Context, t *testing.T, use
 	require.NoError(t, err)
 
 	return client
-}
-
-type bearerTransport struct {
-	base        http.RoundTripper
-	accessToken string
-}
-
-func (t *bearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("Authorization", "Bearer "+t.accessToken)
-	return t.base.RoundTrip(req)
-}
-
-type cookieTransport struct {
-	base        http.RoundTripper
-	accessToken string
-}
-
-func (t *cookieTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.AddCookie(&http.Cookie{Name: "le_access", Value: t.accessToken})
-	return t.base.RoundTrip(req)
 }
 
 func TestRegister(t *testing.T) {
@@ -817,8 +783,9 @@ func TestEventPropertiesStored(t *testing.T) {
 				"https://events-storage-test.com",
 			)
 			require.NoError(t, err)
-			err = resp.Body.Close()
-			require.NoError(t,err)
+			if err := resp.Body.Close(); err != nil {
+				t.Logf("failed to close response body: %v", err)
+			}
 			require.Equal(t, http.StatusNoContent, resp.StatusCode)
 		}
 

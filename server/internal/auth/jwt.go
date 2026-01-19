@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -62,7 +63,11 @@ func (p *jwtProvider) generateAccessToken(user *User) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(p.secret)
+	signedToken, err := token.SignedString(p.secret)
+	if err != nil {
+		return "", fmt.Errorf("sign access token: %w", err)
+	}
+	return signedToken, nil
 }
 
 func (p *jwtProvider) generateRefreshToken(user *User) (string, error) {
@@ -81,7 +86,11 @@ func (p *jwtProvider) generateRefreshToken(user *User) (string, error) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(p.secret)
+	signedToken, err := token.SignedString(p.secret)
+	if err != nil {
+		return "", fmt.Errorf("sign refresh token: %w", err)
+	}
+	return signedToken, nil
 }
 
 func (p *jwtProvider) validateToken(tokenString string) (*jwtClaims, error) {

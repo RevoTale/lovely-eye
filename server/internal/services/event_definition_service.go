@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/lovely-eye/server/internal/models"
@@ -46,7 +47,11 @@ type EventDefinitionInput struct {
 }
 
 func (s *EventDefinitionService) List(ctx context.Context, siteID int64) ([]*models.EventDefinition, error) {
-	return s.repo.GetBySite(ctx, siteID)
+	defs, err := s.repo.GetBySite(ctx, siteID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list event definitions: %w", err)
+	}
+	return defs, nil
 }
 
 func (s *EventDefinitionService) Upsert(ctx context.Context, siteID int64, input EventDefinitionInput) (*models.EventDefinition, error) {
@@ -93,7 +98,11 @@ func (s *EventDefinitionService) Upsert(ctx context.Context, siteID int64, input
 		})
 	}
 
-	return s.repo.Upsert(ctx, siteID, name, fields)
+	def, err := s.repo.Upsert(ctx, siteID, name, fields)
+	if err != nil {
+		return nil, fmt.Errorf("failed to upsert event definition: %w", err)
+	}
+	return def, nil
 }
 
 func (s *EventDefinitionService) Delete(ctx context.Context, siteID int64, name string) error {
@@ -101,5 +110,8 @@ func (s *EventDefinitionService) Delete(ctx context.Context, siteID int64, name 
 	if trimmed == "" {
 		return ErrInvalidEventName
 	}
-	return s.repo.DeleteByName(ctx, siteID, trimmed)
+	if err := s.repo.DeleteByName(ctx, siteID, trimmed); err != nil {
+		return fmt.Errorf("failed to delete event definition: %w", err)
+	}
+	return nil
 }

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 )
@@ -19,7 +20,11 @@ type Middleware struct {
 
 // NewMiddleware creates a new authentication middleware.
 func NewMiddleware(service Service) *Middleware {
-	return &Middleware{service: service.(*jwtService)}
+	jwtSvc, ok := service.(*jwtService)
+	if !ok {
+		panic("service must be a *jwtService")
+	}
+	return &Middleware{service: jwtSvc}
 }
 
 // Authenticate extracts and validates authentication from the request.
@@ -47,7 +52,7 @@ func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 		claims, err := m.service.ValidateAccessToken(accessToken)
 		if err != nil {
 			// Try refresh if access token expired
-			if err == ErrExpiredToken && refresh != "" {
+			if errors.Is(err, ErrExpiredToken) && refresh != "" {
 				if tokens, refreshErr := m.service.RefreshTokens(r.Context(), refresh); refreshErr == nil {
 					m.service.SetAuthCookies(w, tokens)
 					claims, _ = m.service.ValidateAccessToken(tokens.AccessToken)

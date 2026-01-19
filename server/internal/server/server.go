@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -38,7 +39,7 @@ func New(cfg *config.Config) (*Server, error) {
 	if len(cfg.TrackerJS) == 0 {
 		trackerPath := filepath.Join("static", "tracker.js")
 		var err error
-		trackerJS, err = os.ReadFile(trackerPath)
+		trackerJS, err = os.ReadFile(trackerPath) // #nosec G304 -- trackerPath is constructed from static directory constant
 		if err != nil {
 			return nil, fmt.Errorf("failed to load tracker.js: %w", err)
 		}
@@ -49,13 +50,15 @@ func New(cfg *config.Config) (*Server, error) {
 	// Initialize database
 	db, err := database.New(&cfg.Database)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create database connection: %w", err)
 	}
 
 	// Run migrations
 	if err := database.Migrate(context.Background(), db); err != nil {
-		database.Close(db)
-		return nil, err
+		if closeErr := database.Close(db); closeErr != nil {
+			slog.Error("failed to close database after migration error", "error", closeErr)
+		}
+		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 
 	// Initialize repositories
@@ -94,8 +97,10 @@ func New(cfg *config.Config) (*Server, error) {
 
 	// Create initial admin from env vars if configured
 	if err := authService.CreateInitialAdmin(context.Background(), cfg.Auth.InitialAdminUsername, cfg.Auth.InitialAdminPassword); err != nil {
-		database.Close(db)
-		return nil, err
+		if closeErr := database.Close(db); closeErr != nil {
+			slog.Error("failed to close database after admin creation error", "error", closeErr)
+		}
+		return nil, fmt.Errorf("create initial admin: %w", err)
 	}
 
 	// Initialize handlers for tracking (REST API)
@@ -132,7 +137,9 @@ func New(cfg *config.Config) (*Server, error) {
 		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Write(trackerJS)
+		if _, err := w.Write(trackerJS); err != nil {
+			slog.Error("failed to write tracker.js", "error", err)
+		}
 	})
 	hh := handlers.NewHealthHandler(db, cfg.Server.DashboardPath)
 
@@ -191,7 +198,10 @@ func New(cfg *config.Config) (*Server, error) {
 
 // Close closes the server and database connection.
 func (s *Server) Close() error {
-	return database.Close(s.DB)
+	if err := database.Close(s.DB); err != nil {
+		return fmt.Errorf("close database: %w", err)
+	}
+	return nil
 }
 
 func graphqlPlaygroundHandler(w http.ResponseWriter, r *http.Request) {
@@ -217,5 +227,7 @@ func graphqlPlaygroundHandler(w http.ResponseWriter, r *http.Request) {
   </script>
 </body>
 </html>`
-	w.Write([]byte(html))
+	if _, err := w.Write([]byte(html)); err != nil {
+		slog.Error("failed to write graphql playground", "error", err)
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 
 	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/repository"
@@ -49,7 +50,7 @@ func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*model
 
 	validatedName, err := utils.ValidateSiteName(input.Name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate site name: %w", err)
 	}
 
 	for _, domain := range normalizedDomains {
@@ -71,7 +72,7 @@ func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*model
 	}
 
 	if err := s.siteRepo.CreateWithDomains(ctx, site, normalizedDomains); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create site with domains: %w", err)
 	}
 
 	site.Domains = buildSiteDomains(site.ID, normalizedDomains)
@@ -92,17 +93,25 @@ func (s *SiteService) GetByID(ctx context.Context, id, userID int64) (*models.Si
 }
 
 func (s *SiteService) GetByPublicKey(ctx context.Context, publicKey string) (*models.Site, error) {
-	return s.siteRepo.GetByPublicKey(ctx, publicKey)
+	site, err := s.siteRepo.GetByPublicKey(ctx, publicKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get site by public key: %w", err)
+	}
+	return site, nil
 }
 
 func (s *SiteService) GetUserSites(ctx context.Context, userID int64) ([]*models.Site, error) {
-	return s.siteRepo.GetByUserID(ctx, userID)
+	sites, err := s.siteRepo.GetByUserID(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user sites: %w", err)
+	}
+	return sites, nil
 }
 
 func (s *SiteService) Update(ctx context.Context, id, userID int64, input UpdateSiteInput) (*models.Site, error) {
 	validatedName, err := utils.ValidateSiteName(input.Name)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to validate site name: %w", err)
 	}
 
 	site, err := s.siteRepo.GetByID(ctx, id)
@@ -152,13 +161,13 @@ func (s *SiteService) Update(ctx context.Context, id, userID int64, input Update
 
 	if input.Domains == nil && input.BlockedIPs == nil && input.BlockedCountries == nil {
 		if err := s.siteRepo.Update(ctx, site); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to update site: %w", err)
 		}
 		return site, nil
 	}
 
 	if err := s.siteRepo.UpdateWithRelations(ctx, site, normalizedDomains, normalizedBlockedIPs, normalizedBlockedCountries); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to update site with relations: %w", err)
 	}
 
 	if input.Domains != nil {
@@ -183,7 +192,10 @@ func (s *SiteService) Delete(ctx context.Context, id, userID int64) error {
 		return ErrNotAuthorized
 	}
 
-	return s.siteRepo.Delete(ctx, id)
+	if err := s.siteRepo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("failed to delete site: %w", err)
+	}
+	return nil
 }
 
 func (s *SiteService) RegeneratePublicKey(ctx context.Context, id, userID int64) (*models.Site, error) {
@@ -203,7 +215,7 @@ func (s *SiteService) RegeneratePublicKey(ctx context.Context, id, userID int64)
 
 	site.PublicKey = publicKey
 	if err := s.siteRepo.Update(ctx, site); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to update site: %w", err)
 	}
 
 	return site, nil
@@ -212,7 +224,7 @@ func (s *SiteService) RegeneratePublicKey(ctx context.Context, id, userID int64)
 func generatePublicKey() (string, error) {
 	bytes := make([]byte, 16)
 	if _, err := rand.Read(bytes); err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate random bytes: %w", err)
 	}
 	return hex.EncodeToString(bytes), nil
 }
@@ -223,7 +235,7 @@ func normalizeDomains(domains []string) ([]string, error) {
 	for _, domain := range domains {
 		normalizedDomain, err := utils.ValidateDomain(domain)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to validate domain: %w", err)
 		}
 		if _, ok := seen[normalizedDomain]; ok {
 			continue
@@ -279,7 +291,7 @@ func normalizeBlockedIPs(ips []string) ([]string, error) {
 	for _, value := range ips {
 		ip, err := utils.ValidateIPAddress(value)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to validate IP address: %w", err)
 		}
 		if _, ok := seen[ip]; ok {
 			continue
@@ -300,7 +312,7 @@ func normalizeBlockedCountries(countries []string) ([]string, error) {
 	for _, value := range countries {
 		code, err := utils.ValidateCountryCode(value)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to validate country code: %w", err)
 		}
 		if _, ok := seen[code]; ok {
 			continue

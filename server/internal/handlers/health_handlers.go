@@ -22,20 +22,20 @@ func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Check database connection
 		if err := h.db.PingContext(r.Context()); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			w.Write([]byte(`{"status":"unhealthy","error":"database connection failed"}`))
+			http.Error(w, `{"status":"unhealthy","error":"database connection failed"}`, http.StatusServiceUnavailable)
 			return
 		}
 
 		// Check dashboard files exist (skip check if dashboard path is empty for tests)
 		if h.dashboardPath != "" {
 			if _, err := os.Stat(filepath.Join(h.dashboardPath, "index.html")); err != nil {
-				w.WriteHeader(http.StatusServiceUnavailable)
-				w.Write([]byte(`{"status":"unhealthy","error":"dashboard files not found"}`))
+				http.Error(w, `{"status":"unhealthy","error":"dashboard files not found"}`, http.StatusServiceUnavailable)
 				return
 			}
 		}
 
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"healthy"}`))
+		if _, err := w.Write([]byte(`{"status":"healthy"}`)); err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+		}
 	}

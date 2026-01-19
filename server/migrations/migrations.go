@@ -35,11 +35,11 @@ func NewMigrations() (*migrate.Migrations, error) {
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create migration filesystem: %w", err)
 	}
 
 	if err := migrations.Discover(migrationFS); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to discover migrations: %w", err)
 	}
 
 	return migrations, nil
