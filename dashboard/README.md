@@ -12,35 +12,35 @@ A privacy-friendly web analytics dashboard built with React, Vite, and Tailwind 
 
 ## Tech Stack
 
-- **React 18** - UI framework
+- **React** - UI framework
 - **Vite** - Build tool (static export)
 - **TypeScript** - Type safety with strict mode
 - **Tailwind CSS** - Styling
 - **shadcn/ui** - UI component library
 - **Apollo Client** - GraphQL client
 - **graphql-codegen** - Type-safe GraphQL operations
-- **React Router** - Client-side routing
+- **TanStack Router** - Type-safe client-side routing
 
 ## Development
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Generate GraphQL types
-npm run codegen
+bun run codegen
 
 # Start development server
-npm run dev
+bun run dev
 
 # Type check
-npm run typecheck
+bun run typecheck
 
 # Lint
-npm run lint
+bun run lint
 
 # Build for production
-npm run build
+bun run build
 ```
 
 ## Static Export
@@ -64,7 +64,7 @@ src/
 ├── components/     # React components
 │   └── ui/         # shadcn/ui components
 ├── config/         # Runtime configuration
-├── generated/      # Generated GraphQL types
+├── gql/            # Generated GraphQL types
 ├── graphql/        # GraphQL operations
 ├── hooks/          # Custom React hooks
 ├── layouts/        # Layout components

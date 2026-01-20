@@ -31,8 +31,8 @@
 ## Code structure
 - [Migrations](./migrations/README.md)
 - [E2E testing](./e2e/README.md)
-- [Packages][./pkg/README.md]
-- [App-related logic][./internal/README.md]
+- [Packages](./pkg/README.md)
+- [App-related logic](./internal/README.md)
 
 ## Code Generation
 
