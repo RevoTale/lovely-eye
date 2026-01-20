@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0](https://github.com/RevoTale/lovely-eye/compare/v1.0.0...v1.1.0) (2026-01-20)
+
+
+### Features
+
+* add db connection timeout ([4892f6e](https://github.com/RevoTale/lovely-eye/commit/4892f6e2af4a0581cba5d3397105821b99066e3f))
+* use `data-site-id` instead of `data-site-key` ([3a1b7be](https://github.com/RevoTale/lovely-eye/commit/3a1b7bed34b4117d517dfa428597a508abca4b54))
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([1774f44](https://github.com/RevoTale/lovely-eye/commit/1774f44d135b4d08dc6a54995091bbecf1e77b2e))
+* **deps:** update all non-major dependencies ([c8603b1](https://github.com/RevoTale/lovely-eye/commit/c8603b1bcfbbd561233c902cc3587ed89ea3f491))
+* postgres mount path for v18.1 ([379c244](https://github.com/RevoTale/lovely-eye/commit/379c2444c395840a73bdf59e58d526c99a543b1c))
+* renovate auto generate code on package change ([ed02be6](https://github.com/RevoTale/lovely-eye/commit/ed02be6cc72a8456eb9cd99a9775182824a436bf))
+* renovate auto generate code on package change ([4f985c8](https://github.com/RevoTale/lovely-eye/commit/4f985c813cd25ceeae09ca5408456e6fea3c6f2b))
+
 ## 1.0.0 (2026-01-19)
 
 
