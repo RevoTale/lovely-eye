@@ -1,61 +1,33 @@
 # Lovely Eye Dashboard
 
-A privacy-friendly web analytics dashboard built with React, Vite, and Tailwind CSS.
+React dashboard for Lovely Eye analytics.
 
-## Features
+## Stack
 
-- 📊 Real-time analytics dashboard
-- 🔒 Privacy-first analytics
-- 📱 Responsive design with shadcn/ui components
-- 🎨 Dark mode support
-- 📈 GraphQL API integration with code generation
-
-## Tech Stack
-
-- **React** - UI framework
-- **Vite** - Build tool (static export)
-- **TypeScript** - Type safety with strict mode
-- **Tailwind CSS** - Styling
-- **shadcn/ui** - UI component library
-- **Apollo Client** - GraphQL client
-- **graphql-codegen** - Type-safe GraphQL operations
-- **TanStack Router** - Type-safe client-side routing
+- React + TypeScript
+- Vite (static export)
+- Tailwind CSS + shadcn/ui
+- Apollo Client + graphql-codegen
+- TanStack Router
 
 ## Development
 
 ```bash
-# Install dependencies
 bun install
-
-# Generate GraphQL types
-bun run codegen
-
-# Start development server
-bun run dev
-
-# Type check
-bun run typecheck
-
-# Lint
-bun run lint
-
-# Build for production
-bun run build
+bun run codegen   # generate GraphQL types
+bun run dev       # start dev server
+bun run build     # production build
 ```
 
-## Static Export
+## Build
 
-The dashboard is built as a static export and served by the Go backend server. The build output goes to the `dist/` directory.
+Static export to `dist/`, served by Go backend. Go server dynamically generates `config.js` per request:
 
-### Runtime Configuration
+- `BASE_PATH` - dashboard URL path
+- `API_URL` - backend API URL
+- `GRAPHQL_URL` - GraphQL endpoint
 
-The app supports runtime configuration through `config.js`:
-
-- `BASE_PATH` - Base URL path for the dashboard (e.g., `/dashboard`)
-- `API_URL` - Backend API URL
-- `GRAPHQL_URL` - GraphQL endpoint URL
-
-These can be configured by the Go server when serving the dashboard, allowing the same build to be deployed to different environments.
+Same build works across environments.
 
 ## Project Structure
 
@@ -63,21 +35,17 @@ These can be configured by the Go server when serving the dashboard, allowing th
 src/
 ├── components/     # React components
 │   └── ui/         # shadcn/ui components
-├── config/         # Runtime configuration
-├── gql/            # Generated GraphQL types
+├── config/         # runtime configuration
+├── gql/            # generated GraphQL types
 ├── graphql/        # GraphQL operations
-├── hooks/          # Custom React hooks
-├── layouts/        # Layout components
-├── lib/            # Utility functions and Apollo client
-└── pages/          # Page components
+├── hooks/          # custom React hooks
+├── layouts/        # layout components
+├── lib/            # utilities and Apollo client
+└── pages/          # page components
 ```
 
-## Adding shadcn/ui Components
-
-This project uses shadcn/ui. To add new components:
+## Adding Components
 
 ```bash
-npx shadcn@latest add [component-name]
+bunx shadcn@latest add [component-name]
 ```
-
-Or manually copy components from the shadcn/ui documentation.

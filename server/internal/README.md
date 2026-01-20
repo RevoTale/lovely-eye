@@ -1,9 +1,10 @@
 # App internal logic
-Here happend all the magic of the app. Future changes should follow the following rules:
-- Every directory should try to be an independent, replacable module. 
-- No Go-related files should be placed inside root of this directory.
 
-A brief overview of the main modules:
+Rules:
+- Each directory should be an independent, replaceable module
+- No Go files in root of this directory
+
+Modules:
 - `./auth` - Authentication module with JWT-based auth using HTTP-only cookies. Handles user registration, login, token refresh, and CSRF protection.
 - `./config` - Application configuration loader. Reads environment variables for server, database, and auth settings.
 - `./database` - Database connection layer using [Bun ORM](https://github.com/uptrace/bun). Supports both SQLite and PostgreSQL.

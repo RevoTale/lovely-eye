@@ -11,8 +11,8 @@
 ## Build
 
 - Output goes to `dist/`, served by Go server
-- Runtime config via `public/config.js` (not bundled)
-- Go server modifies `config.js` at startup for environment-specific values
+- Runtime config via `config.js` (not bundled)
+- Go server dynamically generates `config.js` per request
 
 ## Code Generation
 
