@@ -6,11 +6,11 @@
   'use strict';
 
   var script = document.currentScript;
-  var siteKey = script.getAttribute('data-site-id');
+  var siteKey = script.getAttribute('data-site-key');
   var apiUrl = script.getAttribute('data-api-url') || (script.src.replace(/\/[^/]*$/, ''));
 
   if (!siteKey) {
-    console.warn('Lovely Eye: Missing data-site-id attribute');
+    console.warn('Lovely Eye: Missing data-site-key attribute');
     return;
   }
 
