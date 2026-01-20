@@ -350,16 +350,17 @@ type DailyVisitorStats struct {
 
 func (r *AnalyticsRepository) GetDailyStats(ctx context.Context, siteID int64, from, to time.Time) ([]DailyVisitorStats, error) {
 	var stats []DailyVisitorStats
+	bucketExpr := r.timeBucketExpression(TimeBucketDaily)
 	err := r.db.NewSelect().
 		Model((*models.Session)(nil)).
-		ColumnExpr("DATE(started_at) as date").
+		ColumnExpr(bucketExpr+" as date").
 		ColumnExpr("COUNT(DISTINCT visitor_id) as visitors").
 		ColumnExpr("SUM(page_views) as page_views").
 		ColumnExpr("COUNT(*) as sessions").
 		Where("site_id = ?", siteID).
 		Where("started_at >= ?", from).
 		Where("started_at <= ?", to).
-		Group("DATE(started_at)").
+		GroupExpr(bucketExpr).
 		Order("date ASC").
 		Scan(ctx, &stats)
 	if err != nil {
@@ -848,7 +849,7 @@ func (r *AnalyticsRepository) GetTimeSeriesStatsWithFilter(ctx context.Context, 
 		Where("started_at >= ?", from).
 		Where("started_at <= ?", to)
 	q = applySessionFilters(q, referrer, device, page, country)
-	q = q.Group(bucketExpr)
+	q = q.GroupExpr(bucketExpr)
 	if limit > 0 {
 		q = q.Order("date DESC").Limit(limit)
 	} else {
