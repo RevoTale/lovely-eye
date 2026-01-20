@@ -30,10 +30,11 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Driver   string // "sqlite" or "postgres"
-	DSN      string
-	MaxConns int
-	MinConns int
+	Driver         string // "sqlite" or "postgres"
+	DSN            string
+	MaxConns       int
+	MinConns       int
+	ConnectTimeout time.Duration
 }
 
 type AuthConfig struct {
@@ -66,10 +67,11 @@ func Load() *Config {
 			DashboardPath: getEnv("DASHBOARD_PATH", "dashboard"),
 		},
 		Database: DatabaseConfig{
-			Driver:   getEnv("DB_DRIVER", "sqlite"),
-			DSN:      getEnv("DB_DSN", "file:data/lovely_eye.db?cache=shared&mode=rwc"),
-			MaxConns: getEnvInt("DB_MAX_CONNS", 10),
-			MinConns: getEnvInt("DB_MIN_CONNS", 1),
+			Driver:         getEnv("DB_DRIVER", "sqlite"),
+			DSN:            getEnv("DB_DSN", "file:data/lovely_eye.db?cache=shared&mode=rwc"),
+			MaxConns:       getEnvInt("DB_MAX_CONNS", 10),
+			MinConns:       getEnvInt("DB_MIN_CONNS", 1),
+			ConnectTimeout: getEnvDuration("DB_CONNECT_TIMEOUT", 7*time.Second),
 		},
 		Auth: AuthConfig{
 			JWTSecret:            getJWTSecret(),
@@ -141,4 +143,13 @@ func getEnvLogLevel(key string, defaultValue slog.Level) slog.Level {
 	default:
 		return defaultValue
 	}
+}
+
+func getEnvDuration(key string, defaultValue time.Duration) time.Duration {
+	if value := os.Getenv(key); value != "" {
+		if duration, err := time.ParseDuration(value); err == nil {
+			return duration
+		}
+	}
+	return defaultValue
 }

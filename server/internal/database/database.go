@@ -43,7 +43,13 @@ func New(cfg *config.DatabaseConfig) (*bun.DB, error) {
 	))
 
 	// Test connection
-	if err := db.PingContext(context.Background()); err != nil {
+	pingCtx := context.Background()
+	if cfg.ConnectTimeout > 0 {
+		var cancel context.CancelFunc
+		pingCtx, cancel = context.WithTimeout(pingCtx, cfg.ConnectTimeout)
+		defer cancel()
+	}
+	if err := db.PingContext(pingCtx); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 

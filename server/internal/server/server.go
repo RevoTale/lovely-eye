@@ -141,7 +141,7 @@ func New(cfg *config.Config) (*Server, error) {
 			slog.Error("failed to write tracker.js", "error", err)
 		}
 	})
-	hh := handlers.NewHealthHandler(db, cfg.Server.DashboardPath)
+	hh := handlers.NewHealthHandler(db, cfg.Server.DashboardPath, cfg.Database.ConnectTimeout)
 
 	// Health check (always at root for load balancers)
 	mux.Handle("GET /health", hh)
