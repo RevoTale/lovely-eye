@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.4](https://github.com/RevoTale/lovely-eye/compare/v1.1.3...v1.1.4) (2026-01-20)
+
+
+### Bug Fixes
+
+* bad group expression for postgres failed data collection ([ecf6734](https://github.com/RevoTale/lovely-eye/commit/ecf67342b89608ab9d8ebd4d280d7804d2411624))
+* bad group expression for postgres failed data collection ([9e6a0c4](https://github.com/RevoTale/lovely-eye/commit/9e6a0c4f3f84f12e79e9c19c5c263561fd87f295))
+
 ## [1.1.3](https://github.com/RevoTale/lovely-eye/compare/v1.1.2...v1.1.3) (2026-01-20)
 
 
