@@ -108,32 +108,15 @@ Server starts at http://localhost:8080. The first registered user becomes admin.
 | `SECURE_COOKIES` | `true` | Use secure cookies (requires HTTPS). Set to `false` for local dev |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
 | `GEOIP_DB_PATH` | `/data/GeoLite2-Country.mmdb` | Path to GeoLite2-Country.mmdb for country stats |
-| `GEOIP_DOWNLOAD_URL` | `https://download.db-ip.com/free/dbip-country-lite-YYYY-MM.mmdb.gz` | Custom GeoIP download URL (mmdb, gz, or tar.gz). DB-IP URLs will try the current and previous 2 monthly filenames automatically. |
+| `GEOIP_DOWNLOAD_URL` | `https://download.db-ip.com/free/dbip-country-lite.mmdb.gz` | Custom GeoIP download URL (mmdb, gz, or tar.gz) |
 | `GEOIP_MAXMIND_LICENSE_KEY` | - | MaxMind license key for GeoLite2 auto-download |
 
 Country tracking downloads the GeoLite2 database on demand when at least one site enables it. If the download fails, the dashboard will show the error in site settings.
 
-## Authentication
-
-JWT tokens in HttpOnly cookies with SameSite settings:
-
-- **HttpOnly**: Prevents JavaScript access (XSS protection)
-- **Secure**: HTTPS only in production
-- **SameSite=Strict** (production) or **Lax** (development): Prevents CSRF
-
-No CSRF tokens needed. See [discussion](https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/).
-
-## Tracking
-See [ANALYTICS.md](./ANALYTICS.md) for tracking mechanics.
-
-## Privacy
-See [PRIVACY.md](./PRIVACY.md) for privacy handling.
-
-### Track Custom Events
+## Custom Events
 
 ```html
 <script>
-  // Example: track an error event with metadata
   window.lovelyEye?.track('error', {
     message: 'Checkout failed',
     code: 'PAYMENT_DECLINED',
@@ -141,7 +124,21 @@ See [PRIVACY.md](./PRIVACY.md) for privacy handling.
 </script>
 ```
 
-Events must be allowlisted in the site settings. Unknown event names or fields are ignored.
+Events must be allowlisted in site settings. Unknown event names or fields are ignored.
+
+## Documentation
+
+- [ANALYTICS.md](./ANALYTICS.md) - tracking mechanics
+- [PRIVACY.md](./PRIVACY.md) - privacy handling
+
+## Authentication
+
+JWT tokens in HttpOnly cookies with SameSite settings:
+
+- **HttpOnly**: prevents JavaScript access (XSS protection)
+- **Secure**: HTTPS only in production
+- **SameSite=Strict** (production) or **Lax** (development): prevents CSRF
+
 
 ## License
 
