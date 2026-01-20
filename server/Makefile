@@ -9,6 +9,7 @@ run:
 
 test:
 	go test ./... --count=2
+	golangci-lint run 
 
 clean:
 	rm -rf bin/
