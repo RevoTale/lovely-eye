@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.3](https://github.com/RevoTale/lovely-eye/compare/v1.1.2...v1.1.3) (2026-01-20)
+
+
+### Bug Fixes
+
+* cord error due to misisng credentials header. deduplicate cors header ([02bc51b](https://github.com/RevoTale/lovely-eye/commit/02bc51b6e23bac06862ee06f305c661d271d4def))
+* cors credentials header and polish documentation ([261e980](https://github.com/RevoTale/lovely-eye/commit/261e980856aecb4e2a9bf884519a9baa753798a1))
+* markdown errors ([2547aef](https://github.com/RevoTale/lovely-eye/commit/2547aef5548b4fdcad63fd7bd4ca65afaa2cda9e))
+
 ## [1.1.2](https://github.com/RevoTale/lovely-eye/compare/v1.1.1...v1.1.2) (2026-01-20)
 
 
