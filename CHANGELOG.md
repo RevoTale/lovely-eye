@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/RevoTale/lovely-eye/compare/v1.1.1...v1.1.2) (2026-01-20)
+
+
+### Bug Fixes
+
+* secure CORS policy and add security headers ([90a9261](https://github.com/RevoTale/lovely-eye/commit/90a92618d4ef9610dbac1bd4d0c3883db3710540))
+* secure CORS policy and add security headers ([23e32e5](https://github.com/RevoTale/lovely-eye/commit/23e32e52086178532df3b10a7af7a10c0b00a546))
+
 ## [1.1.1](https://github.com/RevoTale/lovely-eye/compare/v1.1.0...v1.1.1) (2026-01-20)
 
 
