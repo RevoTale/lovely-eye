@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/RevoTale/lovely-eye/compare/v1.1.0...v1.1.1) (2026-01-20)
+
+
+### Bug Fixes
+
+* revert: use `data-site-id` instead of `data-site-key` due to sematics ([7f28da4](https://github.com/RevoTale/lovely-eye/commit/7f28da43c635d5feef1a20bf14d9b5808bb55a1f))
+* revert: use `data-site-id` instead of `data-site-key` due to sematics ([fcf8d9f](https://github.com/RevoTale/lovely-eye/commit/fcf8d9f4b3372a0de12da169a1f1d981fafd668e))
+
 ## [1.1.0](https://github.com/RevoTale/lovely-eye/compare/v1.0.0...v1.1.0) (2026-01-20)
 
 
