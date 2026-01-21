@@ -1,10 +1,7 @@
 package graph
 
 import (
-	"encoding/json"
-	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/lovely-eye/server/internal/graph/model"
@@ -42,12 +39,26 @@ func convertToGraphQLEvents(events []*models.Event, total int) *model.EventsResu
 	}
 
 	for _, e := range events {
+		// Convert unix timestamp to time.Time
+		createdAt := time.Unix(e.Time, 0)
+
+		// Convert EventData to EventProperty
+		properties := make([]*model.EventProperty, 0, len(e.Data))
+		for _, data := range e.Data {
+			if data.Field != nil {
+				properties = append(properties, &model.EventProperty{
+					Key:   data.Field.Key,
+					Value: data.Value,
+				})
+			}
+		}
+
 		event := &model.Event{
 			ID:         strconv.FormatInt(e.ID, 10),
 			Name:       e.Name,
 			Path:       e.Path,
-			Properties: parseEventProperties(e.Properties),
-			CreatedAt:  e.CreatedAt,
+			Properties: properties,
+			CreatedAt:  createdAt,
 		}
 		result.Events = append(result.Events, event)
 	}
@@ -60,10 +71,25 @@ func convertToGraphQLEventDefinitions(definitions []*models.EventDefinition) []*
 	for _, def := range definitions {
 		fields := make([]*model.EventDefinitionField, 0, len(def.Fields))
 		for _, field := range def.Fields {
+			// Convert FieldType enum to string
+			var fieldTypeStr string
+			switch field.Type {
+			case models.FieldTypeString:
+				fieldTypeStr = "STRING"
+			case models.FieldTypeInt:
+				fieldTypeStr = "INT"
+			case models.FieldTypeFloat:
+				fieldTypeStr = "FLOAT"
+			case models.FieldTypeBool:
+				fieldTypeStr = "BOOLEAN"
+			default:
+				fieldTypeStr = "STRING"
+			}
+
 			fields = append(fields, &model.EventDefinitionField{
 				ID:        strconv.FormatInt(field.ID, 10),
 				Key:       field.Key,
-				Type:      model.EventFieldType(strings.ToUpper(field.Type)),
+				Type:      model.EventFieldType(fieldTypeStr),
 				Required:  field.Required,
 				MaxLength: field.MaxLength,
 			})
@@ -95,25 +121,4 @@ func convertToGraphQLGeoIPStatus(status services.GeoIPStatus) *model.GeoIPStatus
 		LastError: lastError,
 		UpdatedAt: status.UpdatedAt,
 	}
-}
-
-func parseEventProperties(propsJSON string) []*model.EventProperty {
-	if propsJSON == "" {
-		return []*model.EventProperty{}
-	}
-
-	var props map[string]interface{}
-	if err := json.Unmarshal([]byte(propsJSON), &props); err != nil {
-		return []*model.EventProperty{}
-	}
-
-	result := make([]*model.EventProperty, 0, len(props))
-	for k, v := range props {
-		result = append(result, &model.EventProperty{
-			Key:   k,
-			Value: fmt.Sprint(v),
-		})
-	}
-
-	return result
 }

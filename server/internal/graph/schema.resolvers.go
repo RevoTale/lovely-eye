@@ -159,7 +159,7 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 	items := make([]*model.DailyStats, 0, len(stats))
 	for _, stat := range stats {
 		items = append(items, &model.DailyStats{
-			Date:      stat.Date,
+			Date:      time.Unix(stat.DateBucket, 0), // Convert integer bucket to timestamp here
 			Visitors:  stat.Visitors,
 			PageViews: stat.PageViews,
 			Sessions:  stat.Sessions,

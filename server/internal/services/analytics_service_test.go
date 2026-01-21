@@ -11,7 +11,7 @@ func TestSanitizeEventPropertiesTruncatesAndStrips(t *testing.T) {
 	fields := []*models.EventDefinitionField{
 		{
 			Key:       "error",
-			Type:      eventFieldTypeString,
+			Type:      models.FieldTypeString,
 			Required:  true,
 			MaxLength: 5,
 		},
@@ -43,7 +43,7 @@ func TestSanitizeEventPropertiesMissingRequired(t *testing.T) {
 	fields := []*models.EventDefinitionField{
 		{
 			Key:      "code",
-			Type:     eventFieldTypeString,
+			Type:     models.FieldTypeString,
 			Required: true,
 		},
 	}
@@ -61,7 +61,7 @@ func TestSanitizeEventPropertiesTypeMismatch(t *testing.T) {
 	fields := []*models.EventDefinitionField{
 		{
 			Key:  "count",
-			Type: eventFieldTypeNumber,
+			Type: models.FieldTypeFloat,
 		},
 	}
 
@@ -78,7 +78,7 @@ func TestSanitizeEventPropertiesBoolean(t *testing.T) {
 	fields := []*models.EventDefinitionField{
 		{
 			Key:  "retry",
-			Type: eventFieldTypeBoolean,
+			Type: models.FieldTypeBool,
 		},
 	}
 

@@ -74,13 +74,33 @@ func createTestSite(t *testing.T, db *bun.DB) *models.Site {
 	return site
 }
 
-func insertSession(t *testing.T, db *bun.DB, siteID int64, visitorID string, startedAt, lastSeenAt time.Time, duration int, isBounce bool) {
+func createTestClient(t *testing.T, db *bun.DB, siteID int64, hash string, device string, browser string, os string) int64 {
 	t.Helper()
 
-	// Use raw SQL to avoid Bun's default:true tag behavior with boolean false values
+	ctx := context.Background()
+	client := &models.Client{
+		SiteID:  siteID,
+		Hash:    hash,
+		Device:  device,
+		Browser: browser,
+		OS:      os,
+	}
+	if _, err := db.NewInsert().Model(client).Exec(ctx); err != nil {
+		t.Fatalf("failed to insert client: %v", err)
+	}
+
+	return client.ID
+}
+
+func insertSession(t *testing.T, db *bun.DB, siteID int64, clientID int64, enterTime time.Time, durationSeconds int, pageViewCount int) {
+	t.Helper()
+
+	enterUnix := enterTime.Unix()
+	exitUnix := enterUnix + int64(durationSeconds)
+
 	_, err := db.Exec(
-		"INSERT INTO sessions (site_id, visitor_id, started_at, last_seen_at, duration, is_bounce) VALUES (?, ?, ?, ?, ?, ?)",
-		siteID, visitorID, startedAt, lastSeenAt, duration, isBounce,
+		"INSERT INTO sessions (site_id, client_id, enter_time, enter_hour, enter_day, enter_path, exit_time, exit_hour, exit_day, exit_path, duration, page_view_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		siteID, clientID, enterUnix, enterUnix/3600, enterUnix/86400, "/", exitUnix, exitUnix/3600, exitUnix/86400, "/", durationSeconds, pageViewCount,
 	)
 	if err != nil {
 		t.Fatalf("failed to insert session: %v", err)
@@ -113,14 +133,18 @@ func TestGetAvgSessionDuration_EmptyResult(t *testing.T) {
 		{
 			name: "only bounce sessions exist",
 			setup: func() {
-				insertSession(t, db, site.ID, "visitor1", now.Add(-1*time.Hour), now.Add(-1*time.Hour), 10, true)
+				clientID := createTestClient(t, db, site.ID, "hash1", "desktop", "Chrome", "Windows")
+				sessionTime := now.Add(-1 * time.Hour)
+				// Bounce session: page_view_count = 1
+				insertSession(t, db, site.ID, clientID, sessionTime, 10, 1)
 			},
 		},
 		{
 			name: "sessions outside date range",
 			setup: func() {
+				clientID := createTestClient(t, db, site.ID, "hash2", "desktop", "Chrome", "Windows")
 				pastTime := now.Add(-30 * 24 * time.Hour)
-				insertSession(t, db, site.ID, "visitor2", pastTime, pastTime, 100, false)
+				insertSession(t, db, site.ID, clientID, pastTime, 100, 2)
 			},
 		},
 	}
@@ -151,10 +175,15 @@ func TestGetAvgSessionDuration_WithSessions(t *testing.T) {
 	from := now.Add(-24 * time.Hour)
 	to := now
 
-	// Insert test sessions
-	insertSession(t, db, site.ID, "visitor1", now.Add(-2*time.Hour), now.Add(-2*time.Hour), 60, false)
-	insertSession(t, db, site.ID, "visitor2", now.Add(-3*time.Hour), now.Add(-3*time.Hour), 120, false)
-	insertSession(t, db, site.ID, "visitor3", now.Add(-4*time.Hour), now.Add(-4*time.Hour), 180, false)
+	// Insert test sessions (non-bounce sessions: page_view_count > 1)
+	client1 := createTestClient(t, db, site.ID, "hash1", "desktop", "Chrome", "Windows")
+	insertSession(t, db, site.ID, client1, now.Add(-2*time.Hour), 60, 2)
+
+	client2 := createTestClient(t, db, site.ID, "hash2", "mobile", "Safari", "iOS")
+	insertSession(t, db, site.ID, client2, now.Add(-3*time.Hour), 120, 3)
+
+	client3 := createTestClient(t, db, site.ID, "hash3", "tablet", "Firefox", "Android")
+	insertSession(t, db, site.ID, client3, now.Add(-4*time.Hour), 180, 2)
 
 	got, err := repo.GetAvgSessionDuration(ctx, site.ID, from, to)
 	if err != nil {
@@ -179,8 +208,11 @@ func TestGetAvgSessionDuration_ExcludesBounces(t *testing.T) {
 	to := now
 
 	// Insert non-bounce and bounce sessions
-	insertSession(t, db, site.ID, "visitor1", now.Add(-2*time.Hour), now.Add(-2*time.Hour), 100, false)
-	insertSession(t, db, site.ID, "visitor2", now.Add(-3*time.Hour), now.Add(-3*time.Hour), 1000, true)
+	client1 := createTestClient(t, db, site.ID, "hash1", "desktop", "Chrome", "Windows")
+	insertSession(t, db, site.ID, client1, now.Add(-2*time.Hour), 100, 2) // non-bounce: page_view_count = 2
+
+	client2 := createTestClient(t, db, site.ID, "hash2", "mobile", "Safari", "iOS")
+	insertSession(t, db, site.ID, client2, now.Add(-3*time.Hour), 1000, 1) // bounce: page_view_count = 1
 
 	got, err := repo.GetAvgSessionDuration(ctx, site.ID, from, to)
 	if err != nil {
@@ -220,10 +252,13 @@ func TestGetAvgSessionDurationWithFilter_EmptyResult(t *testing.T) {
 			name:     "filter matches no sessions",
 			referrer: stringPtr("nonexistent.com"),
 			setup: func() {
-				// Use raw SQL to insert with referrer field
+				// Create client and session with different referrer
+				clientID := createTestClient(t, db, site.ID, "hash1", "desktop", "Chrome", "Windows")
+				enterTime := now.Add(-1 * time.Hour).Unix()
+				exitTime := enterTime + 100
 				_, err := db.Exec(
-					"INSERT INTO sessions (site_id, visitor_id, started_at, last_seen_at, duration, is_bounce, referrer) VALUES (?, ?, ?, ?, ?, ?, ?)",
-					site.ID, "visitor1", now.Add(-1*time.Hour), now.Add(-1*time.Hour), 100, false, "google.com",
+					"INSERT INTO sessions (site_id, client_id, enter_time, enter_hour, enter_day, enter_path, exit_time, exit_hour, exit_day, exit_path, duration, page_view_count, referrer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					site.ID, clientID, enterTime, enterTime/3600, enterTime/86400, "/", exitTime, exitTime/3600, exitTime/86400, "/", 100, 2, "google.com",
 				)
 				if err != nil {
 					t.Fatalf("failed to insert session: %v", err)
@@ -273,17 +308,25 @@ func TestGetAvgSessionDurationWithFilter_WithData(t *testing.T) {
 	to := now
 
 	// Insert sessions with different referrers and devices
+	// Session 1: desktop, google.com referrer
+	client1 := createTestClient(t, db, site.ID, "hash1", "desktop", "Chrome", "Windows")
+	enterTime1 := now.Add(-2 * time.Hour).Unix()
+	exitTime1 := enterTime1 + 60
 	_, err := db.Exec(
-		"INSERT INTO sessions (site_id, visitor_id, started_at, last_seen_at, duration, is_bounce, referrer, device) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-		site.ID, "visitor1", now.Add(-2*time.Hour), now.Add(-2*time.Hour), 60, false, "google.com", "desktop",
+		"INSERT INTO sessions (site_id, client_id, enter_time, enter_hour, enter_day, enter_path, exit_time, exit_hour, exit_day, exit_path, duration, page_view_count, referrer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		site.ID, client1, enterTime1, enterTime1/3600, enterTime1/86400, "/", exitTime1, exitTime1/3600, exitTime1/86400, "/", 60, 2, "google.com",
 	)
 	if err != nil {
 		t.Fatalf("failed to insert session 1: %v", err)
 	}
 
+	// Session 2: mobile, no referrer
+	client2 := createTestClient(t, db, site.ID, "hash2", "mobile", "Safari", "iOS")
+	enterTime2 := now.Add(-3 * time.Hour).Unix()
+	exitTime2 := enterTime2 + 120
 	_, err = db.Exec(
-		"INSERT INTO sessions (site_id, visitor_id, started_at, last_seen_at, duration, is_bounce, referrer, device) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-		site.ID, "visitor2", now.Add(-3*time.Hour), now.Add(-3*time.Hour), 120, false, "", "mobile",
+		"INSERT INTO sessions (site_id, client_id, enter_time, enter_hour, enter_day, enter_path, exit_time, exit_hour, exit_day, exit_path, duration, page_view_count, referrer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		site.ID, client2, enterTime2, enterTime2/3600, enterTime2/86400, "/", exitTime2, exitTime2/3600, exitTime2/86400, "/", 120, 2, "",
 	)
 	if err != nil {
 		t.Fatalf("failed to insert session 2: %v", err)
