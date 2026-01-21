@@ -2,7 +2,7 @@ import React from 'react';
 import { Globe } from 'lucide-react';
 import { Badge, Progress } from '@/components/ui';
 import type { CountryStats } from '@/gql/graphql';
-import { BoardCard } from '@/components/board-card';
+import { BoardCard, BoardCardSkeleton } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
 
@@ -14,13 +14,18 @@ interface CountryCardProps {
   pageSize: number;
   siteId: string;
   onPageChange: (page: number) => void;
+  loading?: boolean;
 }
 
 const EMPTY_COUNT = 0;
 const PERCENT_MULTIPLIER = 100;
 const PERCENT_PRECISION = 1;
 
-export function CountryCard({ countries, total, totalVisitors, page, pageSize, siteId, onPageChange }: CountryCardProps): React.JSX.Element {
+export function CountryCard({ countries, total, totalVisitors, page, pageSize, siteId, onPageChange, loading = false }: CountryCardProps): React.JSX.Element {
+  if (loading) {
+    return <BoardCardSkeleton title="Countries" icon={Globe} />;
+  }
+
   return (
     <BoardCard
       title="Countries"

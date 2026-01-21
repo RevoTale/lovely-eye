@@ -11,9 +11,6 @@ import (
 )
 
 const (
-	eventFieldTypeString  = "string"
-	eventFieldTypeNumber  = "number"
-	eventFieldTypeBoolean = "boolean"
 	defaultEventMaxLength = 500
 	maxEventNameLength    = 100
 	maxEventKeyLength     = 100
@@ -72,12 +69,21 @@ func (s *EventDefinitionService) Upsert(ctx context.Context, siteID int64, input
 		}
 		seen[key] = struct{}{}
 
-		fieldType := strings.ToLower(strings.TrimSpace(field.Type))
-		if fieldType == "" {
-			fieldType = eventFieldTypeString
+		fieldTypeStr := strings.ToLower(strings.TrimSpace(field.Type))
+		if fieldTypeStr == "" {
+			fieldTypeStr = "string"
 		}
-		switch fieldType {
-		case eventFieldTypeString, eventFieldTypeNumber, eventFieldTypeBoolean:
+
+		var fieldType models.FieldType
+		switch fieldTypeStr {
+		case "string":
+			fieldType = models.FieldTypeString
+		case "number":
+			fieldType = models.FieldTypeFloat
+		case "int", "integer":
+			fieldType = models.FieldTypeInt
+		case "bool", "boolean":
+			fieldType = models.FieldTypeBool
 		default:
 			return nil, ErrInvalidFieldType
 		}

@@ -6,8 +6,6 @@ query Dashboard(
   $referrersPaging: PagingInput!
   $devicesPaging: PagingInput!
   $countriesPaging: PagingInput!
-  $dailyStatsBucket: TimeBucket
-  $dailyStatsLimit: Int
 ) {
   dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
     visitors
@@ -50,12 +48,6 @@ query Dashboard(
         visitors
       }
     }
-    dailyStats(bucket: $dailyStatsBucket, limit: $dailyStatsLimit) {
-      date
-      visitors
-      pageViews
-      sessions
-    }
   }
 }
 
@@ -69,8 +61,8 @@ query Realtime($siteId: ID!) {
   }
 }
 
-query Events($siteId: ID!, $dateRange: DateRangeInput, $limit: Int, $offset: Int) {
-  events(siteId: $siteId, dateRange: $dateRange, limit: $limit, offset: $offset) {
+query Events($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $limit: Int, $offset: Int) {
+  events(siteId: $siteId, dateRange: $dateRange, filter: $filter, limit: $limit, offset: $offset) {
     total
     events {
       id
@@ -81,6 +73,40 @@ query Events($siteId: ID!, $dateRange: DateRangeInput, $limit: Int, $offset: Int
         key
         value
       }
+    }
+  }
+}
+
+query EventCounts($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $limit: Int) {
+  eventCounts(siteId: $siteId, dateRange: $dateRange, filter: $filter, limit: $limit) {
+    count
+    event {
+      id
+      name
+      path
+      createdAt
+      properties {
+        key
+        value
+      }
+    }
+  }
+}
+
+query ChartData(
+  $siteId: ID!
+  $dateRange: DateRangeInput
+  $filter: FilterInput
+  $bucket: TimeBucket
+  $limit: Int
+  $offset: Int
+) {
+  dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
+    dailyStats(bucket: $bucket, limit: $limit, offset: $offset) {
+      date
+      visitors
+      pageViews
+      sessions
     }
   }
 }

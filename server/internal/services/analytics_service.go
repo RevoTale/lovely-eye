@@ -88,12 +88,8 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		return nil
 	}
 
-	// Generate anonymous visitor ID with daily salt rotation for privacy
-	visitorID := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
-
-	// Try to find existing session (within 30 minutes)
-	sessionTimeout := time.Now().Add(-30 * time.Minute)
-	session, err := s.analyticsRepo.GetSessionByVisitor(ctx, site.ID, visitorID, sessionTimeout)
+	// Generate anonymous visitor ID (SHA-256 hash) with daily salt rotation for privacy
+	visitorHash := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
 
 	// Parse user agent with proper library
 	ua := useragent.Parse(input.UserAgent)
@@ -114,72 +110,107 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		country = s.geoIPService.GetCountryName(input.IP)
 	}
 
+	// Find or create Client record (stores stable attributes)
+	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country)
+	if err != nil {
+		return fmt.Errorf("find or create client: %w", err)
+	}
+
+	// Current time for timestamps
+	now := time.Now()
+	nowUnix := now.Unix()
+
+	// Try to find existing session (within 30 minutes)
+	sessionTimeout := now.Add(-30 * time.Minute)
+	session, err := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
+
 	if err != nil || session == nil {
 		// Create new session
 		session = &models.Session{
-			SiteID:      site.ID,
-			VisitorID:   visitorID,
-			StartedAt:   time.Now(),
-			LastSeenAt:  time.Now(),
-			EntryPage:   input.Path,
-			ExitPage:    input.Path,
-			Referrer:    input.Referrer,
-			UTMSource:   input.UTMSource,
-			UTMMedium:   input.UTMMedium,
-			UTMCampaign: input.UTMCampaign,
-			Device:      device,
-			Browser:     browser,
-			OS:          os,
-			ScreenSize:  screenSize,
-			PageViews:   1,
-			IsBounce:    true,
-			Country:     country,
-			EventOnly:   false,
+			SiteID:        site.ID,
+			ClientID:      client.ID,
+			EnterTime:     nowUnix,
+			EnterHour:     nowUnix / 3600,
+			EnterDay:      nowUnix / 86400,
+			EnterPath:     input.Path,
+			ExitTime:      nowUnix,
+			ExitHour:      nowUnix / 3600,
+			ExitDay:       nowUnix / 86400,
+			ExitPath:      input.Path,
+			Referrer:      input.Referrer,
+			UTMSource:     input.UTMSource,
+			UTMMedium:     input.UTMMedium,
+			UTMCampaign:   input.UTMCampaign,
+			Duration:      0,
+			PageViewCount: 1,
 		}
 		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
 			return fmt.Errorf("create session: %w", err)
 		}
 	} else {
 		// Update existing session
-		session.LastSeenAt = time.Now()
-		session.ExitPage = input.Path
-		session.PageViews++
-		session.IsBounce = false
-		if session.EventOnly {
-			session.EventOnly = false
-		}
-		session.Duration = int(time.Since(session.StartedAt).Seconds())
-		// Update country if not set
-		if session.Country == "" && country != "" {
-			session.Country = country
-		}
+		session.ExitTime = nowUnix
+		session.ExitHour = nowUnix / 3600
+		session.ExitDay = nowUnix / 86400
+		session.ExitPath = input.Path
+		session.PageViewCount++
+		session.Duration = int(nowUnix - session.EnterTime)
 		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
 			return fmt.Errorf("update session: %w", err)
 		}
 	}
 
-	// Deduplicate page views: check if same visitor viewed same page in last 10 seconds
+	// Deduplicate page views: check if same session viewed same page in last 10 seconds
 	// This prevents duplicate counts from double-clicks, SPA route changes, or script reloads
-	recentPageView, _ := s.analyticsRepo.GetRecentPageView(ctx, site.ID, visitorID, input.Path, time.Now().Add(-10*time.Second))
-	if recentPageView != nil {
+	recentEvent, _ := s.getRecentPageViewEvent(ctx, session.ID, input.Path, nowUnix-10)
+	if recentEvent != nil {
 		// Same page view within 10 seconds - ignore to prevent duplicates
 		return nil
 	}
 
-	// Record page view
-	pageView := &models.PageView{
-		SiteID:    site.ID,
+	// Create Event record (Type=EventTypePageview=0)
+	event := &models.Event{
 		SessionID: session.ID,
-		VisitorID: visitorID,
+		Time:      nowUnix,
+		Hour:      nowUnix / 3600,
+		Day:       nowUnix / 86400,
 		Path:      input.Path,
-		Title:     input.Title,
-		Referrer:  input.Referrer,
+		Name:      input.Title,
+		Type:      models.EventTypePageview,
+		DefinitionID: nil,
 	}
 
-	if err := s.analyticsRepo.CreatePageView(ctx, pageView); err != nil {
-		return fmt.Errorf("create page view: %w", err)
+	if err := s.analyticsRepo.CreateEvent(ctx, event); err != nil {
+		return fmt.Errorf("create event: %w", err)
 	}
 	return nil
+}
+
+// findOrCreateClient finds an existing client by hash or creates a new one
+func (s *AnalyticsService) findOrCreateClient(ctx context.Context, siteID int64, hash, device, browser, os, screenSize, country string) (*models.Client, error) {
+	client, err := s.analyticsRepo.FindOrCreateClient(ctx, siteID, hash, device, browser, os, screenSize, country)
+	if err != nil {
+		return nil, fmt.Errorf("find or create client: %w", err)
+	}
+	return client, nil
+}
+
+// getActiveSession finds an active session for a client (within timeout)
+func (s *AnalyticsService) getActiveSession(ctx context.Context, siteID, clientID int64, since time.Time) (*models.Session, error) {
+	session, err := s.analyticsRepo.GetActiveSession(ctx, siteID, clientID, since.Unix())
+	if err != nil {
+		return nil, fmt.Errorf("get active session: %w", err)
+	}
+	return session, nil
+}
+
+// getRecentPageViewEvent checks if the same page was viewed recently in the same session
+func (s *AnalyticsService) getRecentPageViewEvent(ctx context.Context, sessionID int64, path string, since int64) (*models.Event, error) {
+	event, err := s.analyticsRepo.GetRecentPageViewEvent(ctx, sessionID, path, since)
+	if err != nil {
+		return nil, fmt.Errorf("get recent pageview event: %w", err)
+	}
+	return event, nil
 }
 
 // CollectEvent records a custom event
@@ -220,70 +251,136 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		return nil
 	}
 
-	visitorID := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
+	// Generate anonymous visitor ID (SHA-256 hash)
+	visitorHash := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
 
-	// Try to find existing session
+	// Parse user agent
+	ua := useragent.Parse(input.UserAgent)
+	device := categorizeDevice(ua)
+	browser := ua.Name
+	if browser == "" {
+		browser = "Other"
+	}
+	os := ua.OS
+	if os == "" {
+		os = "Other"
+	}
+	screenSize := "" // Not available for custom events
+
+	// Get country from IP (only if enabled for the site)
+	country := ""
+	if site.TrackCountry && s.geoIPService != nil {
+		country = s.geoIPService.GetCountryName(input.IP)
+	}
+
+	// Find or create Client record
+	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country)
+	if err != nil {
+		return fmt.Errorf("find or create client: %w", err)
+	}
+
+	// Current time for timestamps
 	now := time.Now()
+	nowUnix := now.Unix()
+
+	// Try to find existing session (within 30 minutes)
 	sessionTimeout := now.Add(-30 * time.Minute)
-	session, _ := s.analyticsRepo.GetSessionByVisitor(ctx, site.ID, visitorID, sessionTimeout)
+	session, _ := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
 
 	if session == nil {
-		ua := useragent.Parse(input.UserAgent)
-		device := categorizeDevice(ua)
-		browser := ua.Name
-		if browser == "" {
-			browser = "Other"
+		// Create new session for event-only session
+		entryPath := input.Path
+		if entryPath == "" {
+			entryPath = "/"
 		}
-		os := ua.OS
-		if os == "" {
-			os = "Other"
-		}
-
-		country := ""
-		if site.TrackCountry && s.geoIPService != nil {
-			country = s.geoIPService.GetCountryName(input.IP)
-		}
-
 		session = &models.Session{
-			SiteID:     site.ID,
-			VisitorID:  visitorID,
-			StartedAt:  now,
-			LastSeenAt: now,
-			EntryPage:  input.Path,
-			ExitPage:   input.Path,
-			Device:     device,
-			Browser:    browser,
-			OS:         os,
-			Country:    country,
-			IsBounce:   true,
-			EventOnly:  true,
+			SiteID:        site.ID,
+			ClientID:      client.ID,
+			EnterTime:     nowUnix,
+			EnterHour:     nowUnix / 3600,
+			EnterDay:      nowUnix / 86400,
+			EnterPath:     entryPath,
+			ExitTime:      nowUnix,
+			ExitHour:      nowUnix / 3600,
+			ExitDay:       nowUnix / 86400,
+			ExitPath:      entryPath,
+			Referrer:      "",
+			UTMSource:     "",
+			UTMMedium:     "",
+			UTMCampaign:   "",
+			Duration:      0,
+			PageViewCount: 0, // Event-only session starts with 0 pageviews
 		}
 		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
 			return fmt.Errorf("create session: %w", err)
 		}
 	} else {
-		session.LastSeenAt = now
+		// Update existing session
+		session.ExitTime = nowUnix
+		session.ExitHour = nowUnix / 3600
+		session.ExitDay = nowUnix / 86400
 		if input.Path != "" {
-			session.ExitPage = input.Path
+			session.ExitPath = input.Path
 		}
-		session.Duration = int(now.Sub(session.StartedAt).Seconds())
+		session.Duration = int(nowUnix - session.EnterTime)
 		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
 			return fmt.Errorf("update session: %w", err)
 		}
 	}
 
+	// Create Event record with Type=EventTypeCustom=1
 	event := &models.Event{
-		SiteID:     site.ID,
-		SessionID:  session.ID,
-		VisitorID:  visitorID,
-		Name:       input.Name,
-		Path:       input.Path,
-		Properties: sanitizedProps,
+		SessionID:    session.ID,
+		Time:         nowUnix,
+		Hour:         nowUnix / 3600,
+		Day:          nowUnix / 86400,
+		Path:         input.Path,
+		Name:         input.Name,
+		Type:         models.EventTypeCustom,
+		DefinitionID: &definition.ID,
 	}
 
 	if err := s.analyticsRepo.CreateEvent(ctx, event); err != nil {
 		return fmt.Errorf("create event: %w", err)
 	}
+
+	// Store event properties in EventData table
+	if sanitizedProps != "" {
+		// Parse the JSON properties
+		var propsMap map[string]string
+		if err := json.Unmarshal([]byte(sanitizedProps), &propsMap); err != nil {
+			return fmt.Errorf("unmarshal sanitized properties: %w", err)
+		}
+
+		// Build a map of field keys to IDs for fast lookup
+		fieldMap := make(map[string]int64, len(definition.Fields))
+		for _, field := range definition.Fields {
+			fieldMap[field.Key] = field.ID
+		}
+
+		// Create EventData records for each property
+		eventDataList := make([]*models.EventData, 0, len(propsMap))
+		for key, value := range propsMap {
+			fieldID, exists := fieldMap[key]
+			if !exists {
+				continue // Skip if field not found in definition
+			}
+
+			eventDataList = append(eventDataList, &models.EventData{
+				EventID: event.ID,
+				FieldID: fieldID,
+				Value:   value,
+			})
+		}
+
+		// Batch insert all event data
+		if len(eventDataList) > 0 {
+			if err := s.analyticsRepo.CreateEventDataBatch(ctx, eventDataList); err != nil {
+				return fmt.Errorf("create event data batch: %w", err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -464,6 +561,72 @@ func (s *AnalyticsService) GetEventsWithTotal(ctx context.Context, siteID int64,
 	return events, total, nil
 }
 
+// GetEventsWithTotalAndFilter retrieves events with total count for pagination and filtering
+func (s *AnalyticsService) GetEventsWithTotalAndFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit, offset int) ([]*models.Event, int, error) {
+	events, err := s.analyticsRepo.GetEventsWithFilter(ctx, siteID, from, to, referrer, device, page, country, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get events with filter: %w", err)
+	}
+
+	total, err := s.analyticsRepo.GetEventCountWithFilter(ctx, siteID, from, to, referrer, device, page, country)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get event count with filter: %w", err)
+	}
+
+	return events, total, nil
+}
+
+// EventCountWithEvent represents an event count with its most recent event
+type EventCountWithEvent struct {
+	Event *models.Event
+	Count int
+}
+
+// GetEventCounts retrieves aggregated event counts by name
+func (s *AnalyticsService) GetEventCounts(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit int) ([]EventCountWithEvent, error) {
+	results, err := s.analyticsRepo.GetEventCountsGrouped(ctx, siteID, from, to, referrer, device, page, country, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get event counts grouped: %w", err)
+	}
+
+	if len(results) == 0 {
+		return []EventCountWithEvent{}, nil
+	}
+
+	// Extract event IDs
+	eventIDs := make([]int64, len(results))
+	for i, result := range results {
+		eventIDs[i] = result.EventID
+	}
+
+	// Fetch full event details
+	events, err := s.analyticsRepo.GetEventsByIDs(ctx, eventIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get events by IDs: %w", err)
+	}
+
+	// Create map of event ID to event
+	eventMap := make(map[int64]*models.Event, len(events))
+	for _, event := range events {
+		eventMap[event.ID] = event
+	}
+
+	// Build final result
+	eventCounts := make([]EventCountWithEvent, 0, len(results))
+	for _, result := range results {
+		event, ok := eventMap[result.EventID]
+		if !ok {
+			continue
+		}
+		eventCounts = append(eventCounts, EventCountWithEvent{
+			Event: event,
+			Count: result.Count,
+		})
+	}
+
+	return eventCounts, nil
+}
+
 // Helper functions for visitor identification and user agent parsing
 
 // generateVisitorID creates a privacy-preserving visitor identifier
@@ -511,7 +674,7 @@ func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionF
 		}
 
 		switch field.Type {
-		case eventFieldTypeString:
+		case models.FieldTypeString:
 			strValue, ok := value.(string)
 			if !ok {
 				return "", false, nil
@@ -524,13 +687,25 @@ func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionF
 				strValue = strValue[:maxLen]
 			}
 			sanitized[key] = strValue
-		case eventFieldTypeNumber:
+		case models.FieldTypeInt:
+			// Accept both int and float for int type
+			switch v := value.(type) {
+			case float64:
+				sanitized[key] = int64(v)
+			case int:
+				sanitized[key] = int64(v)
+			case int64:
+				sanitized[key] = v
+			default:
+				return "", false, nil
+			}
+		case models.FieldTypeFloat:
 			numberValue, ok := value.(float64)
 			if !ok {
 				return "", false, nil
 			}
 			sanitized[key] = numberValue
-		case eventFieldTypeBoolean:
+		case models.FieldTypeBool:
 			boolValue, ok := value.(bool)
 			if !ok {
 				return "", false, nil

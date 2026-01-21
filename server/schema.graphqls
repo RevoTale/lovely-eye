@@ -45,7 +45,7 @@ type DashboardStats {
   browsers: [BrowserStats!]!
   devices(paging: PagingInput!): PagedDeviceStats!
   countries(paging: PagingInput!): PagedCountryStats!
-  dailyStats(bucket: TimeBucket = DAILY, limit: Int): [DailyStats!]!
+  dailyStats(bucket: TimeBucket = DAILY, limit: Int, offset: Int): [DailyStats!]!
 }
 
 type PageStats {
@@ -164,6 +164,11 @@ type EventsResult {
   total: Int!
 }
 
+type EventCount {
+  event: Event!
+  count: Int!
+}
+
 enum EventFieldType {
   STRING
   NUMBER
@@ -251,7 +256,9 @@ type Query {
   geoIPStatus: GeoIPStatus!
   geoIPCountries(search: String): [GeoIPCountry!]!
   """Get events for a site with pagination"""
-  events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!
+  events(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, limit: Int, offset: Int): EventsResult!
+  """Get event counts aggregated by event with the most recent occurrence"""
+  eventCounts(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, limit: Int): [EventCount!]!
   """Get event definitions for a site"""
   eventDefinitions(siteId: ID!): [EventDefinition!]!
 }

@@ -37,12 +37,14 @@ func main() {
 		&models.User{},
 		&models.Site{},
 		&models.SiteDomain{},
+		&models.SiteBlockedIP{},
+		&models.SiteBlockedCountry{},
+		&models.Client{},
 		&models.Session{},
-		&models.PageView{},
 		&models.Event{},
 		&models.EventDefinition{},
 		&models.EventDefinitionField{},
-		&models.DailyStats{},
+		&models.EventData{},
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load schema: %v\n", err)

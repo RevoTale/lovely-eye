@@ -1,32 +1,23 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, type ChartConfig } from '@/components/ui';
+import { Card, CardContent, CardHeader, CardTitle, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { TrendingUp } from 'lucide-react';
-import type { DailyStats } from '@/gql/graphql';
+import { CHART_CONFIG, CHART_MARGIN, TICK_MARGIN } from '@/lib/chart-config';
+import { ChartSkeleton } from '@/components/chart-skeleton';
+import { useChartDataLoader } from '@/hooks/use-chart-data-loader';
 
 interface OverviewChartSectionProps {
-  dailyStats: DailyStats[];
+  siteId: string;
+  dateRange: { from: Date; to: Date } | null;
+  filter: Record<string, string[]> | null;
   bucket: 'daily' | 'hourly';
   onBucketChange: (bucket: 'daily' | 'hourly') => void;
 }
 
 const EMPTY_COUNT = 0;
-const CHART_MARGIN_TOP = 10;
-const CHART_MARGIN_RIGHT = 10;
-const CHART_MARGIN_LEFT = 0;
-const CHART_MARGIN_BOTTOM = 0;
-const CHART_MARGIN = {
-  top: CHART_MARGIN_TOP,
-  right: CHART_MARGIN_RIGHT,
-  left: CHART_MARGIN_LEFT,
-  bottom: CHART_MARGIN_BOTTOM,
-};
-const TICK_MARGIN = 8;
 
-export function OverviewChartSection({ dailyStats, bucket, onBucketChange }: OverviewChartSectionProps): React.JSX.Element | null {
-  if (dailyStats.length === EMPTY_COUNT) {
-    return null;
-  }
+export function OverviewChartSection({ siteId, dateRange, filter, bucket, onBucketChange }: OverviewChartSectionProps): React.JSX.Element | null {
+  const { loadedData, loading } = useChartDataLoader({ siteId, dateRange, filter, bucket });
 
   const formatLabel = (value: string): string => {
     const date = new Date(value);
@@ -36,6 +27,21 @@ export function OverviewChartSection({ dailyStats, bucket, onBucketChange }: Ove
     }
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
+
+  const chartData = loadedData.map(stat => ({
+    date: formatLabel(stat.date),
+    visitors: stat.visitors,
+    pageViews: stat.pageViews,
+    sessions: stat.sessions,
+  }));
+
+  if (loading && loadedData.length === EMPTY_COUNT) {
+    return <ChartSkeleton />;
+  }
+
+  if (chartData.length === EMPTY_COUNT && !loading) {
+    return null;
+  }
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -64,30 +70,9 @@ export function OverviewChartSection({ dailyStats, bucket, onBucketChange }: Ove
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer
-          config={{
-            visitors: {
-              label: 'Visitors',
-              color: 'hsl(var(--primary))',
-            },
-            pageViews: {
-              label: 'Page Views',
-              color: 'hsl(var(--chart-2))',
-            },
-            sessions: {
-              label: 'Sessions',
-              color: 'hsl(var(--chart-3))',
-            },
-          } satisfies ChartConfig}
-          className="h-[300px] w-full"
-        >
+        <ChartContainer config={CHART_CONFIG} className="h-[300px] w-full">
           <AreaChart
-            data={dailyStats.map(stat => ({
-              date: formatLabel(stat.date),
-              visitors: stat.visitors,
-              pageViews: stat.pageViews,
-              sessions: stat.sessions,
-            }))}
+            data={chartData}
             margin={CHART_MARGIN}
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />

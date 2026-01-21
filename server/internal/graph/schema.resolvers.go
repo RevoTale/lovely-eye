@@ -128,7 +128,7 @@ func (r *dashboardStatsResolver) Countries(ctx context.Context, obj *model.Dashb
 }
 
 // DailyStats is the resolver for the dailyStats field.
-func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int) ([]*model.DailyStats, error) {
+func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int, offset *int) ([]*model.DailyStats, error) {
 	var selectedBucket services.TimeBucket
 	switch bucketValue := bucketValueOrDefault(bucket); bucketValue {
 	case model.TimeBucketHourly:
@@ -159,11 +159,25 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 	items := make([]*model.DailyStats, 0, len(stats))
 	for _, stat := range stats {
 		items = append(items, &model.DailyStats{
-			Date:      stat.Date,
+			Date:      time.Unix(stat.DateBucket, 0), // Convert integer bucket to timestamp here
 			Visitors:  stat.Visitors,
 			PageViews: stat.PageViews,
 			Sessions:  stat.Sessions,
 		})
+	}
+
+	// Apply offset pagination
+	offsetValue := 0
+	if offset != nil {
+		offsetValue = *offset
+	}
+
+	if offsetValue >= len(items) {
+		return []*model.DailyStats{}, nil
+	}
+
+	if offsetValue > 0 {
+		items = items[offsetValue:]
 	}
 
 	return items, nil
@@ -597,7 +611,7 @@ func (r *queryResolver) GeoIPCountries(ctx context.Context, search *string) ([]*
 }
 
 // Events is the resolver for the events field.
-func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) (*model.EventsResult, error) {
+func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) (*model.EventsResult, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
@@ -627,12 +641,68 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 		off = *offset
 	}
 
-	events, total, err := r.AnalyticsService.GetEventsWithTotal(ctx, id, from, to, lim, off)
+	// Get filters
+	referrer, device, page, country := parseFilterInput(filter)
+
+	var events []*models.Event
+	var total int
+	if filter == nil || (len(referrer) == 0 && len(device) == 0 && len(page) == 0 && len(country) == 0) {
+		events, total, err = r.AnalyticsService.GetEventsWithTotal(ctx, id, from, to, lim, off)
+	} else {
+		events, total, err = r.AnalyticsService.GetEventsWithTotalAndFilter(ctx, id, from, to, referrer, device, page, country, lim, off)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events: %w", err)
 	}
 
 	return convertToGraphQLEvents(events, total), nil
+}
+
+// EventCounts is the resolver for the eventCounts field.
+func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int) ([]*model.EventCount, error) {
+	claims := auth.GetUserFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized")
+	}
+
+	id, err := strconv.ParseInt(siteID, 10, 64)
+	if err != nil {
+		return nil, errors.New("invalid site ID")
+	}
+
+	// Verify ownership
+	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get site: %w", err)
+	}
+
+	// Parse date range
+	from, to := parseDateRangeInput(dateRange)
+
+	// Default limit
+	lim := 50
+	if limit != nil {
+		lim = *limit
+	}
+
+	// Get filters
+	referrer, device, page, country := parseFilterInput(filter)
+
+	eventCounts, err := r.AnalyticsService.GetEventCounts(ctx, id, from, to, referrer, device, page, country, lim)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get event counts: %w", err)
+	}
+
+	// Convert to GraphQL type
+	result := make([]*model.EventCount, 0, len(eventCounts))
+	for _, ec := range eventCounts {
+		result = append(result, &model.EventCount{
+			Event: convertToGraphQLEvent(ec.Event),
+			Count: ec.Count,
+		})
+	}
+
+	return result, nil
 }
 
 // EventDefinitions is the resolver for the eventDefinitions field.
