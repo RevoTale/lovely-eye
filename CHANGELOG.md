@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/RevoTale/lovely-eye/compare/v1.2.0...v1.2.1) (2026-01-21)
+
+
+### Bug Fixes
+
+* by download stats I analyzed there is currently no users of this software, so I can do the silent breaking change with migrations to fix migrations issue the hard way. Part of https://github.com/RevoTale/lovely-eye/issues/32. ([9ce44c0](https://github.com/RevoTale/lovely-eye/commit/9ce44c0c3556776a8d623d79a6f95bbe666f54a9))
+
 ## [1.2.0](https://github.com/RevoTale/lovely-eye/compare/v1.1.4...v1.2.0) (2026-01-21)
 
 
