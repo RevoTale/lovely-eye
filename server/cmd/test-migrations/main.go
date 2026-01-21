@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/lovely-eye/server/internal/config"
 	"github.com/lovely-eye/server/internal/database"
@@ -14,129 +17,136 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	cfg := config.Load()
+
+	// CI-friendly: cancel on SIGINT/SIGTERM + hard timeout.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
 
 	db, err := database.New(&cfg.Database)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", "error", err)
+		return 1
 	}
-	defer func ()  {
-		err := database.Close(db)
-		if nil != err {
-			slog.Error("db close error","error",err.Error())
+	defer func() {
+		if err := database.Close(db); err != nil {
+			slog.Error("db close error", "error", err)
 		}
 	}()
 
 	migs, err := migrations.NewMigrations()
 	if err != nil {
-		log.Fatalf("Failed to load migrations: %v", err)
+		slog.Error("failed to load migrations", "error", err)
+		return 1
 	}
 
-	migrator := migrate.NewMigrator(db, migs)
-	ctx := context.Background()
+	// TODO fix the migrations tests when https://github.com/uptrace/bun/issues/1318 will be resolved
+	// IMPORTANT: makes "applied" mean "successfully applied".
+	// Without it, Bun may mark a failed migration as applied so you can rollback. :contentReference[oaicite:2]{index=2}
+	migrator := migrate.NewMigrator(db, migs, migrate.WithMarkAppliedOnSuccess(true))
 
 	dbType := strings.ToUpper(cfg.Database.Driver)
 	fmt.Printf("=== Testing %s Migrations ===\n", dbType)
 	fmt.Printf("DB_DRIVER: %s\n", cfg.Database.Driver)
 	fmt.Printf("DB_DSN: %s\n\n", cfg.Database.DSN)
 
-	// Step 1: Initialize
+	// Step 1: Initialize migration tables
 	fmt.Println("Step 1: Initialize migration tables")
 	if err := migrator.Init(ctx); err != nil {
-		log.Fatalf("Init failed: %v", err)
+		slog.Error("init failed", "error", err)
+		return 1
 	}
 
-	// Step 2: Check initial status
-	fmt.Println("\nStep 2: Check initial status (should show no applied migrations)")
-	ms, err := migrator.MigrationsWithStatus(ctx)
-	if err != nil {
-		log.Fatalf("Status check failed: %v", err)
+	printStatus := func(title string) (migrate.MigrationSlice, int) {
+		ms, err := migrator.MigrationsWithStatus(ctx)
+		if err != nil {
+			slog.Error("status check failed", "error", err)
+			return nil, 1
+		}
+		fmt.Printf("\n%s\n", title)
+		fmt.Printf("applied: %d\n", len(ms.Applied()))
+		fmt.Printf("unapplied: %d\n", len(ms.Unapplied()))
+		fmt.Printf("last group: %v\n", ms.LastGroup())
+		return ms, 0
 	}
-	fmt.Printf("migrations: %s\n", ms)
-	fmt.Printf("unapplied migrations: %s\n", ms.Unapplied())
-	fmt.Printf("last migration group: %s\n", ms.LastGroup())
+
+	// Step 2: Initial status
+	if _, code := printStatus("Step 2: Initial status"); code != 0 {
+		return code
+	}
 
 	// Step 3: Apply all migrations
 	fmt.Println("\nStep 3: Apply all migrations (UP)")
 	group, err := migrator.Migrate(ctx)
 	if err != nil {
-		log.Fatalf("Migration failed: %v", err)
+		slog.Error("migration up failed", "error", err)
+		return 1
 	}
 	if group.IsZero() {
-		fmt.Println("there are no new migrations to run (database is up to date)")
+		fmt.Println("no new migrations to run (database is up to date)")
 	} else {
 		fmt.Printf("migrated to %s\n", group)
 	}
 
-	// Step 4: Check status after migration
-	fmt.Println("\nStep 4: Check status after migration (should show all applied)")
-	ms, err = migrator.MigrationsWithStatus(ctx)
-	if err != nil {
-		log.Fatalf("Status check failed: %v", err)
+	// Step 4: Status after UP + verify nothing left unapplied
+	ms, code := printStatus("Step 4: Status after migration (should show all applied)")
+	if code != 0 {
+		return code
 	}
-	fmt.Printf("migrations: %s\n", ms)
-	fmt.Printf("unapplied migrations: %s\n", ms.Unapplied())
-	fmt.Printf("last migration group: %s\n", ms.LastGroup())
-
-	// Verify all migrations were actually applied
 	if len(ms.Unapplied()) > 0 {
-		log.Fatalf("ERROR: Not all migrations were applied. Unapplied: %s", ms.Unapplied())
+		slog.Error("not all migrations were applied", "unapplied", fmt.Sprint(ms.Unapplied()))
+		return 1
 	}
 
-	// Step 5: Count and rollback all migrations
+	// Step 5: Rollback all migration groups
 	fmt.Println("\nStep 5: Rollback all migrations (DOWN)")
-	appliedCount := len(ms.Applied())
-	fmt.Printf("Found %d applied migrations to rollback\n", appliedCount)
-
-	for i := 0; i < appliedCount; i++ {
-		fmt.Printf("Rollback iteration %d of %d\n", i+1, appliedCount)
+	for {
 		group, err := migrator.Rollback(ctx)
 		if err != nil {
-			log.Fatalf("Rollback failed: %v", err)
+			slog.Error("rollback failed", "error", err)
+			return 1
 		}
 		if group.IsZero() {
-			fmt.Println("there are no groups to roll back")
+			fmt.Println("no more groups to roll back")
 			break
 		}
 		fmt.Printf("rolled back %s\n", group)
 	}
 
-	// Step 6: Check status after rollback
-	fmt.Println("\nStep 6: Check status after rollback (should show no applied migrations)")
-	ms, err = migrator.MigrationsWithStatus(ctx)
-	if err != nil {
-		log.Fatalf("Status check failed: %v", err)
+	// Step 6: Status after rollback
+	if _, code := printStatus("Step 6: Status after rollback (should show none applied)"); code != 0 {
+		return code
 	}
-	fmt.Printf("migrations: %s\n", ms)
-	fmt.Printf("unapplied migrations: %s\n", ms.Unapplied())
-	fmt.Printf("last migration group: %s\n", ms.LastGroup())
 
-	// Step 7: Apply migrations again
-	fmt.Println("\nStep 7: Apply migrations again to verify idempotency")
+	// Step 7: Apply again (idempotency)
+	fmt.Println("\nStep 7: Apply migrations again (idempotency)")
 	group, err = migrator.Migrate(ctx)
 	if err != nil {
-		log.Fatalf("Migration failed: %v", err)
+		slog.Error("migration up (2nd run) failed", "error", err)
+		return 1
 	}
 	if group.IsZero() {
-		fmt.Println("there are no new migrations to run (database is up to date)")
+		fmt.Println("no new migrations to run (database is up to date)")
 	} else {
 		fmt.Printf("migrated to %s\n", group)
 	}
 
-	// Step 8: Final status check
-	fmt.Println("\nStep 8: Final status check")
-	ms, err = migrator.MigrationsWithStatus(ctx)
-	if err != nil {
-		log.Fatalf("Status check failed: %v", err)
+	// Step 8: Final status + verify
+	ms, code = printStatus("Step 8: Final status check")
+	if code != 0 {
+		return code
 	}
-	fmt.Printf("migrations: %s\n", ms)
-	fmt.Printf("unapplied migrations: %s\n", ms.Unapplied())
-	fmt.Printf("last migration group: %s\n", ms.LastGroup())
-
-	// Verify all migrations were applied (idempotency check)
 	if len(ms.Unapplied()) > 0 {
-		log.Fatalf("ERROR: Not all migrations were applied on second run. Unapplied: %s", ms.Unapplied())
+		slog.Error("not all migrations were applied on second run", "unapplied", fmt.Sprint(ms.Unapplied()))
+		return 1
 	}
 
 	fmt.Printf("\n✓ %s migration test completed successfully\n", dbType)
+	return 0
 }
