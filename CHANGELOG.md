@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/RevoTale/lovely-eye/compare/v1.1.4...v1.2.0) (2026-01-21)
+
+
+### Features
+
+* batch loading of the chart data to prevent downfall during the large amount traffic ([fb20c85](https://github.com/RevoTale/lovely-eye/commit/fb20c851ce4e9785a354f0ca76297fbe7ffaee0f))
+* optimize the event loading, recuce bandwidth usage. ([298c794](https://github.com/RevoTale/lovely-eye/commit/298c794e5a50d318c3339ed6e6253e2a0870974a))
+
 ## [1.1.4](https://github.com/RevoTale/lovely-eye/compare/v1.1.3...v1.1.4) (2026-01-20)
 
 
