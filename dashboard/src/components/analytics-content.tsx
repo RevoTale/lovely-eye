@@ -3,7 +3,7 @@ import type {
   CountryStats,
   DashboardStats,
   DeviceStats,
-  Event,
+  EventCount,
   EventsResult,
   PageStats,
   ReferrerStats,
@@ -29,7 +29,7 @@ interface AnalyticsContentProps {
   realtime: RealtimeStats | undefined;
   eventsLoading: boolean;
   eventsResult: EventsResult | undefined;
-  eventsCounts: Event[];
+  eventsCounts: EventCount[];
   eventsPage: number;
   eventsPageSize: number;
   onEventsPageChange: (page: number) => void;

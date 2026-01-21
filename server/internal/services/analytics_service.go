@@ -561,6 +561,72 @@ func (s *AnalyticsService) GetEventsWithTotal(ctx context.Context, siteID int64,
 	return events, total, nil
 }
 
+// GetEventsWithTotalAndFilter retrieves events with total count for pagination and filtering
+func (s *AnalyticsService) GetEventsWithTotalAndFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit, offset int) ([]*models.Event, int, error) {
+	events, err := s.analyticsRepo.GetEventsWithFilter(ctx, siteID, from, to, referrer, device, page, country, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get events with filter: %w", err)
+	}
+
+	total, err := s.analyticsRepo.GetEventCountWithFilter(ctx, siteID, from, to, referrer, device, page, country)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get event count with filter: %w", err)
+	}
+
+	return events, total, nil
+}
+
+// EventCountWithEvent represents an event count with its most recent event
+type EventCountWithEvent struct {
+	Event *models.Event
+	Count int
+}
+
+// GetEventCounts retrieves aggregated event counts by name
+func (s *AnalyticsService) GetEventCounts(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit int) ([]EventCountWithEvent, error) {
+	results, err := s.analyticsRepo.GetEventCountsGrouped(ctx, siteID, from, to, referrer, device, page, country, limit)
+	if err != nil {
+		return nil, fmt.Errorf("get event counts grouped: %w", err)
+	}
+
+	if len(results) == 0 {
+		return []EventCountWithEvent{}, nil
+	}
+
+	// Extract event IDs
+	eventIDs := make([]int64, len(results))
+	for i, result := range results {
+		eventIDs[i] = result.EventID
+	}
+
+	// Fetch full event details
+	events, err := s.analyticsRepo.GetEventsByIDs(ctx, eventIDs)
+	if err != nil {
+		return nil, fmt.Errorf("get events by IDs: %w", err)
+	}
+
+	// Create map of event ID to event
+	eventMap := make(map[int64]*models.Event, len(events))
+	for _, event := range events {
+		eventMap[event.ID] = event
+	}
+
+	// Build final result
+	eventCounts := make([]EventCountWithEvent, 0, len(results))
+	for _, result := range results {
+		event, ok := eventMap[result.EventID]
+		if !ok {
+			continue
+		}
+		eventCounts = append(eventCounts, EventCountWithEvent{
+			Event: event,
+			Count: result.Count,
+		})
+	}
+
+	return eventCounts, nil
+}
+
 // Helper functions for visitor identification and user agent parsing
 
 // generateVisitorID creates a privacy-preserving visitor identifier

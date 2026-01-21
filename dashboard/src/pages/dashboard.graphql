@@ -69,10 +69,26 @@ query Realtime($siteId: ID!) {
   }
 }
 
-query Events($siteId: ID!, $dateRange: DateRangeInput, $limit: Int, $offset: Int) {
-  events(siteId: $siteId, dateRange: $dateRange, limit: $limit, offset: $offset) {
+query Events($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $limit: Int, $offset: Int) {
+  events(siteId: $siteId, dateRange: $dateRange, filter: $filter, limit: $limit, offset: $offset) {
     total
     events {
+      id
+      name
+      path
+      createdAt
+      properties {
+        key
+        value
+      }
+    }
+  }
+}
+
+query EventCounts($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $limit: Int) {
+  eventCounts(siteId: $siteId, dateRange: $dateRange, filter: $filter, limit: $limit) {
+    count
+    event {
       id
       name
       path

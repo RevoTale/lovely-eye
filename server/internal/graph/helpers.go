@@ -31,6 +31,37 @@ func parseDateRangeInput(input *model.DateRangeInput) (time.Time, time.Time) {
 	return from, to
 }
 
+func parseFilterInput(input *model.FilterInput) (referrer []string, device []string, page []string, country []string) {
+	if input == nil {
+		return nil, nil, nil, nil
+	}
+	return input.Referrer, input.Device, input.Page, input.Country
+}
+
+func convertToGraphQLEvent(e *models.Event) *model.Event {
+	// Convert unix timestamp to time.Time
+	createdAt := time.Unix(e.Time, 0)
+
+	// Convert EventData to EventProperty
+	properties := make([]*model.EventProperty, 0, len(e.Data))
+	for _, data := range e.Data {
+		if data.Field != nil {
+			properties = append(properties, &model.EventProperty{
+				Key:   data.Field.Key,
+				Value: data.Value,
+			})
+		}
+	}
+
+	return &model.Event{
+		ID:         strconv.FormatInt(e.ID, 10),
+		Name:       e.Name,
+		Path:       e.Path,
+		Properties: properties,
+		CreatedAt:  createdAt,
+	}
+}
+
 
 func convertToGraphQLEvents(events []*models.Event, total int) *model.EventsResult {
 	result := &model.EventsResult{

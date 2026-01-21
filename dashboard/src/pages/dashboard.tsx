@@ -5,6 +5,7 @@ import {
   DashboardDocument,
   RealtimeDocument,
   EventsDocument,
+  EventCountsDocument,
   SiteDocument,
 } from '@/gql/graphql';
 import { siteDetailRoute } from '@/router';
@@ -188,6 +189,7 @@ export function DashboardPage(): React.JSX.Element {
     variables: {
       siteId,
       dateRange: dateRange ?? null,
+      filter: Object.keys(filter).length > EMPTY_COUNT ? filter : null,
       limit: EVENTS_PAGE_SIZE,
       offset: (eventsPage - PAGE_INDEX_OFFSET) * EVENTS_PAGE_SIZE,
     },
@@ -195,12 +197,12 @@ export function DashboardPage(): React.JSX.Element {
     pollInterval: DASHBOARD_POLL_INTERVAL_MS,
   });
 
-  const { data: eventsCountsData } = useQuery(EventsDocument, {
+  const { data: eventsCountsData } = useQuery(EventCountsDocument, {
     variables: {
       siteId,
       dateRange: dateRange ?? null,
+      filter: Object.keys(filter).length > EMPTY_COUNT ? filter : null,
       limit: EVENTS_COUNT_LIMIT,
-      offset: EMPTY_COUNT,
     },
     skip: !hasSiteId,
     pollInterval: DASHBOARD_POLL_INTERVAL_MS,
@@ -214,7 +216,7 @@ export function DashboardPage(): React.JSX.Element {
   const stats = dashboardData?.dashboard;
   const realtime = realtimeData?.realtime;
   const eventsResult = eventsData?.events;
-  const eventsCounts = eventsCountsData?.events.events ?? [];
+  const eventsCounts = eventsCountsData?.eventCounts ?? [];
   const topPagesResult = stats?.topPages;
   const referrersResult = stats?.topReferrers;
   const devicesResult = stats?.devices;

@@ -1,13 +1,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
-import type { EventsResult, Event } from '@/gql/graphql';
+import type { EventsResult, EventCount } from '@/gql/graphql';
 import { EventsCard } from '@/components/events-card';
 import { EventCountsCard } from '@/components/event-counts-card';
 
 interface EventsSectionProps {
   loading: boolean;
   eventsResult: EventsResult | undefined;
-  eventsCounts: Event[];
+  eventsCounts: EventCount[];
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
@@ -47,7 +47,7 @@ export function EventsSection({
         pageSize={pageSize}
         onPageChange={onPageChange}
       />
-      <EventCountsCard events={eventsCounts} />
+      <EventCountsCard eventCounts={eventsCounts} />
     </div>
   );
 }

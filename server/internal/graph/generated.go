@@ -102,6 +102,11 @@ type ComplexityRoot struct {
 		Properties func(childComplexity int) int
 	}
 
+	EventCount struct {
+		Count func(childComplexity int) int
+		Event func(childComplexity int) int
+	}
+
 	EventDefinition struct {
 		CreatedAt func(childComplexity int) int
 		Fields    func(childComplexity int) int
@@ -185,8 +190,9 @@ type ComplexityRoot struct {
 
 	Query struct {
 		Dashboard        func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) int
+		EventCounts      func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int) int
 		EventDefinitions func(childComplexity int, siteID string) int
-		Events           func(childComplexity int, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) int
+		Events           func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) int
 		GeoIPCountries   func(childComplexity int, search *string) int
 		GeoIPStatus      func(childComplexity int) int
 		Me               func(childComplexity int) int
@@ -264,7 +270,8 @@ type QueryResolver interface {
 	Realtime(ctx context.Context, siteID string) (*model.RealtimeStats, error)
 	GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, error)
 	GeoIPCountries(ctx context.Context, search *string) ([]*model.GeoIPCountry, error)
-	Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, limit *int, offset *int) (*model.EventsResult, error)
+	Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) (*model.EventsResult, error)
+	EventCounts(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int) ([]*model.EventCount, error)
 	EventDefinitions(ctx context.Context, siteID string) ([]*model.EventDefinition, error)
 }
 type RealtimeStatsResolver interface {
@@ -496,6 +503,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Event.Properties(childComplexity), true
+
+	case "EventCount.count":
+		if e.complexity.EventCount.Count == nil {
+			break
+		}
+
+		return e.complexity.EventCount.Count(childComplexity), true
+	case "EventCount.event":
+		if e.complexity.EventCount.Event == nil {
+			break
+		}
+
+		return e.complexity.EventCount.Event(childComplexity), true
 
 	case "EventDefinition.createdAt":
 		if e.complexity.EventDefinition.CreatedAt == nil {
@@ -835,6 +855,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Dashboard(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput)), true
+	case "Query.eventCounts":
+		if e.complexity.Query.EventCounts == nil {
+			break
+		}
+
+		args, err := ec.field_Query_eventCounts_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.EventCounts(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput), args["limit"].(*int)), true
 	case "Query.eventDefinitions":
 		if e.complexity.Query.EventDefinitions == nil {
 			break
@@ -856,7 +887,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Events(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["limit"].(*int), args["offset"].(*int)), true
+		return e.complexity.Query.Events(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput), args["limit"].(*int), args["offset"].(*int)), true
 	case "Query.geoIPCountries":
 		if e.complexity.Query.GeoIPCountries == nil {
 			break
@@ -1321,6 +1352,11 @@ type EventsResult {
   total: Int!
 }
 
+type EventCount {
+  event: Event!
+  count: Int!
+}
+
 enum EventFieldType {
   STRING
   NUMBER
@@ -1408,7 +1444,9 @@ type Query {
   geoIPStatus: GeoIPStatus!
   geoIPCountries(search: String): [GeoIPCountry!]!
   """Get events for a site with pagination"""
-  events(siteId: ID!, dateRange: DateRangeInput, limit: Int, offset: Int): EventsResult!
+  events(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, limit: Int, offset: Int): EventsResult!
+  """Get event counts aggregated by event with the most recent occurrence"""
+  eventCounts(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, limit: Int): [EventCount!]!
   """Get event definitions for a site"""
   eventDefinitions(siteId: ID!): [EventDefinition!]!
 }
@@ -1644,6 +1682,32 @@ func (ec *executionContext) field_Query_dashboard_args(ctx context.Context, rawA
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_eventCounts_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "siteId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["siteId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "dateRange", ec.unmarshalODateRangeInput2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDateRangeInput)
+	if err != nil {
+		return nil, err
+	}
+	args["dateRange"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter", ec.unmarshalOFilterInput2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐFilterInput)
+	if err != nil {
+		return nil, err
+	}
+	args["filter"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["limit"] = arg3
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_eventDefinitions_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1668,16 +1732,21 @@ func (ec *executionContext) field_Query_events_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["dateRange"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "filter", ec.unmarshalOFilterInput2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐFilterInput)
 	if err != nil {
 		return nil, err
 	}
-	args["limit"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "offset", ec.unmarshalOInt2ᚖint)
+	args["filter"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
 	if err != nil {
 		return nil, err
 	}
-	args["offset"] = arg3
+	args["limit"] = arg3
+	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "offset", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["offset"] = arg4
 	return args, nil
 }
 
@@ -2724,6 +2793,76 @@ func (ec *executionContext) fieldContext_Event_createdAt(_ context.Context, fiel
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Time does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _EventCount_event(ctx context.Context, field graphql.CollectedField, obj *model.EventCount) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_EventCount_event,
+		func(ctx context.Context) (any, error) {
+			return obj.Event, nil
+		},
+		nil,
+		ec.marshalNEvent2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEvent,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_EventCount_event(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EventCount",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Event_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Event_name(ctx, field)
+			case "path":
+				return ec.fieldContext_Event_path(ctx, field)
+			case "properties":
+				return ec.fieldContext_Event_properties(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Event_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Event", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _EventCount_count(ctx context.Context, field graphql.CollectedField, obj *model.EventCount) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_EventCount_count,
+		func(ctx context.Context) (any, error) {
+			return obj.Count, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_EventCount_count(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EventCount",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4639,7 +4778,7 @@ func (ec *executionContext) _Query_events(ctx context.Context, field graphql.Col
 		ec.fieldContext_Query_events,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Events(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["limit"].(*int), fc.Args["offset"].(*int))
+			return ec.resolvers.Query().Events(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["limit"].(*int), fc.Args["offset"].(*int))
 		},
 		nil,
 		ec.marshalNEventsResult2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventsResult,
@@ -4672,6 +4811,53 @@ func (ec *executionContext) fieldContext_Query_events(ctx context.Context, field
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_events_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_eventCounts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_eventCounts,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().EventCounts(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["limit"].(*int))
+		},
+		nil,
+		ec.marshalNEventCount2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCountᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_eventCounts(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "event":
+				return ec.fieldContext_EventCount_event(ctx, field)
+			case "count":
+				return ec.fieldContext_EventCount_count(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type EventCount", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_eventCounts_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -7884,6 +8070,50 @@ func (ec *executionContext) _Event(ctx context.Context, sel ast.SelectionSet, ob
 	return out
 }
 
+var eventCountImplementors = []string{"EventCount"}
+
+func (ec *executionContext) _EventCount(ctx context.Context, sel ast.SelectionSet, obj *model.EventCount) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, eventCountImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("EventCount")
+		case "event":
+			out.Values[i] = ec._EventCount_event(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "count":
+			out.Values[i] = ec._EventCount_count(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var eventDefinitionImplementors = []string{"EventDefinition"}
 
 func (ec *executionContext) _EventDefinition(ctx context.Context, sel ast.SelectionSet, obj *model.EventDefinition) graphql.Marshaler {
@@ -8715,6 +8945,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_events(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "eventCounts":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_eventCounts(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -9823,6 +10075,60 @@ func (ec *executionContext) marshalNEvent2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserve
 		return graphql.Null
 	}
 	return ec._Event(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNEventCount2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCountᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.EventCount) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNEventCount2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCount(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNEventCount2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCount(ctx context.Context, sel ast.SelectionSet, v *model.EventCount) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._EventCount(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNEventDefinition2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinition(ctx context.Context, sel ast.SelectionSet, v model.EventDefinition) graphql.Marshaler {

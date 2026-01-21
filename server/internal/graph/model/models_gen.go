@@ -16,6 +16,11 @@ type ActivePageStats struct {
 	Visitors int `json:"visitors"`
 }
 
+type EventCount struct {
+	Event *Event `json:"event"`
+	Count int    `json:"count"`
+}
+
 type FilterInput struct {
 	// Filter by specific referrer
 	Referrer []string `json:"referrer,omitempty"`

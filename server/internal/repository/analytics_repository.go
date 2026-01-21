@@ -156,6 +156,28 @@ func (r *AnalyticsRepository) GetEvents(ctx context.Context, siteID int64, from,
 	return events, nil
 }
 
+func (r *AnalyticsRepository) GetEventsWithFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit, offset int) ([]*models.Event, error) {
+	var events []*models.Event
+	fromUnix := from.Unix()
+	toUnix := to.Unix()
+	q := r.db.NewSelect().
+		Model(&events).
+		Relation("Data.Field").
+		Join("INNER JOIN sessions s ON e.session_id = s.id").
+		Where("s.site_id = ?", siteID).
+		Where("e.time >= ?", fromUnix).
+		Where("e.time <= ?", toUnix)
+	q = applyEventFilters(q, referrer, device, page, country)
+	err := q.Order("e.time DESC").
+		Limit(limit).
+		Offset(offset).
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get events with filter: %w", err)
+	}
+	return events, nil
+}
+
 func (r *AnalyticsRepository) CreateEventData(ctx context.Context, eventData *models.EventData) error {
 	_, err := r.db.NewInsert().Model(eventData).Exec(ctx)
 	if err != nil {
@@ -189,6 +211,82 @@ func (r *AnalyticsRepository) GetEventCount(ctx context.Context, siteID int64, f
 		return 0, fmt.Errorf("failed to get event count: %w", err)
 	}
 	return count, nil
+}
+
+func (r *AnalyticsRepository) GetEventCountWithFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string) (int, error) {
+	fromUnix := from.Unix()
+	toUnix := to.Unix()
+	q := r.db.NewSelect().
+		TableExpr("events e").
+		Join("INNER JOIN sessions s ON e.session_id = s.id").
+		Where("s.site_id = ?", siteID).
+		Where("e.time >= ?", fromUnix).
+		Where("e.time <= ?", toUnix)
+	q = applyEventFilters(q, referrer, device, page, country)
+	count, err := q.Count(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get event count with filter: %w", err)
+	}
+	return count, nil
+}
+
+// EventCountResult represents aggregated event count with the most recent event instance
+type EventCountResult struct {
+	Name  string
+	Count int
+	// Most recent event ID for this name (used to fetch full event details)
+	EventID int64
+}
+
+// GetEventCountsGrouped returns event counts grouped by name with the most recent event for each
+// This is used for the eventCounts GraphQL query to avoid fetching 200 full events just for counting
+func (r *AnalyticsRepository) GetEventCountsGrouped(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit int) ([]EventCountResult, error) {
+	fromUnix := from.Unix()
+	toUnix := to.Unix()
+
+	var results []EventCountResult
+	q := r.db.NewSelect().
+		TableExpr("events e").
+		Join("INNER JOIN sessions s ON e.session_id = s.id").
+		Column("e.name").
+		ColumnExpr("COUNT(*) as count").
+		ColumnExpr("MAX(e.id) as event_id").
+		Where("s.site_id = ?", siteID).
+		Where("e.time >= ?", fromUnix).
+		Where("e.time <= ?", toUnix).
+		Group("e.name").
+		Order("count DESC")
+
+	q = applyEventFilters(q, referrer, device, page, country)
+
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+
+	err := q.Scan(ctx, &results)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get event counts grouped: %w", err)
+	}
+
+	return results, nil
+}
+
+// GetEventsByIDs retrieves events by their IDs (used to fetch full event details for event counts)
+func (r *AnalyticsRepository) GetEventsByIDs(ctx context.Context, eventIDs []int64) ([]*models.Event, error) {
+	if len(eventIDs) == 0 {
+		return []*models.Event{}, nil
+	}
+
+	var events []*models.Event
+	err := r.db.NewSelect().
+		Model(&events).
+		Relation("Data.Field").
+		Where("e.id IN (?)", bun.In(eventIDs)).
+		Scan(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get events by IDs: %w", err)
+	}
+	return events, nil
 }
 
 func (r *AnalyticsRepository) GetVisitorCount(ctx context.Context, siteID int64, from, to time.Time) (int, error) {
