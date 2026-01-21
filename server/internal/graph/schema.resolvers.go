@@ -128,7 +128,7 @@ func (r *dashboardStatsResolver) Countries(ctx context.Context, obj *model.Dashb
 }
 
 // DailyStats is the resolver for the dailyStats field.
-func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int) ([]*model.DailyStats, error) {
+func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int, offset *int) ([]*model.DailyStats, error) {
 	var selectedBucket services.TimeBucket
 	switch bucketValue := bucketValueOrDefault(bucket); bucketValue {
 	case model.TimeBucketHourly:
@@ -164,6 +164,20 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 			PageViews: stat.PageViews,
 			Sessions:  stat.Sessions,
 		})
+	}
+
+	// Apply offset pagination
+	offsetValue := 0
+	if offset != nil {
+		offsetValue = *offset
+	}
+
+	if offsetValue >= len(items) {
+		return []*model.DailyStats{}, nil
+	}
+
+	if offsetValue > 0 {
+		items = items[offsetValue:]
 	}
 
 	return items, nil

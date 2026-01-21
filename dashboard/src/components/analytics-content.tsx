@@ -1,7 +1,7 @@
 import React from 'react';
 import type {
   CountryStats,
-  DashboardStats,
+  DashboardQuery,
   DeviceStats,
   EventCount,
   EventsResult,
@@ -23,7 +23,9 @@ const SECONDS_PER_MINUTE = 60;
 
 interface AnalyticsContentProps {
   siteId: string;
-  stats: DashboardStats;
+  stats: DashboardQuery['dashboard'];
+  dateRange: { from: Date; to: Date } | null;
+  filter: Record<string, string[]> | null;
   chartBucket: 'daily' | 'hourly';
   onChartBucketChange: (bucket: 'daily' | 'hourly') => void;
   realtime: RealtimeStats | undefined;
@@ -69,6 +71,8 @@ function formatDuration(seconds: number): string {
 export function AnalyticsContent({
   siteId,
   stats,
+  dateRange,
+  filter,
   chartBucket,
   onChartBucketChange,
   realtime,
@@ -130,7 +134,9 @@ export function AnalyticsContent({
       </div>
 
       <OverviewChartSection
-        dailyStats={stats.dailyStats}
+        siteId={siteId}
+        dateRange={dateRange}
+        filter={filter}
         bucket={chartBucket}
         onBucketChange={onChartBucketChange}
       />

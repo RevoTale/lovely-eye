@@ -31,8 +31,6 @@ const PAGE_INDEX_OFFSET = 1;
 const DASHBOARD_POLL_INTERVAL_MS = 60000;
 const REALTIME_POLL_INTERVAL_MS = 5000;
 const DEFAULT_STATS_BUCKET = 'daily';
-const DAILY_STATS_LIMIT = 365;
-const HOURLY_STATS_LIMIT = 168;
 
 type PageValue = string | string[] | undefined;
 
@@ -109,6 +107,14 @@ export function DashboardPage(): React.JSX.Element {
     [referrers, devices, pages, countries]
   );
 
+  const dateRangeForChart = useMemo(
+    () => {
+      if (dateRange === undefined) return null;
+      return { from: new Date(dateRange.from), to: new Date(dateRange.to) };
+    },
+    [dateRange]
+  );
+
   useEffect(() => {
     void navigate({
       to: '/sites/$siteId',
@@ -149,8 +155,6 @@ export function DashboardPage(): React.JSX.Element {
     });
   };
 
-  const dailyStatsLimit = statsBucket === 'hourly' ? HOURLY_STATS_LIMIT : DAILY_STATS_LIMIT;
-
   const { data: dashboardData, loading: dashboardLoading } = useQuery(DashboardDocument, {
     variables: {
       siteId,
@@ -172,8 +176,6 @@ export function DashboardPage(): React.JSX.Element {
         limit: COUNTRIES_PAGE_SIZE,
         offset: (countriesPage - PAGE_INDEX_OFFSET) * COUNTRIES_PAGE_SIZE,
       },
-      dailyStatsBucket: statsBucket === 'hourly' ? 'HOURLY' : 'DAILY',
-      dailyStatsLimit,
     },
     skip: !hasSiteId,
     pollInterval: DASHBOARD_POLL_INTERVAL_MS,
@@ -254,6 +256,8 @@ export function DashboardPage(): React.JSX.Element {
         <AnalyticsContent
           siteId={siteId}
           stats={stats}
+          dateRange={dateRangeForChart}
+          filter={Object.keys(filter).length > EMPTY_COUNT ? filter : null}
           chartBucket={statsBucket}
           onChartBucketChange={setStatsBucket}
           realtime={realtime}

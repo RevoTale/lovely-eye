@@ -80,7 +80,7 @@ type ComplexityRoot struct {
 		BounceRate   func(childComplexity int) int
 		Browsers     func(childComplexity int) int
 		Countries    func(childComplexity int, paging model.PagingInput) int
-		DailyStats   func(childComplexity int, bucket *model.TimeBucket, limit *int) int
+		DailyStats   func(childComplexity int, bucket *model.TimeBucket, limit *int, offset *int) int
 		Devices      func(childComplexity int, paging model.PagingInput) int
 		PageViews    func(childComplexity int) int
 		Sessions     func(childComplexity int) int
@@ -247,7 +247,7 @@ type DashboardStatsResolver interface {
 	Browsers(ctx context.Context, obj *model.DashboardStats) ([]*model.BrowserStats, error)
 	Devices(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedDeviceStats, error)
 	Countries(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedCountryStats, error)
-	DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int) ([]*model.DailyStats, error)
+	DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int, offset *int) ([]*model.DailyStats, error)
 }
 type MutationResolver interface {
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthPayload, error)
@@ -407,7 +407,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.DashboardStats.DailyStats(childComplexity, args["bucket"].(*model.TimeBucket), args["limit"].(*int)), true
+		return e.complexity.DashboardStats.DailyStats(childComplexity, args["bucket"].(*model.TimeBucket), args["limit"].(*int), args["offset"].(*int)), true
 	case "DashboardStats.devices":
 		if e.complexity.DashboardStats.Devices == nil {
 			break
@@ -1233,7 +1233,7 @@ type DashboardStats {
   browsers: [BrowserStats!]!
   devices(paging: PagingInput!): PagedDeviceStats!
   countries(paging: PagingInput!): PagedCountryStats!
-  dailyStats(bucket: TimeBucket = DAILY, limit: Int): [DailyStats!]!
+  dailyStats(bucket: TimeBucket = DAILY, limit: Int, offset: Int): [DailyStats!]!
 }
 
 type PageStats {
@@ -1500,6 +1500,11 @@ func (ec *executionContext) field_DashboardStats_dailyStats_args(ctx context.Con
 		return nil, err
 	}
 	args["limit"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "offset", ec.unmarshalOInt2ᚖint)
+	if err != nil {
+		return nil, err
+	}
+	args["offset"] = arg2
 	return args, nil
 }
 
@@ -2546,7 +2551,7 @@ func (ec *executionContext) _DashboardStats_dailyStats(ctx context.Context, fiel
 		ec.fieldContext_DashboardStats_dailyStats,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.DashboardStats().DailyStats(ctx, obj, fc.Args["bucket"].(*model.TimeBucket), fc.Args["limit"].(*int))
+			return ec.resolvers.DashboardStats().DailyStats(ctx, obj, fc.Args["bucket"].(*model.TimeBucket), fc.Args["limit"].(*int), fc.Args["offset"].(*int))
 		},
 		nil,
 		ec.marshalNDailyStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDailyStatsᚄ,

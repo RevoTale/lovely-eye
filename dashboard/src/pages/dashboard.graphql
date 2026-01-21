@@ -6,8 +6,6 @@ query Dashboard(
   $referrersPaging: PagingInput!
   $devicesPaging: PagingInput!
   $countriesPaging: PagingInput!
-  $dailyStatsBucket: TimeBucket
-  $dailyStatsLimit: Int
 ) {
   dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
     visitors
@@ -50,12 +48,6 @@ query Dashboard(
         visitors
       }
     }
-    dailyStats(bucket: $dailyStatsBucket, limit: $dailyStatsLimit) {
-      date
-      visitors
-      pageViews
-      sessions
-    }
   }
 }
 
@@ -97,6 +89,24 @@ query EventCounts($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput
         key
         value
       }
+    }
+  }
+}
+
+query ChartData(
+  $siteId: ID!
+  $dateRange: DateRangeInput
+  $filter: FilterInput
+  $bucket: TimeBucket
+  $limit: Int
+  $offset: Int
+) {
+  dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
+    dailyStats(bucket: $bucket, limit: $limit, offset: $offset) {
+      date
+      visitors
+      pageViews
+      sessions
     }
   }
 }

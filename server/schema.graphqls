@@ -45,7 +45,7 @@ type DashboardStats {
   browsers: [BrowserStats!]!
   devices(paging: PagingInput!): PagedDeviceStats!
   countries(paging: PagingInput!): PagedCountryStats!
-  dailyStats(bucket: TimeBucket = DAILY, limit: Int): [DailyStats!]!
+  dailyStats(bucket: TimeBucket = DAILY, limit: Int, offset: Int): [DailyStats!]!
 }
 
 type PageStats {

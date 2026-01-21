@@ -1,14 +1,20 @@
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, type ChartConfig } from '@/components/ui';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useQuery } from '@apollo/client/react';
+import { Card, CardContent, CardHeader, CardTitle, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton, type ChartConfig } from '@/components/ui';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { TrendingUp } from 'lucide-react';
-import type { DailyStats } from '@/gql/graphql';
+import { ChartDataDocument, type DailyStats } from '@/gql/graphql';
 
 interface OverviewChartSectionProps {
-  dailyStats: DailyStats[];
+  siteId: string;
+  dateRange: { from: Date; to: Date } | null;
+  filter: Record<string, string[]> | null;
   bucket: 'daily' | 'hourly';
   onBucketChange: (bucket: 'daily' | 'hourly') => void;
 }
+
+const BATCH_SIZE = 10;
+const INITIAL_OFFSET = 0;
 
 const EMPTY_COUNT = 0;
 const CHART_MARGIN_TOP = 10;
@@ -23,10 +29,78 @@ const CHART_MARGIN = {
 };
 const TICK_MARGIN = 8;
 
-export function OverviewChartSection({ dailyStats, bucket, onBucketChange }: OverviewChartSectionProps): React.JSX.Element | null {
-  if (dailyStats.length === EMPTY_COUNT) {
-    return null;
-  }
+export function OverviewChartSection({ siteId, dateRange, filter, bucket, onBucketChange }: OverviewChartSectionProps): React.JSX.Element | null {
+  const [loadedData, setLoadedData] = useState<DailyStats[]>([]);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const filterKey = useMemo(
+    () => JSON.stringify({ siteId, dateRange, filter, bucket }),
+    [siteId, dateRange, filter, bucket]
+  );
+
+  const bucketValue = bucket === 'daily' ? 'DAILY' : 'HOURLY';
+
+  const { data, loading, fetchMore } = useQuery(ChartDataDocument, {
+    variables: {
+      siteId,
+      dateRange: dateRange === null ? undefined : { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() },
+      filter: filter === null ? undefined : {
+        referrer: filter['referrer'],
+        device: filter['device'],
+        page: filter['page'],
+        country: filter['country'],
+      },
+      bucket: bucketValue,
+      limit: BATCH_SIZE,
+      offset: INITIAL_OFFSET,
+    },
+  });
+
+  useEffect(() => {
+    if (data?.dashboard.dailyStats !== undefined) {
+      setLoadedData(data.dashboard.dailyStats);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    setLoadedData([]);
+    setIsLoadingMore(false);
+  }, [filterKey]);
+
+  const loadNextBatch = useCallback(async () => {
+    if (isLoadingMore || loading || data?.dashboard === undefined) return;
+
+    const { dashboard } = data;
+    const { dailyStats } = dashboard;
+    if (dailyStats.length < BATCH_SIZE) return;
+
+    setIsLoadingMore(true);
+    try {
+      const result = await fetchMore({
+        variables: {
+          offset: loadedData.length,
+        },
+      });
+
+      const { data: resultData } = result;
+      if (resultData?.dashboard === undefined) return;
+      const { dashboard: resultDashboard } = resultData;
+      const { dailyStats: newData } = resultDashboard;
+      if (newData.length > EMPTY_COUNT) {
+        setLoadedData(prev => [...prev, ...newData]);
+      }
+    } catch {
+      // Silently handle batch loading errors
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, loading, data, fetchMore, loadedData.length]);
+
+  useEffect(() => {
+    if (!loading && !isLoadingMore && loadedData.length > EMPTY_COUNT && loadedData.length % BATCH_SIZE === EMPTY_COUNT) {
+      void loadNextBatch();
+    }
+  }, [loading, isLoadingMore, loadedData.length, loadNextBatch]);
 
   const formatLabel = (value: string): string => {
     const date = new Date(value);
@@ -36,6 +110,30 @@ export function OverviewChartSection({ dailyStats, bucket, onBucketChange }: Ove
     }
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
+
+  const chartData = loadedData.map(stat => ({
+    date: formatLabel(stat.date),
+    visitors: stat.visitors,
+    pageViews: stat.pageViews,
+    sessions: stat.sessions,
+  }));
+
+  if (loading && loadedData.length === EMPTY_COUNT) {
+    return (
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader>
+          <Skeleton className="h-8 w-48" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (chartData.length === EMPTY_COUNT) {
+    return null;
+  }
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -82,12 +180,7 @@ export function OverviewChartSection({ dailyStats, bucket, onBucketChange }: Ove
           className="h-[300px] w-full"
         >
           <AreaChart
-            data={dailyStats.map(stat => ({
-              date: formatLabel(stat.date),
-              visitors: stat.visitors,
-              pageViews: stat.pageViews,
-              sessions: stat.sessions,
-            }))}
+            data={chartData}
             margin={CHART_MARGIN}
           >
             <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
