@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge, Progress } from '@/components/ui';
 import { Globe, ExternalLink, TrendingUp } from 'lucide-react';
 import type { ReferrerStats } from '@/gql/graphql';
-import { BoardCard } from '@/components/board-card';
+import { BoardCard, BoardCardSkeleton } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
 
@@ -14,6 +14,7 @@ interface ReferrersCardProps {
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  loading?: boolean;
 }
 
 const EMPTY_COUNT = 0;
@@ -33,7 +34,12 @@ export function ReferrersCard({
   page,
   pageSize,
   onPageChange,
+  loading = false,
 }: ReferrersCardProps): React.JSX.Element {
+  if (loading) {
+    return <BoardCardSkeleton title="Top Referrers" icon={Globe} />;
+  }
+
   const formatReferrer = (referrer: string | null): string => {
     if (referrer === null || referrer === '') return DIRECT_REFERRER_LABEL;
 

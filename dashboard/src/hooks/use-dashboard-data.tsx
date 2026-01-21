@@ -1,0 +1,130 @@
+import { useQuery } from '@apollo/client/react';
+import {
+  DashboardDocument,
+  RealtimeDocument,
+  EventsDocument,
+  EventCountsDocument,
+  SiteDocument,
+  type DashboardQuery,
+  type RealtimeStats,
+  type EventsResult,
+  type EventCount,
+  type Site,
+} from '@/gql/graphql';
+
+const EVENTS_PAGE_SIZE = 5;
+const EVENTS_COUNT_LIMIT = 200;
+const TOP_PAGES_PAGE_SIZE = 5;
+const REFERRERS_PAGE_SIZE = 5;
+const DEVICES_PAGE_SIZE = 6;
+const COUNTRIES_PAGE_SIZE = 6;
+const EMPTY_COUNT = 0;
+const PAGE_INDEX_OFFSET = 1;
+const DASHBOARD_POLL_INTERVAL_MS = 60000;
+const REALTIME_POLL_INTERVAL_MS = 5000;
+
+interface UseDashboardDataParams {
+  siteId: string;
+  dateRange: { from: string; to: string } | null | undefined;
+  filter: Record<string, string[]> | null;
+  eventsPage: number;
+  topPagesPage: number;
+  referrersPage: number;
+  devicesPage: number;
+  countriesPage: number;
+}
+
+interface DashboardData {
+  site: Site | null | undefined;
+  stats: DashboardQuery['dashboard'] | undefined;
+  realtime: RealtimeStats | undefined;
+  eventsResult: EventsResult | undefined;
+  eventsCounts: EventCount[];
+  siteLoading: boolean;
+  dashboardLoading: boolean;
+  eventsLoading: boolean;
+}
+
+export function useDashboardData(params: UseDashboardDataParams): DashboardData {
+  const { siteId, dateRange, filter, eventsPage, topPagesPage, referrersPage, devicesPage, countriesPage } = params;
+  const hasSiteId = siteId !== '';
+
+  const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
+    variables: { id: siteId },
+    skip: !hasSiteId,
+  });
+
+  const { data: dashboardData, loading: dashboardLoading } = useQuery(DashboardDocument, {
+    variables: {
+      siteId,
+      dateRange: dateRange ?? null,
+      filter: Object.keys(filter ?? {}).length > EMPTY_COUNT ? filter : null,
+      topPagesPaging: {
+        limit: TOP_PAGES_PAGE_SIZE,
+        offset: (topPagesPage - PAGE_INDEX_OFFSET) * TOP_PAGES_PAGE_SIZE,
+      },
+      referrersPaging: {
+        limit: REFERRERS_PAGE_SIZE,
+        offset: (referrersPage - PAGE_INDEX_OFFSET) * REFERRERS_PAGE_SIZE,
+      },
+      devicesPaging: {
+        limit: DEVICES_PAGE_SIZE,
+        offset: (devicesPage - PAGE_INDEX_OFFSET) * DEVICES_PAGE_SIZE,
+      },
+      countriesPaging: {
+        limit: COUNTRIES_PAGE_SIZE,
+        offset: (countriesPage - PAGE_INDEX_OFFSET) * COUNTRIES_PAGE_SIZE,
+      },
+    },
+    skip: !hasSiteId,
+    pollInterval: DASHBOARD_POLL_INTERVAL_MS,
+  });
+
+  const { data: realtimeData } = useQuery(RealtimeDocument, {
+    variables: { siteId },
+    skip: !hasSiteId,
+    pollInterval: REALTIME_POLL_INTERVAL_MS,
+  });
+
+  const { data: eventsData, loading: eventsLoading } = useQuery(EventsDocument, {
+    variables: {
+      siteId,
+      dateRange: dateRange ?? null,
+      filter: Object.keys(filter ?? {}).length > EMPTY_COUNT ? filter : null,
+      limit: EVENTS_PAGE_SIZE,
+      offset: (eventsPage - PAGE_INDEX_OFFSET) * EVENTS_PAGE_SIZE,
+    },
+    skip: !hasSiteId,
+    pollInterval: DASHBOARD_POLL_INTERVAL_MS,
+  });
+
+  const { data: eventsCountsData } = useQuery(EventCountsDocument, {
+    variables: {
+      siteId,
+      dateRange: dateRange ?? null,
+      filter: Object.keys(filter ?? {}).length > EMPTY_COUNT ? filter : null,
+      limit: EVENTS_COUNT_LIMIT,
+    },
+    skip: !hasSiteId,
+    pollInterval: DASHBOARD_POLL_INTERVAL_MS,
+  });
+
+  return {
+    site: siteData?.site,
+    stats: dashboardData?.dashboard,
+    realtime: realtimeData?.realtime,
+    eventsResult: eventsData?.events,
+    eventsCounts: eventsCountsData?.eventCounts ?? [],
+    siteLoading,
+    dashboardLoading,
+    eventsLoading,
+  };
+}
+
+export const PAGE_SIZES = {
+  EVENTS: EVENTS_PAGE_SIZE,
+  TOP_PAGES: TOP_PAGES_PAGE_SIZE,
+  REFERRERS: REFERRERS_PAGE_SIZE,
+  DEVICES: DEVICES_PAGE_SIZE,
+  COUNTRIES: COUNTRIES_PAGE_SIZE,
+} as const;

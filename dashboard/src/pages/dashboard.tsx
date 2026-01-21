@@ -1,84 +1,20 @@
 import React, { useMemo, useEffect } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { useQuery } from '@apollo/client/react';
-import {
-  DashboardDocument,
-  RealtimeDocument,
-  EventsDocument,
-  EventCountsDocument,
-  SiteDocument,
-} from '@/gql/graphql';
 import { siteDetailRoute } from '@/router';
 import { ActiveFilters } from '@/components/active-filters';
 import { TimeRangeCard } from '@/components/time-range-card';
 import { AnalyticsContent } from '@/components/analytics-content';
-import { normalizeFilterValue } from '@/lib/filter-utils';
 import { useDateRange } from '@/hooks/use-date-range';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { DashboardEmptyState, DashboardLoading, DashboardNotFound } from '@/components/dashboard-states';
-
-const EVENTS_PAGE_SIZE = 5;
-const EVENTS_COUNT_LIMIT = 200;
-const TOP_PAGES_PAGE_SIZE = 5;
-const REFERRERS_PAGE_SIZE = 5;
-const DEVICES_PAGE_SIZE = 6;
-const COUNTRIES_PAGE_SIZE = 6;
+import { useDashboardData, PAGE_SIZES } from '@/hooks/use-dashboard-data';
+import { parsePage, normalizeStatsBucket, buildFilters, extractStatsData } from '@/lib/dashboard-utils';
+import { clearPaginationParams, updatePageParam } from '@/lib/dashboard-navigation';
+import { AnalyticsSkeleton } from '@/components/analytics-skeleton';
 
 const EMPTY_COUNT = 0;
-const FIRST_INDEX = 0;
-const FIRST_PAGE = 1;
-const PAGE_INDEX_OFFSET = 1;
-const DASHBOARD_POLL_INTERVAL_MS = 60000;
-const REALTIME_POLL_INTERVAL_MS = 5000;
 const DEFAULT_STATS_BUCKET = 'daily';
 
-type PageValue = string | string[] | undefined;
-
-function parsePage(value: PageValue): number {
-  const raw = Array.isArray(value) ? value[FIRST_INDEX] : value;
-  const numeric = Number(raw);
-  if (!Number.isFinite(numeric) || numeric < FIRST_PAGE) {
-    return FIRST_PAGE;
-  }
-  return Math.floor(numeric);
-}
-
-function buildFilters(search: Record<string, string | string[] | undefined>): {
-  referrers: string[];
-  devices: string[];
-  pages: string[];
-  countries: string[];
-  decodedSearch: Record<string, unknown>;
-  filter: Record<string, string[]>;
-} {
-  const referrers = normalizeFilterValue(search['referrer']);
-  const devices = normalizeFilterValue(search['device']);
-  const pages = normalizeFilterValue(search['page']);
-  const countries = normalizeFilterValue(search['country']);
-  const decodedSearch = {
-    ...search,
-    ...(referrers.length > EMPTY_COUNT ? { referrer: referrers } : {}),
-    ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
-    ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
-    ...(countries.length > EMPTY_COUNT ? { country: countries } : {}),
-  };
-
-  const filter = {
-    ...(referrers.length > EMPTY_COUNT ? { referrer: referrers } : {}),
-    ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
-    ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
-    ...(countries.length > EMPTY_COUNT ? { country: countries } : {}),
-  };
-
-  return { referrers, devices, pages, countries, decodedSearch, filter };
-}
-
-function normalizeStatsBucket(value: PageValue): 'daily' | 'hourly' {
-  const raw = Array.isArray(value) ? value[FIRST_INDEX] : value;
-  return raw === 'hourly' ? 'hourly' : 'daily';
-}
-
-// eslint-disable-next-line complexity -- DashboardPage orchestrates multiple sections and filters.
 export function DashboardPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const search = useSearch({ from: siteDetailRoute.id });
@@ -91,40 +27,35 @@ export function DashboardPage(): React.JSX.Element {
   const countriesPage = useMemo(() => parsePage(search.countriesPage), [search.countriesPage]);
   const statsBucket = useMemo(() => normalizeStatsBucket(search.statsBucket), [search.statsBucket]);
 
-  const hasSiteId = siteId !== '';
-  const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
-    variables: { id: siteId },
-    skip: !hasSiteId,
-  });
-
-  const { referrers, devices, pages, countries, decodedSearch, filter } = useMemo(
-    () => buildFilters(search),
-    [search]
-  );
+  const { referrers, devices, pages, countries, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
 
   const filterKey = useMemo(
-    () => [referrers, devices, pages, countries].map((value) => value.join(',')).join('|'),
+    () => [referrers, devices, pages, countries].map((v) => v.join(',')).join('|'),
     [referrers, devices, pages, countries]
   );
 
-  const dateRangeForChart = useMemo(
-    () => {
-      if (dateRange === undefined) return null;
-      return { from: new Date(dateRange.from), to: new Date(dateRange.to) };
-    },
-    [dateRange]
-  );
+  const dateRangeForChart = useMemo(() => {
+    if (dateRange === undefined) return null;
+    return { from: new Date(dateRange.from), to: new Date(dateRange.to) };
+  }, [dateRange]);
+
+  const { site, stats, realtime, eventsResult, eventsCounts, siteLoading, dashboardLoading, eventsLoading } =
+    useDashboardData({
+      siteId,
+      dateRange,
+      filter: Object.keys(filter).length > EMPTY_COUNT ? filter : null,
+      eventsPage,
+      topPagesPage,
+      referrersPage,
+      devicesPage,
+      countriesPage,
+    });
 
   useEffect(() => {
     void navigate({
       to: '/sites/$siteId',
       params: { siteId },
-      search: (prev) => {
-        const keys = new Set(['eventsPage', 'topPagesPage', 'referrersPage', 'devicesPage', 'countriesPage']);
-        return Object.fromEntries(
-          Object.entries(prev).filter(([key]) => !keys.has(key))
-        );
-      },
+      search: clearPaginationParams,
     });
   }, [siteId, dateRange?.from, dateRange?.to, filterKey, navigate]);
 
@@ -132,20 +63,13 @@ export function DashboardPage(): React.JSX.Element {
     void navigate({
       to: '/sites/$siteId',
       params: { siteId },
-      search: (prev) => {
-        if (nextPage <= FIRST_PAGE) {
-          return Object.fromEntries(
-            Object.entries(prev).filter(([entryKey]) => entryKey !== key)
-          );
-        }
-        return { ...(prev as Record<string, unknown>), [key]: String(nextPage) };
-      },
+      search: (prev) => updatePageParam(prev as Record<string, unknown>, key, nextPage),
     });
   };
 
   const setStatsBucket = (bucket: 'daily' | 'hourly'): void => {
     void navigate({
-      resetScroll:false,
+      resetScroll: false,
       to: '/sites/$siteId',
       params: { siteId },
       search: (prev) => ({
@@ -155,86 +79,30 @@ export function DashboardPage(): React.JSX.Element {
     });
   };
 
-  const { data: dashboardData, loading: dashboardLoading } = useQuery(DashboardDocument, {
-    variables: {
-      siteId,
-      dateRange: dateRange ?? null,
-      filter: Object.keys(filter).length > EMPTY_COUNT ? filter : null,
-      topPagesPaging: {
-        limit: TOP_PAGES_PAGE_SIZE,
-        offset: (topPagesPage - PAGE_INDEX_OFFSET) * TOP_PAGES_PAGE_SIZE,
-      },
-      referrersPaging: {
-        limit: REFERRERS_PAGE_SIZE,
-        offset: (referrersPage - PAGE_INDEX_OFFSET) * REFERRERS_PAGE_SIZE,
-      },
-      devicesPaging: {
-        limit: DEVICES_PAGE_SIZE,
-        offset: (devicesPage - PAGE_INDEX_OFFSET) * DEVICES_PAGE_SIZE,
-      },
-      countriesPaging: {
-        limit: COUNTRIES_PAGE_SIZE,
-        offset: (countriesPage - PAGE_INDEX_OFFSET) * COUNTRIES_PAGE_SIZE,
-      },
-    },
-    skip: !hasSiteId,
-    pollInterval: DASHBOARD_POLL_INTERVAL_MS,
-  });
-
-  const { data: realtimeData } = useQuery(RealtimeDocument, {
-    variables: { siteId },
-    skip: !hasSiteId,
-    pollInterval: REALTIME_POLL_INTERVAL_MS,
-  });
-
-  const { data: eventsData, loading: eventsLoading } = useQuery(EventsDocument, {
-    variables: {
-      siteId,
-      dateRange: dateRange ?? null,
-      filter: Object.keys(filter).length > EMPTY_COUNT ? filter : null,
-      limit: EVENTS_PAGE_SIZE,
-      offset: (eventsPage - PAGE_INDEX_OFFSET) * EVENTS_PAGE_SIZE,
-    },
-    skip: !hasSiteId,
-    pollInterval: DASHBOARD_POLL_INTERVAL_MS,
-  });
-
-  const { data: eventsCountsData } = useQuery(EventCountsDocument, {
-    variables: {
-      siteId,
-      dateRange: dateRange ?? null,
-      filter: Object.keys(filter).length > EMPTY_COUNT ? filter : null,
-      limit: EVENTS_COUNT_LIMIT,
-    },
-    skip: !hasSiteId,
-    pollInterval: DASHBOARD_POLL_INTERVAL_MS,
-  });
-
-  if (siteLoading || dashboardLoading) {
+  if (siteLoading) {
     return <DashboardLoading />;
   }
-
-  const site = siteData?.site;
-  const stats = dashboardData?.dashboard;
-  const realtime = realtimeData?.realtime;
-  const eventsResult = eventsData?.events;
-  const eventsCounts = eventsCountsData?.eventCounts ?? [];
-  const topPagesResult = stats?.topPages;
-  const referrersResult = stats?.topReferrers;
-  const devicesResult = stats?.devices;
-  const countriesResult = stats?.countries;
-  const topPages = topPagesResult?.items ?? [];
-  const referrersItems = referrersResult?.items ?? [];
-  const devicesItems = devicesResult?.items ?? [];
-  const countriesItems = countriesResult?.items ?? [];
-  const devicesTotalVisitors = devicesResult?.totalVisitors ?? EMPTY_COUNT;
-  const countriesTotalVisitors = countriesResult?.totalVisitors ?? EMPTY_COUNT;
 
   if (site === null || site === undefined) {
     return <DashboardNotFound />;
   }
 
+  const {
+    topPages,
+    topPagesTotal,
+    referrersItems,
+    referrersTotal,
+    devicesItems,
+    devicesTotal,
+    devicesTotalVisitors,
+    countriesItems,
+    countriesTotal,
+    countriesTotalVisitors,
+  } = extractStatsData(stats);
+
   const hasStats = stats !== undefined;
+  const showSkeletons = dashboardLoading && !hasStats;
+  const isRefreshing = dashboardLoading && hasStats;
 
   return (
     <div className="space-y-8">
@@ -265,40 +133,54 @@ export function DashboardPage(): React.JSX.Element {
           eventsResult={eventsResult}
           eventsCounts={eventsCounts}
           eventsPage={eventsPage}
-          eventsPageSize={EVENTS_PAGE_SIZE}
+          eventsPageSize={PAGE_SIZES.EVENTS}
           onEventsPageChange={(page) => {
             setPage('eventsPage', page);
           }}
           topPages={topPages}
-          topPagesTotal={topPagesResult?.total ?? EMPTY_COUNT}
+          topPagesTotal={topPagesTotal}
           topPagesPage={topPagesPage}
-          topPagesPageSize={TOP_PAGES_PAGE_SIZE}
+          topPagesPageSize={PAGE_SIZES.TOP_PAGES}
+          topPagesLoading={isRefreshing}
           onTopPagesPageChange={(page) => {
             setPage('topPagesPage', page);
           }}
           referrers={referrersItems}
-          referrersTotal={referrersResult?.total ?? EMPTY_COUNT}
+          referrersTotal={referrersTotal}
           referrersPage={referrersPage}
-          referrersPageSize={REFERRERS_PAGE_SIZE}
+          referrersPageSize={PAGE_SIZES.REFERRERS}
+          referrersLoading={isRefreshing}
           onReferrersPageChange={(page) => {
             setPage('referrersPage', page);
           }}
           countries={countriesItems}
-          countriesTotal={countriesResult?.total ?? EMPTY_COUNT}
+          countriesTotal={countriesTotal}
           countriesTotalVisitors={countriesTotalVisitors}
           countriesPage={countriesPage}
-          countriesPageSize={COUNTRIES_PAGE_SIZE}
+          countriesPageSize={PAGE_SIZES.COUNTRIES}
+          countriesLoading={isRefreshing}
           onCountriesPageChange={(page) => {
             setPage('countriesPage', page);
           }}
           devices={devicesItems}
-          devicesTotal={devicesResult?.total ?? EMPTY_COUNT}
+          devicesTotal={devicesTotal}
           devicesTotalVisitors={devicesTotalVisitors}
           devicesPage={devicesPage}
-          devicesPageSize={DEVICES_PAGE_SIZE}
+          devicesPageSize={PAGE_SIZES.DEVICES}
+          devicesLoading={isRefreshing}
           onDevicesPageChange={(page) => {
             setPage('devicesPage', page);
           }}
+        />
+      ) : showSkeletons ? (
+        <AnalyticsSkeleton
+          siteId={siteId}
+          dateRangeForChart={dateRangeForChart}
+          filter={Object.keys(filter).length > EMPTY_COUNT ? filter : null}
+          statsBucket={statsBucket}
+          realtime={realtime}
+          onStatsBucketChange={setStatsBucket}
+          onPageChange={setPage}
         />
       ) : (
         <DashboardEmptyState />

@@ -18,8 +18,7 @@ import { TopPagesCard } from '@/components/top-pages-card';
 import { ReferrersCard } from '@/components/referrers-card';
 import { CountryCard } from '@/components/country-card';
 import { DevicesCard } from '@/components/devices-card';
-
-const SECONDS_PER_MINUTE = 60;
+import { formatDuration } from '@/lib/dashboard-utils';
 
 interface AnalyticsContentProps {
   siteId: string;
@@ -39,72 +38,39 @@ interface AnalyticsContentProps {
   topPagesTotal: number;
   topPagesPage: number;
   topPagesPageSize: number;
+  topPagesLoading?: boolean;
   onTopPagesPageChange: (page: number) => void;
   referrers: ReferrerStats[];
   referrersTotal: number;
   referrersPage: number;
   referrersPageSize: number;
+  referrersLoading?: boolean;
   onReferrersPageChange: (page: number) => void;
   countries: CountryStats[];
   countriesTotal: number;
   countriesTotalVisitors: number;
   countriesPage: number;
   countriesPageSize: number;
+  countriesLoading?: boolean;
   onCountriesPageChange: (page: number) => void;
   devices: DeviceStats[];
   devicesTotal: number;
   devicesTotalVisitors: number;
   devicesPage: number;
   devicesPageSize: number;
+  devicesLoading?: boolean;
   onDevicesPageChange: (page: number) => void;
 }
 
-function formatDuration(seconds: number): string {
-  if (seconds < SECONDS_PER_MINUTE) {
-    return `${String(Math.round(seconds))}s`;
-  }
-  const minutes = Math.floor(seconds / SECONDS_PER_MINUTE);
-  const remainingSeconds = Math.round(seconds % SECONDS_PER_MINUTE);
-  return `${String(minutes)}m ${String(remainingSeconds)}s`;
-}
-
-export function AnalyticsContent({
-  siteId,
-  stats,
-  dateRange,
-  filter,
-  chartBucket,
-  onChartBucketChange,
-  realtime,
-  eventsLoading,
-  eventsResult,
-  eventsCounts,
-  eventsPage,
-  eventsPageSize,
-  onEventsPageChange,
-  topPages,
-  topPagesTotal,
-  topPagesPage,
-  topPagesPageSize,
-  onTopPagesPageChange,
-  referrers,
-  referrersTotal,
-  referrersPage,
-  referrersPageSize,
-  onReferrersPageChange,
-  countries,
-  countriesTotal,
-  countriesTotalVisitors,
-  countriesPage,
-  countriesPageSize,
-  onCountriesPageChange,
-  devices,
-  devicesTotal,
-  devicesTotalVisitors,
-  devicesPage,
-  devicesPageSize,
-  onDevicesPageChange,
-}: AnalyticsContentProps): React.JSX.Element {
+export function AnalyticsContent(props: AnalyticsContentProps): React.JSX.Element {
+  const {
+    siteId, stats, dateRange, filter, chartBucket, onChartBucketChange, realtime,
+    eventsLoading, eventsResult, eventsCounts, eventsPage, eventsPageSize, onEventsPageChange,
+    topPages, topPagesTotal, topPagesPage, topPagesPageSize, topPagesLoading = false, onTopPagesPageChange,
+    referrers, referrersTotal, referrersPage, referrersPageSize, referrersLoading = false, onReferrersPageChange,
+    countries, countriesTotal, countriesTotalVisitors, countriesPage, countriesPageSize, countriesLoading = false, onCountriesPageChange,
+    devices, devicesTotal, devicesTotalVisitors, devicesPage, devicesPageSize, devicesLoading = false, onDevicesPageChange,
+  } = props;
   const activePages = realtime?.activePages;
   const hasActivePages = activePages !== undefined;
 
@@ -161,6 +127,7 @@ export function AnalyticsContent({
           page={topPagesPage}
           pageSize={topPagesPageSize}
           siteId={siteId}
+          loading={topPagesLoading}
           onPageChange={onTopPagesPageChange}
         />
         <ReferrersCard
@@ -170,6 +137,7 @@ export function AnalyticsContent({
           siteId={siteId}
           page={referrersPage}
           pageSize={referrersPageSize}
+          loading={referrersLoading}
           onPageChange={onReferrersPageChange}
         />
       </div>
@@ -181,6 +149,7 @@ export function AnalyticsContent({
         page={countriesPage}
         pageSize={countriesPageSize}
         siteId={siteId}
+        loading={countriesLoading}
         onPageChange={onCountriesPageChange}
       />
 
@@ -191,6 +160,7 @@ export function AnalyticsContent({
         page={devicesPage}
         pageSize={devicesPageSize}
         siteId={siteId}
+        loading={devicesLoading}
         onPageChange={onDevicesPageChange}
       />
     </>

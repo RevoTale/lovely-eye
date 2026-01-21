@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge, Progress } from '@/components/ui';
 import type { DeviceStats } from '@/gql/graphql';
 import { Monitor, Smartphone } from 'lucide-react';
-import { BoardCard } from '@/components/board-card';
+import { BoardCard, BoardCardSkeleton } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
 
@@ -14,6 +14,7 @@ interface DevicesCardProps {
   pageSize: number;
   siteId: string;
   onPageChange: (page: number) => void;
+  loading?: boolean;
 }
 
 const EMPTY_COUNT = 0;
@@ -28,7 +29,12 @@ export function DevicesCard({
   pageSize,
   siteId,
   onPageChange,
+  loading = false,
 }: DevicesCardProps): React.JSX.Element {
+  if (loading) {
+    return <BoardCardSkeleton title="Device Types" icon={Monitor} />;
+  }
+
   return (
     <BoardCard
       title="Device Types"

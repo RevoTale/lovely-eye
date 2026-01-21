@@ -2,7 +2,7 @@ import React from 'react';
 import { Badge, Progress } from '@/components/ui';
 import type { PageStats } from '@/gql/graphql';
 import { Globe } from 'lucide-react';
-import { BoardCard } from '@/components/board-card';
+import { BoardCard, BoardCardSkeleton } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
 
@@ -13,6 +13,7 @@ interface TopPagesCardProps {
   pageSize: number;
   siteId: string;
   onPageChange: (page: number) => void;
+  loading?: boolean;
 }
 
 const EMPTY_COUNT = 0;
@@ -26,8 +27,13 @@ export function TopPagesCard({
   pageSize,
   siteId,
   onPageChange,
+  loading = false,
 }: TopPagesCardProps): React.JSX.Element {
   const maxViews = pages.length > EMPTY_COUNT ? pages[FIRST_INDEX]?.views ?? EMPTY_COUNT : EMPTY_COUNT;
+
+  if (loading) {
+    return <BoardCardSkeleton title="Top Pages" icon={Globe} />;
+  }
 
   return (
     <BoardCard
