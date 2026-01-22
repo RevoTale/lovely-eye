@@ -1,5 +1,5 @@
 import * as React from "react"
-import * as RechartsPrimitive from "recharts"
+import { Legend, ResponsiveContainer, Tooltip } from "recharts"
 import type { Payload, ValueType, NameType } from "recharts/types/component/DefaultTooltipContent"
 import type { Props as LegendProps } from "recharts/types/component/DefaultLegendContent"
 
@@ -51,7 +51,7 @@ const ChartContainer = React.forwardRef<
   React.ComponentProps<"div"> & {
     config: ChartConfig
     children: React.ComponentProps<
-      typeof RechartsPrimitive.ResponsiveContainer
+      typeof ResponsiveContainer
     >["children"]
   }
 >(({ id, className, children, config, ...props }, ref) => {
@@ -70,9 +70,9 @@ const ChartContainer = React.forwardRef<
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer>
+        <ResponsiveContainer>
           {children}
-        </RechartsPrimitive.ResponsiveContainer>
+        </ResponsiveContainer>
       </div>
     </ChartContext.Provider>
   )
@@ -116,7 +116,7 @@ ${colorConfig
   )
 }
 
-const ChartTooltip = RechartsPrimitive.Tooltip
+const ChartTooltip = Tooltip
 
 interface ChartTooltipContentProps extends React.ComponentProps<"div"> {
   active?: boolean
@@ -284,7 +284,7 @@ const ChartTooltipContent = React.forwardRef<
 )
 ChartTooltipContent.displayName = "ChartTooltip"
 
-const ChartLegend = RechartsPrimitive.Legend
+const ChartLegend = Legend
 
 interface ChartLegendContentProps extends React.ComponentProps<"div"> {
   payload?: LegendPayload[]

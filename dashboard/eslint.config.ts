@@ -13,6 +13,7 @@ export default [
       'src/gql/**',
       'src/components/ui/**',
       'src/vite-env.d.ts',
+      'src/routeTree.gen.ts',
       'public/**',
       '*.config.js',
       '*.config.ts',
@@ -83,6 +84,12 @@ export default [
   },
   {
     files: ['src/router.tsx'],
+    rules: {
+      '@typescript-eslint/only-throw-error': 'off',
+    },
+  },
+  {
+    files: ['src/routes/**/*.tsx'],
     rules: {
       '@typescript-eslint/only-throw-error': 'off',
     },
