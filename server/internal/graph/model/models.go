@@ -120,7 +120,7 @@ type EventFieldType string
 
 const (
 	EventFieldTypeString  EventFieldType = "STRING"
-	EventFieldTypeNumber  EventFieldType = "NUMBER"
+	EventFieldTypeInt     EventFieldType = "INT"
 	EventFieldTypeBoolean EventFieldType = "BOOLEAN"
 )
 

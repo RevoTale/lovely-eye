@@ -74,16 +74,14 @@ func (s *EventDefinitionService) Upsert(ctx context.Context, siteID int64, input
 			fieldTypeStr = "string"
 		}
 
-		var fieldType models.FieldType
-		switch fieldTypeStr {
-		case "string":
-			fieldType = models.FieldTypeString
-		case "number":
-			fieldType = models.FieldTypeFloat
-		case "int", "integer":
-			fieldType = models.FieldTypeInt
-		case "bool", "boolean":
-			fieldType = models.FieldTypeBool
+	var fieldType models.FieldType
+	switch fieldTypeStr {
+	case "string":
+		fieldType = models.FieldTypeString
+	case "int", "integer":
+		fieldType = models.FieldTypeInt
+	case "bool", "boolean":
+		fieldType = models.FieldTypeBool
 		default:
 			return nil, ErrInvalidFieldType
 		}

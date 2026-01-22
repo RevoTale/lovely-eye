@@ -345,13 +345,13 @@ type EventFieldType string
 
 const (
 	EventFieldTypeString  EventFieldType = "STRING"
-	EventFieldTypeNumber  EventFieldType = "NUMBER"
+	EventFieldTypeInt     EventFieldType = "INT"
 	EventFieldTypeBoolean EventFieldType = "BOOLEAN"
 )
 
 var AllEventFieldType = []EventFieldType{
 	EventFieldTypeString,
-	EventFieldTypeNumber,
+	EventFieldTypeInt,
 	EventFieldTypeBoolean,
 }
 

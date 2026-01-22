@@ -1359,7 +1359,7 @@ type EventCount {
 
 enum EventFieldType {
   STRING
-  NUMBER
+  INT
   BOOLEAN
 }
 

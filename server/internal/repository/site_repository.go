@@ -30,7 +30,7 @@ func (r *SiteRepository) GetByID(ctx context.Context, id int64) (*models.Site, e
 		Model(site).
 		Where("id = ?", id).
 		Relation("Domains", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.Order("position ASC")
+			return q.Order("position ASC", "id ASC")
 		}).
 		Relation("BlockedIPs", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Order("ip ASC")
@@ -51,7 +51,7 @@ func (r *SiteRepository) GetByPublicKey(ctx context.Context, publicKey string) (
 		Model(site).
 		Where("public_key = ?", publicKey).
 		Relation("Domains", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.Order("position ASC")
+			return q.Order("position ASC", "id ASC")
 		}).
 		Relation("BlockedIPs", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Order("ip ASC")
@@ -85,7 +85,7 @@ func (r *SiteRepository) GetByUserID(ctx context.Context, userID int64) ([]*mode
 		Model(&sites).
 		Where("user_id = ?", userID).
 		Relation("Domains", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.Order("position ASC")
+			return q.Order("position ASC", "id ASC")
 		}).
 		Relation("BlockedIPs", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Order("ip ASC")
