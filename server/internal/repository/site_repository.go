@@ -66,15 +66,18 @@ func (r *SiteRepository) GetByPublicKey(ctx context.Context, publicKey string) (
 	return site, nil
 }
 
-func (r *SiteRepository) GetByDomain(ctx context.Context, domain string) (*models.Site, error) {
+func (r *SiteRepository) GetByDomainForUser(ctx context.Context, userID int64, domain string) (*models.Site, error) {
 	site := new(models.Site)
 	err := r.db.NewSelect().
 		Model(site).
 		Join("JOIN site_domains AS sd ON sd.site_id = s.id").
+		Where("s.user_id = ?", userID).
 		Where("sd.domain = ?", domain).
+		Order("s.id ASC").
+		Limit(1).
 		Scan(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get site by domain: %w", err)
+		return nil, fmt.Errorf("failed to get site by domain for user: %w", err)
 	}
 	return site, nil
 }

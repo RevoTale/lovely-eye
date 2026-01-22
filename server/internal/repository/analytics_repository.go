@@ -101,24 +101,6 @@ func (r *AnalyticsRepository) GetSession(ctx context.Context, id int64) (*models
 	return session, nil
 }
 
-func (r *AnalyticsRepository) GetSessionByVisitor(ctx context.Context, siteID int64, visitorID string, since time.Time) (*models.Session, error) {
-	// Deprecated: Use GetActiveSession with client_id instead
-	// This method is kept for backward compatibility but should not be used
-	session := new(models.Session)
-	sinceUnix := since.Unix()
-	err := r.db.NewSelect().
-		Model(session).
-		Where("site_id = ?", siteID).
-		Where("exit_time > ?", sinceUnix).
-		Order("exit_time DESC").
-		Limit(1).
-		Scan(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get session by visitor: %w", err)
-	}
-	return session, nil
-}
-
 func (r *AnalyticsRepository) UpdateSession(ctx context.Context, session *models.Session) error {
 	_, err := r.db.NewUpdate().Model(session).WherePK().Exec(ctx)
 	if err != nil {
