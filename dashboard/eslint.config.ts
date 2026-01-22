@@ -38,6 +38,29 @@ export default [
       ...love.rules,
       complexity: ['error', 25],
       'import/no-namespace': 'error',
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@apollo/client',
+              importNames: ['gql'],
+              message: 'Use .graphql files instead of gql templates.',
+            },
+            {
+              name: 'graphql-tag',
+              message: 'Use .graphql files instead of gql templates.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "TaggedTemplateExpression[tag.name='gql']",
+          message: 'Use .graphql files instead of gql templates.',
+        },
+      ],
     },
     settings: {
       react: {
