@@ -1,4 +1,5 @@
 
+import * as React from 'react';
 import { useMutation } from '@apollo/client/react';
 import { DeleteSiteDocument, SitesDocument } from '@/gql/graphql';
 import { DangerZoneCard } from '@/components/site-form/danger-zone-card';

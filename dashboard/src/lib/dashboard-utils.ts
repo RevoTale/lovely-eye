@@ -1,4 +1,5 @@
 import { normalizeFilterValue } from '@/lib/filter-utils';
+import type { DashboardQuery } from '@/gql/graphql';
 
 const EMPTY_COUNT = 0;
 const FIRST_INDEX = 0;
@@ -54,41 +55,66 @@ export function buildFilters(search: Record<string, string | string[] | undefine
 }
 
 interface StatsDataResult {
-  topPages: never[];
+  topPages: DashboardQuery['dashboard']['topPages']['items'];
   topPagesTotal: number;
-  referrersItems: never[];
+  referrersItems: DashboardQuery['dashboard']['topReferrers']['items'];
   referrersTotal: number;
-  devicesItems: never[];
+  devicesItems: DashboardQuery['dashboard']['devices']['items'];
   devicesTotal: number;
   devicesTotalVisitors: number;
-  countriesItems: never[];
+  countriesItems: DashboardQuery['dashboard']['countries']['items'];
   countriesTotal: number;
   countriesTotalVisitors: number;
 }
 
-export function extractStatsData(stats: unknown): StatsDataResult {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Stats data structure from GraphQL query, types narrowed for component usage
-  const statsData: Record<string, { items?: unknown[]; total?: number; totalVisitors?: number }> | null | undefined = stats as Record<string, { items?: unknown[]; total?: number; totalVisitors?: number }> | null | undefined;
-  const topPagesResult = statsData?.['topPages'];
-  const referrersResult = statsData?.['topReferrers'];
-  const devicesResult = statsData?.['devices'];
-  const countriesResult = statsData?.['countries'];
+export function createEmptyDashboardStats(): DashboardQuery['dashboard'] {
+  return {
+    __typename: 'DashboardStats',
+    visitors: EMPTY_COUNT,
+    pageViews: EMPTY_COUNT,
+    sessions: EMPTY_COUNT,
+    bounceRate: EMPTY_COUNT,
+    avgDuration: EMPTY_COUNT,
+    topPages: {
+      __typename: 'PagedPageStats',
+      total: EMPTY_COUNT,
+      items: [],
+    },
+    topReferrers: {
+      __typename: 'PagedReferrerStats',
+      total: EMPTY_COUNT,
+      items: [],
+    },
+    browsers: [],
+    devices: {
+      __typename: 'PagedDeviceStats',
+      total: EMPTY_COUNT,
+      totalVisitors: EMPTY_COUNT,
+      items: [],
+    },
+    countries: {
+      __typename: 'PagedCountryStats',
+      total: EMPTY_COUNT,
+      totalVisitors: EMPTY_COUNT,
+      items: [],
+    },
+  };
+}
+
+export function extractStatsData(stats: DashboardQuery['dashboard'] | undefined): StatsDataResult {
+  const normalizedStats = stats ?? createEmptyDashboardStats();
 
   return {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- GraphQL types are narrowed for component usage
-    topPages: (topPagesResult?.items ?? []) as never[],
-    topPagesTotal: topPagesResult?.total ?? EMPTY_COUNT,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- GraphQL types are narrowed for component usage
-    referrersItems: (referrersResult?.items ?? []) as never[],
-    referrersTotal: referrersResult?.total ?? EMPTY_COUNT,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- GraphQL types are narrowed for component usage
-    devicesItems: (devicesResult?.items ?? []) as never[],
-    devicesTotal: devicesResult?.total ?? EMPTY_COUNT,
-    devicesTotalVisitors: devicesResult?.totalVisitors ?? EMPTY_COUNT,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- GraphQL types are narrowed for component usage
-    countriesItems: (countriesResult?.items ?? []) as never[],
-    countriesTotal: countriesResult?.total ?? EMPTY_COUNT,
-    countriesTotalVisitors: countriesResult?.totalVisitors ?? EMPTY_COUNT,
+    topPages: normalizedStats.topPages.items,
+    topPagesTotal: normalizedStats.topPages.total,
+    referrersItems: normalizedStats.topReferrers.items,
+    referrersTotal: normalizedStats.topReferrers.total,
+    devicesItems: normalizedStats.devices.items,
+    devicesTotal: normalizedStats.devices.total,
+    devicesTotalVisitors: normalizedStats.devices.totalVisitors,
+    countriesItems: normalizedStats.countries.items,
+    countriesTotal: normalizedStats.countries.total,
+    countriesTotalVisitors: normalizedStats.countries.totalVisitors,
   };
 }
 

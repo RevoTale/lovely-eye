@@ -6,10 +6,22 @@ interface RouterContext {
   auth: AuthContextType;
 }
 
+const noopAuthAction = async (): Promise<void> => {
+  await Promise.resolve();
+};
+
 // Helper to create initial router context (overridden at runtime via RouterProvider)
 function createInitialContext(): RouterContext {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion, @typescript-eslint/consistent-type-assertions -- TanStack Router requires initial context placeholder
-  return {} as RouterContext;
+  return {
+    auth: {
+      user: null,
+      isLoading: true,
+      isAuthenticated: false,
+      login: noopAuthAction,
+      register: noopAuthAction,
+      logout: noopAuthAction,
+    },
+  };
 }
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
@@ -25,7 +37,6 @@ const loginRoute = createRoute({
       return;
     }
     if (context.auth.isAuthenticated) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router expects redirect throws.
       throw redirect({ to: '/' });
     }
   },
@@ -44,7 +55,6 @@ const registerRoute = createRoute({
       return;
     }
     if (context.auth.isAuthenticated) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router expects redirect throws.
       throw redirect({ to: '/' });
     }
   },
@@ -63,7 +73,6 @@ const authLayoutRoute = createRoute({
       return;
     }
     if (!context.auth.isAuthenticated) {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router expects redirect throws.
       throw redirect({ to: '/login' });
     }
   },

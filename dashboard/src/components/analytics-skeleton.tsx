@@ -1,6 +1,7 @@
 
 import { AnalyticsContent } from '@/components/analytics-content';
-import type { RealtimeStats, DashboardQuery } from '@/gql/graphql';
+import type { RealtimeStats } from '@/gql/graphql';
+import { createEmptyDashboardStats } from '@/lib/dashboard-utils';
 
 const EMPTY_COUNT = 0;
 const FIRST_PAGE = 1;
@@ -29,8 +30,7 @@ export function AnalyticsSkeleton({
   onStatsBucketChange,
   onPageChange,
 }: AnalyticsSkeletonProps): React.JSX.Element {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions, @typescript-eslint/no-unsafe-type-assertion -- Skeleton requires partial stats object
-  const emptyStats: DashboardQuery['dashboard'] = { visitors: EMPTY_COUNT, pageViews: EMPTY_COUNT, sessions: EMPTY_COUNT, bounceRate: EMPTY_COUNT, avgDuration: EMPTY_COUNT } as DashboardQuery['dashboard'];
+  const emptyStats = createEmptyDashboardStats();
 
   return (
     <AnalyticsContent

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, Input, Label } from '@/components/ui';
 import type { EventDefinition, EventDefinitionInput, EventDefinitionFieldInput, EventFieldType } from '@/gql/graphql';
 
@@ -38,7 +38,7 @@ export function EventDefinitionsCard({
   deleting,
   onSave,
   onDelete,
-}: EventDefinitionsCardProps): React.JSX.Element {
+}: EventDefinitionsCardProps): ReactElement {
   const [draftName, setDraftName] = useState('');
   const [draftFields, setDraftFields] = useState<EventDefinitionFieldInput[]>([]);
   const [originalName, setOriginalName] = useState<string | null>(null);

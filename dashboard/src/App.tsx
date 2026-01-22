@@ -12,7 +12,6 @@ function InnerApp(): React.JSX.Element {
 
 export function App(): React.JSX.Element {
   const authErrorHandlerRef = useRef<(() => void) | null>(null);
-  // eslint-disable-next-line react-hooks/refs -- callback is only called on auth errors, not during render
   const apolloClient = useMemo(() => createApolloClient(() => {
     authErrorHandlerRef.current?.();
   }), []);

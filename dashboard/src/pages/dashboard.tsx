@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, type ReactElement } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { siteDetailRoute } from '@/router';
 import { ActiveFilters } from '@/components/active-filters';
@@ -15,7 +15,7 @@ import { AnalyticsSkeleton } from '@/components/analytics-skeleton';
 const EMPTY_COUNT = 0;
 const DEFAULT_STATS_BUCKET = 'daily';
 
-export function DashboardPage(): React.JSX.Element {
+export function DashboardPage(): ReactElement {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const search = useSearch({ from: siteDetailRoute.id });
   const navigate = useNavigate();
