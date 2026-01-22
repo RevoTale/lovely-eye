@@ -110,6 +110,7 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
       limit: EVENTS_PAGE_SIZE,
       offset: (eventsPage - PAGE_INDEX_OFFSET) * EVENTS_PAGE_SIZE,
     },
+    fetchPolicy:'cache-and-network',
     skip: !hasSiteId,
     pollInterval: DASHBOARD_POLL_INTERVAL_MS,
   });
