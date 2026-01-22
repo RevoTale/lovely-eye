@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useQuery, useMutation } from '@apollo/client/react';
 import {
   EventDefinitionsDocument,

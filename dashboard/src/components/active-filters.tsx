@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Badge } from '@/components/ui';
 import { Link } from '@/router';
 import { normalizeFilterValue, removeFilterValue, updateFilterSearch } from '@/lib/filter-utils';

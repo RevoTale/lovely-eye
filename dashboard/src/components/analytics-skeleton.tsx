@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { AnalyticsContent } from '@/components/analytics-content';
 import type { RealtimeStats, DashboardQuery } from '@/gql/graphql';
 

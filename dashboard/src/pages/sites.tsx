@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useQuery } from '@apollo/client/react';
 import { SitesDocument, type SitesQuery } from '@/gql/graphql';
 import { Link } from '@/router';

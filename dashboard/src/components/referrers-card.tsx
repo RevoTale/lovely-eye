@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Badge, Progress } from '@/components/ui';
 import { Globe, ExternalLink, TrendingUp } from 'lucide-react';
 import type { ReferrerStats } from '@/gql/graphql';

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Globe } from 'lucide-react';
 import { Badge, Progress } from '@/components/ui';
 import type { CountryStats } from '@/gql/graphql';

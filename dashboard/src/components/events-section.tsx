@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
 import type { EventsResult, EventCount } from '@/gql/graphql';
 import { EventsCard } from '@/components/events-card';

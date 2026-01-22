@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Badge } from '@/components/ui';
 import { Activity, Settings } from 'lucide-react';
 import type { RealtimeStats, Site } from '@/gql/graphql';

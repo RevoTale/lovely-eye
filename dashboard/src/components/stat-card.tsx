@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Card, CardContent, CardHeader, CardTitle, Skeleton } from '@/components/ui';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
 
