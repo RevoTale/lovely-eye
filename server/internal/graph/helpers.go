@@ -104,18 +104,16 @@ func convertToGraphQLEventDefinitions(definitions []*models.EventDefinition) []*
 		for _, field := range def.Fields {
 			// Convert FieldType enum to string
 			var fieldTypeStr string
-			switch field.Type {
-			case models.FieldTypeString:
-				fieldTypeStr = "STRING"
-			case models.FieldTypeInt:
-				fieldTypeStr = "INT"
-			case models.FieldTypeFloat:
-				fieldTypeStr = "FLOAT"
-			case models.FieldTypeBool:
-				fieldTypeStr = "BOOLEAN"
-			default:
-				fieldTypeStr = "STRING"
-			}
+	switch field.Type {
+	case models.FieldTypeString:
+		fieldTypeStr = "STRING"
+	case models.FieldTypeInt:
+		fieldTypeStr = "INT"
+	case models.FieldTypeBool:
+		fieldTypeStr = "BOOLEAN"
+	default:
+		fieldTypeStr = "STRING"
+	}
 
 			fields = append(fields, &model.EventDefinitionField{
 				ID:        strconv.FormatInt(field.ID, 10),

@@ -6,18 +6,16 @@ import (
 )
 
 const (
-	maxDashboardPageSize = 100
+	maxPageSize         = 100
 	maxTimeSeriesPoints  = 1000
 	defaultDailyPoints   = 365
 	defaultHourlyPoints  = 168
+	defaultEventsPage    = 50
 )
 
 func normalizePaging(paging model.PagingInput) (int, int) {
-	limit := clampLimit(paging.Limit, maxDashboardPageSize)
-	offset := paging.Offset
-	if offset < 0 {
-		offset = 0
-	}
+	limit := clampLimit(paging.Limit, maxPageSize)
+	offset := max(paging.Offset, 0)
 	return limit, offset
 }
 

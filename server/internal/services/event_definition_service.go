@@ -43,8 +43,8 @@ type EventDefinitionInput struct {
 	Fields []EventFieldInput
 }
 
-func (s *EventDefinitionService) List(ctx context.Context, siteID int64) ([]*models.EventDefinition, error) {
-	defs, err := s.repo.GetBySite(ctx, siteID)
+func (s *EventDefinitionService) List(ctx context.Context, siteID int64, limit, offset int) ([]*models.EventDefinition, error) {
+	defs, err := s.repo.GetBySite(ctx, siteID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list event definitions: %w", err)
 	}

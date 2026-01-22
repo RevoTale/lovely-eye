@@ -240,7 +240,7 @@ type EventCountResult struct {
 
 // GetEventCountsGrouped returns event counts grouped by name with the most recent event for each
 // This is used for the eventCounts GraphQL query to avoid fetching 200 full events just for counting
-func (r *AnalyticsRepository) GetEventCountsGrouped(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit int) ([]EventCountResult, error) {
+func (r *AnalyticsRepository) GetEventCountsGrouped(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit, offset int) ([]EventCountResult, error) {
 	fromUnix := from.Unix()
 	toUnix := to.Unix()
 
@@ -261,6 +261,9 @@ func (r *AnalyticsRepository) GetEventCountsGrouped(ctx context.Context, siteID 
 
 	if limit > 0 {
 		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
 	}
 
 	err := q.Scan(ctx, &results)
@@ -565,10 +568,10 @@ type ActivePageStats struct {
 	Visitors int
 }
 
-func (r *AnalyticsRepository) GetActivePages(ctx context.Context, siteID int64, since time.Time) ([]ActivePageStats, error) {
+func (r *AnalyticsRepository) GetActivePages(ctx context.Context, siteID int64, since time.Time, limit, offset int) ([]ActivePageStats, error) {
 	var stats []ActivePageStats
 	sinceUnix := since.Unix()
-	err := r.db.NewSelect().
+	q := r.db.NewSelect().
 		Model((*models.Event)(nil)).
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		ColumnExpr("e.path").
@@ -577,9 +580,14 @@ func (r *AnalyticsRepository) GetActivePages(ctx context.Context, siteID int64, 
 		Where("e.type = ?", models.EventTypePageview).
 		Where("e.time >= ?", sinceUnix).
 		Group("e.path").
-		Order("visitors DESC").
-		Limit(10).
-		Scan(ctx, &stats)
+		Order("visitors DESC", "e.path ASC")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+	err := q.Scan(ctx, &stats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active pages: %w", err)
 	}
@@ -811,7 +819,7 @@ func (r *AnalyticsRepository) GetTopReferrersWithFilter(ctx context.Context, sit
 	return stats, nil
 }
 
-func (r *AnalyticsRepository) GetBrowserStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit int, referrer, device, page, country []string) ([]BrowserStats, error) {
+func (r *AnalyticsRepository) GetBrowserStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, referrer, device, page, country []string) ([]BrowserStats, error) {
 	var stats []BrowserStats
 	fromUnix := from.Unix()
 	toUnix := to.Unix()
@@ -825,10 +833,15 @@ func (r *AnalyticsRepository) GetBrowserStatsWithFilter(ctx context.Context, sit
 		Where("s.enter_time <= ?", toUnix).
 		Where("c.browser != ''")
 	q = applySessionFilters(q, referrer, device, page, country)
-	err := q.Group("c.browser").
-		Order("visitors DESC", "c.browser ASC").
-		Limit(limit).
-		Scan(ctx, &stats)
+	q = q.Group("c.browser").
+		Order("visitors DESC", "c.browser ASC")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+	err := q.Scan(ctx, &stats)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get browser stats with filter: %w", err)
 	}

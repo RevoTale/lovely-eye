@@ -500,8 +500,8 @@ func (s *AnalyticsService) GetCountryStatsWithFilterPaged(ctx context.Context, s
 	return stats, total, totalVisitors, nil
 }
 
-func (s *AnalyticsService) GetBrowserStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit int, filter DashboardFilter) ([]repository.BrowserStats, error) {
-	stats, err := s.analyticsRepo.GetBrowserStatsWithFilter(ctx, siteID, from, to, limit, filter.Referrer, filter.Device, filter.Page, filter.Country)
+func (s *AnalyticsService) GetBrowserStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.BrowserStats, error) {
+	stats, err := s.analyticsRepo.GetBrowserStatsWithFilter(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
 	if err != nil {
 		return nil, fmt.Errorf("get browser stats with filter: %w", err)
 	}
@@ -527,10 +527,10 @@ func (s *AnalyticsService) GetRealtimeVisitors(ctx context.Context, siteID int64
 	return count, nil
 }
 
-func (s *AnalyticsService) GetActivePages(ctx context.Context, siteID int64) ([]repository.ActivePageStats, error) {
+func (s *AnalyticsService) GetActivePages(ctx context.Context, siteID int64, limit, offset int) ([]repository.ActivePageStats, error) {
 	// Get pages viewed in last 5 minutes
 	since := time.Now().Add(-5 * time.Minute)
-	stats, err := s.analyticsRepo.GetActivePages(ctx, siteID, since)
+	stats, err := s.analyticsRepo.GetActivePages(ctx, siteID, since, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("get active pages: %w", err)
 	}
@@ -583,8 +583,8 @@ type EventCountWithEvent struct {
 }
 
 // GetEventCounts retrieves aggregated event counts by name
-func (s *AnalyticsService) GetEventCounts(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit int) ([]EventCountWithEvent, error) {
-	results, err := s.analyticsRepo.GetEventCountsGrouped(ctx, siteID, from, to, referrer, device, page, country, limit)
+func (s *AnalyticsService) GetEventCounts(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit, offset int) ([]EventCountWithEvent, error) {
+	results, err := s.analyticsRepo.GetEventCountsGrouped(ctx, siteID, from, to, referrer, device, page, country, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("get event counts grouped: %w", err)
 	}

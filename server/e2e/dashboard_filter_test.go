@@ -100,7 +100,7 @@ func TestDashboardFiltering(t *testing.T) {
 	}
 
 	t.Run("no filter shows all data", func(t *testing.T) {
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should have all page views
@@ -119,7 +119,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Referrer: []string{googleReferrer},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should only show Google traffic (2 page views)
@@ -141,7 +141,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Device: []string{mobileDevice},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should only show mobile traffic (3 page views: 2 from Facebook, 1 from Twitter)
@@ -167,7 +167,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Page: []string{homePage},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should show traffic to /home page (3 views: 2 Google desktop + 1 Twitter mobile)
@@ -189,7 +189,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Device:   []string{mobileDevice},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should show only Facebook mobile traffic (2 page views to /about)
@@ -209,7 +209,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Device: []string{desktopDevice},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should show only desktop traffic to /home (2 Google views)
@@ -226,7 +226,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Referrer: []string{nonExistentReferrer},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should have no data
@@ -243,7 +243,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Referrer: []string{directReferrer},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		// Should show direct traffic (2 views to /products)

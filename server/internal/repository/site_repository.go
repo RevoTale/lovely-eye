@@ -79,9 +79,9 @@ func (r *SiteRepository) GetByDomain(ctx context.Context, domain string) (*model
 	return site, nil
 }
 
-func (r *SiteRepository) GetByUserID(ctx context.Context, userID int64) ([]*models.Site, error) {
+func (r *SiteRepository) GetByUserID(ctx context.Context, userID int64, limit, offset int) ([]*models.Site, error) {
 	var sites []*models.Site
-	err := r.db.NewSelect().
+	q := r.db.NewSelect().
 		Model(&sites).
 		Where("user_id = ?", userID).
 		Relation("Domains", func(q *bun.SelectQuery) *bun.SelectQuery {
@@ -92,8 +92,14 @@ func (r *SiteRepository) GetByUserID(ctx context.Context, userID int64) ([]*mode
 		}).
 		Relation("BlockedCountries", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Order("country_code ASC")
-		}).
-		Scan(ctx)
+		})
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+	err := q.Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sites by user id: %w", err)
 	}

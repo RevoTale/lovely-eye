@@ -206,7 +206,7 @@ func TestInitialAdminAuthentication(t *testing.T) {
 	})
 
 	t.Run("can list sites", func(t *testing.T) {
-		sitesResp, err := operations.Sites(ctx, client)
+		sitesResp, err := operations.Sites(ctx, client, operations.PagingInput{Limit: 50, Offset: 0})
 
 		require.NoError(t, err)
 		assert.Len(t, sitesResp.Sites, 1)

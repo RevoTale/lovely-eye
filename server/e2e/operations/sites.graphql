@@ -9,8 +9,8 @@ mutation CreateSite($input: CreateSiteInput!) {
 }
 
 # @genqlient
-query Sites {
-  sites {
+query Sites($paging: PagingInput!) {
+  sites(paging: $paging) {
     id
     domains
     name

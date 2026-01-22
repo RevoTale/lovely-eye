@@ -100,8 +100,8 @@ func (s *SiteService) GetByPublicKey(ctx context.Context, publicKey string) (*mo
 	return site, nil
 }
 
-func (s *SiteService) GetUserSites(ctx context.Context, userID int64) ([]*models.Site, error) {
-	sites, err := s.siteRepo.GetByUserID(ctx, userID)
+func (s *SiteService) GetUserSites(ctx context.Context, userID int64, limit, offset int) ([]*models.Site, error) {
+	sites, err := s.siteRepo.GetByUserID(ctx, userID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user sites: %w", err)
 	}
