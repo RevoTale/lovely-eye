@@ -10,6 +10,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/mileusna/useragent v1.3.5
 	github.com/oschwald/geoip2-golang v1.13.0
+	github.com/oschwald/geoip2-golang/v2 v2.1.0
 	github.com/oschwald/maxminddb-golang v1.13.1
 	github.com/stretchr/testify v1.11.1
 	github.com/uptrace/bun v1.2.16
