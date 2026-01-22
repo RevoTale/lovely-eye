@@ -1,5 +1,5 @@
-query EventDefinitions($siteId: ID!) {
-  eventDefinitions(siteId: $siteId) {
+query EventDefinitions($siteId: ID!, $paging: PagingInput!) {
+  eventDefinitions(siteId: $siteId, paging: $paging) {
     id
     name
     createdAt

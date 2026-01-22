@@ -12,6 +12,8 @@ import {
 
 type AuthUser = NonNullable<MeQuery['me']>;
 
+const SITES_PAGE_SIZE = 100;
+
 export interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
@@ -33,6 +35,12 @@ export function AuthProvider({ children, authErrorHandlerRef }: AuthProviderProp
   const client = useApolloClient();
 
   const { loading: meLoading, data: meData, refetch } = useQuery(MeDocument, {
+    variables: {
+      sitesPaging: {
+        limit: SITES_PAGE_SIZE,
+        offset: 0,
+      },
+    },
     fetchPolicy: 'network-only',
     errorPolicy: 'ignore',
   });

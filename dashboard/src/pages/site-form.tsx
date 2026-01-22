@@ -26,6 +26,7 @@ export function SiteFormPage(): React.JSX.Element {
   const navigate = useNavigate();
   const isNew = siteId === 'new';
   const GEO_IP_POLL_INTERVAL_MS = 5000;
+  const sitesPaging = { limit: 100, offset: 0 };
 
   const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
     variables: { id: siteId },
@@ -38,7 +39,7 @@ export function SiteFormPage(): React.JSX.Element {
   });
 
   const [createSite, { loading: creating }] = useMutation(CreateSiteDocument, {
-    refetchQueries: [{ query: SitesDocument }],
+    refetchQueries: [{ query: SitesDocument, variables: { paging: sitesPaging } }],
     onCompleted: (data) => {
       void navigate({ to: '/sites/$siteId', params: { siteId: data.createSite.id } });
     },

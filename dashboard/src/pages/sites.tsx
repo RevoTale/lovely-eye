@@ -11,9 +11,17 @@ const EMPTY_COUNT = 0;
 const FIRST_INDEX = 0;
 const EXTRA_DOMAIN_OFFSET = 1;
 const SKELETON_CARD_COUNT = 3;
+const SITES_PAGE_SIZE = 100;
 
 export function SitesPage(): React.JSX.Element {
-  const { data, loading, error } = useQuery(SitesDocument);
+  const { data, loading, error } = useQuery(SitesDocument, {
+    variables: {
+      paging: {
+        limit: SITES_PAGE_SIZE,
+        offset: 0,
+      },
+    },
+  });
 
   if (loading) {
     return (

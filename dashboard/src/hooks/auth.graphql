@@ -1,10 +1,10 @@
-query Me {
+query Me($sitesPaging: PagingInput!) {
   me {
     id
     username
     role
     createdAt
-    sites {
+    sites(paging: $sitesPaging) {
       id
       domains
       name

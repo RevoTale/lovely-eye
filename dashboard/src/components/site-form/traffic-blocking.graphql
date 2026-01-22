@@ -1,5 +1,5 @@
-query GeoIPCountries($search: String) {
-  geoIPCountries(search: $search) {
+query GeoIPCountries($search: String, $paging: PagingInput!) {
+  geoIPCountries(search: $search, paging: $paging) {
     code
     name
   }

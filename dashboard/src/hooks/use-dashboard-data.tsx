@@ -16,8 +16,10 @@ const EVENTS_PAGE_SIZE = 5;
 const EVENTS_COUNT_LIMIT = 200;
 const TOP_PAGES_PAGE_SIZE = 5;
 const REFERRERS_PAGE_SIZE = 5;
+const BROWSERS_PAGE_SIZE = 10;
 const DEVICES_PAGE_SIZE = 6;
 const COUNTRIES_PAGE_SIZE = 6;
+const ACTIVE_PAGES_PAGE_SIZE = 10;
 const EMPTY_COUNT = 0;
 const PAGE_INDEX_OFFSET = 1;
 const DASHBOARD_POLL_INTERVAL_MS = 60000;
@@ -67,6 +69,10 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
         limit: REFERRERS_PAGE_SIZE,
         offset: (referrersPage - PAGE_INDEX_OFFSET) * REFERRERS_PAGE_SIZE,
       },
+      browsersPaging: {
+        limit: BROWSERS_PAGE_SIZE,
+        offset: 0,
+      },
       devicesPaging: {
         limit: DEVICES_PAGE_SIZE,
         offset: (devicesPage - PAGE_INDEX_OFFSET) * DEVICES_PAGE_SIZE,
@@ -81,7 +87,13 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
   });
 
   const { data: realtimeData } = useQuery(RealtimeDocument, {
-    variables: { siteId },
+    variables: {
+      siteId,
+      activePagesPaging: {
+        limit: ACTIVE_PAGES_PAGE_SIZE,
+        offset: 0,
+      },
+    },
     skip: !hasSiteId,
     pollInterval: REALTIME_POLL_INTERVAL_MS,
   });
@@ -103,7 +115,10 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
       siteId,
       dateRange: dateRange ?? null,
       filter: Object.keys(filter ?? {}).length > EMPTY_COUNT ? filter : null,
-      limit: EVENTS_COUNT_LIMIT,
+      paging: {
+        limit: EVENTS_COUNT_LIMIT,
+        offset: 0,
+      },
     },
     skip: !hasSiteId,
     pollInterval: DASHBOARD_POLL_INTERVAL_MS,
@@ -125,6 +140,7 @@ export const PAGE_SIZES = {
   EVENTS: EVENTS_PAGE_SIZE,
   TOP_PAGES: TOP_PAGES_PAGE_SIZE,
   REFERRERS: REFERRERS_PAGE_SIZE,
+  BROWSERS: BROWSERS_PAGE_SIZE,
   DEVICES: DEVICES_PAGE_SIZE,
   COUNTRIES: COUNTRIES_PAGE_SIZE,
 } as const;

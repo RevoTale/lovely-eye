@@ -4,6 +4,7 @@ query Dashboard(
   $filter: FilterInput
   $topPagesPaging: PagingInput!
   $referrersPaging: PagingInput!
+  $browsersPaging: PagingInput!
   $devicesPaging: PagingInput!
   $countriesPaging: PagingInput!
 ) {
@@ -28,7 +29,7 @@ query Dashboard(
         visitors
       }
     }
-    browsers {
+    browsers(paging: $browsersPaging) {
       browser
       visitors
     }
@@ -51,10 +52,10 @@ query Dashboard(
   }
 }
 
-query Realtime($siteId: ID!) {
+query Realtime($siteId: ID!, $activePagesPaging: PagingInput!) {
   realtime(siteId: $siteId) {
     visitors
-    activePages {
+    activePages(paging: $activePagesPaging) {
       path
       visitors
     }
@@ -77,8 +78,8 @@ query Events($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $li
   }
 }
 
-query EventCounts($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $limit: Int) {
-  eventCounts(siteId: $siteId, dateRange: $dateRange, filter: $filter, limit: $limit) {
+query EventCounts($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $paging: PagingInput!) {
+  eventCounts(siteId: $siteId, dateRange: $dateRange, filter: $filter, paging: $paging) {
     count
     event {
       id

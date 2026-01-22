@@ -40,7 +40,8 @@ export function TrafficBlockingCard({
   const MAX_COUNTRY_MATCHES = 8;
   const MAX_COUNTRIES = 250;
   const MAX_IPS = 500;
-  const SEARCH_MIN_LENGTH = 2;
+const SEARCH_MIN_LENGTH = 2;
+const COUNTRY_PAGE_SIZE = 100;
   const SEARCH_SINGLE_MATCH_COUNT = 1;
 
   const buildBlockedIPEntries = (values: string[]): BlockedIPEntry[] =>
@@ -70,7 +71,13 @@ export function TrafficBlockingCard({
   const trimmedCountrySearch = countrySearch.trim();
   const shouldSearchCountries = geoIPReady && trimmedCountrySearch.length >= SEARCH_MIN_LENGTH;
   const { data: geoIPCountriesData, loading: geoIPCountriesLoading } = useQuery(GeoIpCountriesDocument, {
-    variables: { search: trimmedCountrySearch },
+    variables: {
+      search: trimmedCountrySearch,
+      paging: {
+        limit: COUNTRY_PAGE_SIZE,
+        offset: 0,
+      },
+    },
     skip: !shouldSearchCountries,
   });
 

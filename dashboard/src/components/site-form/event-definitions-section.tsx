@@ -15,9 +15,10 @@ interface EventDefinitionsSectionProps {
 export function EventDefinitionsSection({
   siteId,
 }: EventDefinitionsSectionProps): React.JSX.Element {
+  const paging = { limit: 100, offset: 0 };
   const [actionError, setActionError] = React.useState('');
   const { data: eventDefinitionsData } = useQuery(EventDefinitionsDocument, {
-    variables: { siteId },
+    variables: { siteId, paging },
   });
 
   const [upsertEventDefinition, { loading: savingDefinition }] = useMutation(UpsertEventDefinitionDocument);
@@ -33,7 +34,7 @@ export function EventDefinitionsSection({
           siteId,
           input,
         },
-        refetchQueries: [{ query: EventDefinitionsDocument, variables: { siteId } }],
+        refetchQueries: [{ query: EventDefinitionsDocument, variables: { siteId, paging } }],
       });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to save event definition');
@@ -48,7 +49,7 @@ export function EventDefinitionsSection({
           siteId,
           name: nameToDelete,
         },
-        refetchQueries: [{ query: EventDefinitionsDocument, variables: { siteId } }],
+        refetchQueries: [{ query: EventDefinitionsDocument, variables: { siteId, paging } }],
       });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to delete event definition');

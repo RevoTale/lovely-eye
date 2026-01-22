@@ -12,10 +12,11 @@ export function DangerZoneSection({
   siteId,
   onDeleted,
 }: DangerZoneSectionProps): React.JSX.Element {
+  const sitesPaging = { limit: 100, offset: 0 };
   const [actionError, setActionError] = React.useState('');
   const [confirmingDelete, setConfirmingDelete] = React.useState(false);
   const [deleteSite, { loading: deleting }] = useMutation(DeleteSiteDocument, {
-    refetchQueries: [{ query: SitesDocument }],
+    refetchQueries: [{ query: SitesDocument, variables: { paging: sitesPaging } }],
     onCompleted: () => {
       onDeleted();
     },
