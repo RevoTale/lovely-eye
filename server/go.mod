@@ -20,7 +20,7 @@ require (
 	github.com/urfave/cli/v3 v3.6.2
 	github.com/vektah/gqlparser/v2 v2.5.31
 	golang.org/x/crypto v0.47.0
-	modernc.org/sqlite v1.44.2
+	modernc.org/sqlite v1.44.3
 )
 
 require (
