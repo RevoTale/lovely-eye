@@ -525,6 +525,12 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 		if filter.Country != nil {
 			filterOpts.Country = filter.Country
 		}
+		if filter.EventName != nil {
+			filterOpts.EventName = filter.EventName
+		}
+		if filter.EventPath != nil {
+			filterOpts.EventPath = filter.EventPath
+		}
 	}
 
 	stats, err := r.AnalyticsService.GetDashboardOverviewWithFilter(ctx, id, from, to, filterOpts)
@@ -658,14 +664,14 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 	}
 
 	// Get filters
-	referrer, device, page, country := parseFilterInput(filter)
+	referrer, device, page, country, eventName, eventPath := parseFilterInput(filter)
 
 	var events []*models.Event
 	var total int
-	if filter == nil || (len(referrer) == 0 && len(device) == 0 && len(page) == 0 && len(country) == 0) {
+	if filter == nil || (len(referrer) == 0 && len(device) == 0 && len(page) == 0 && len(country) == 0 && len(eventName) == 0 && len(eventPath) == 0) {
 		events, total, err = r.AnalyticsService.GetEventsWithTotal(ctx, id, from, to, lim, off)
 	} else {
-		events, total, err = r.AnalyticsService.GetEventsWithTotalAndFilter(ctx, id, from, to, referrer, device, page, country, lim, off)
+		events, total, err = r.AnalyticsService.GetEventsWithTotalAndFilter(ctx, id, from, to, referrer, device, page, country, eventName, eventPath, lim, off)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events: %w", err)
@@ -698,9 +704,9 @@ func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRang
 	limit, offset := normalizePaging(paging)
 
 	// Get filters
-	referrer, device, page, country := parseFilterInput(filter)
+	referrer, device, page, country, eventName, eventPath := parseFilterInput(filter)
 
-	eventCounts, err := r.AnalyticsService.GetEventCounts(ctx, id, from, to, referrer, device, page, country, limit, offset)
+	eventCounts, err := r.AnalyticsService.GetEventCounts(ctx, id, from, to, referrer, device, page, country, eventName, eventPath, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get event counts: %w", err)
 	}

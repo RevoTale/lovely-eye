@@ -231,6 +231,10 @@ input FilterInput {
   page: [String!]
   """Filter by country (stored country name)"""
   country: [String!]
+  """Filter by event name"""
+  eventName: [String!]
+  """Filter by event path"""
+  eventPath: [String!]
 }
 
 input EventDefinitionFieldInput {

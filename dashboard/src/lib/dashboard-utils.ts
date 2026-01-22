@@ -41,6 +41,8 @@ interface FilterResult {
   devices: string[];
   pages: string[];
   countries: string[];
+  eventNames: string[];
+  eventPaths: string[];
   decodedSearch: Record<string, unknown>;
   filter: Record<string, string[]>;
 }
@@ -50,6 +52,8 @@ export function buildFilters(search: Record<string, string | string[] | undefine
   const devices = normalizeFilterValue(search['device']);
   const pages = normalizeFilterValue(search['page']);
   const countries = normalizeFilterValue(search['country']);
+  const eventNames = normalizeFilterValue(search['eventName']);
+  const eventPaths = normalizeFilterValue(search['eventPath']);
 
   const decodedSearch = {
     ...search,
@@ -57,6 +61,8 @@ export function buildFilters(search: Record<string, string | string[] | undefine
     ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
     ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
     ...(countries.length > EMPTY_COUNT ? { country: countries } : {}),
+    ...(eventNames.length > EMPTY_COUNT ? { eventName: eventNames } : {}),
+    ...(eventPaths.length > EMPTY_COUNT ? { eventPath: eventPaths } : {}),
   };
 
   const filter = {
@@ -64,9 +70,11 @@ export function buildFilters(search: Record<string, string | string[] | undefine
     ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
     ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
     ...(countries.length > EMPTY_COUNT ? { country: countries } : {}),
+    ...(eventNames.length > EMPTY_COUNT ? { eventName: eventNames } : {}),
+    ...(eventPaths.length > EMPTY_COUNT ? { eventPath: eventPaths } : {}),
   };
 
-  return { referrers, devices, pages, countries, decodedSearch, filter };
+  return { referrers, devices, pages, countries, eventNames, eventPaths, decodedSearch, filter };
 }
 
 interface StatsDataResult {

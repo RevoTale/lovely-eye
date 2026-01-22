@@ -183,6 +183,10 @@ export type FilterInput = {
   country: InputMaybe<Array<Scalars['String']['input']>>;
   /** Filter by device type (desktop, mobile, tablet) */
   device: InputMaybe<Array<Scalars['String']['input']>>;
+  /** Filter by event name */
+  eventName: InputMaybe<Array<Scalars['String']['input']>>;
+  /** Filter by event path */
+  eventPath: InputMaybe<Array<Scalars['String']['input']>>;
   /** Filter by page path */
   page: InputMaybe<Array<Scalars['String']['input']>>;
   /** Filter by specific referrer */

@@ -426,6 +426,10 @@ type FilterInput struct {
 	Page []string `json:"page"`
 	// Filter by country (stored country name)
 	Country []string `json:"country"`
+	// Filter by event name
+	EventName []string `json:"eventName"`
+	// Filter by event path
+	EventPath []string `json:"eventPath"`
 }
 
 // GetReferrer returns FilterInput.Referrer, and is useful for accessing the field via an interface.
@@ -439,6 +443,12 @@ func (v *FilterInput) GetPage() []string { return v.Page }
 
 // GetCountry returns FilterInput.Country, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetCountry() []string { return v.Country }
+
+// GetEventName returns FilterInput.EventName, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetEventName() []string { return v.EventName }
+
+// GetEventPath returns FilterInput.EventPath, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetEventPath() []string { return v.EventPath }
 
 type LoginInput struct {
 	Username string `json:"username"`

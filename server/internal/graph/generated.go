@@ -1439,6 +1439,10 @@ input FilterInput {
   page: [String!]
   """Filter by country (stored country name)"""
   country: [String!]
+  """Filter by event name"""
+  eventName: [String!]
+  """Filter by event path"""
+  eventPath: [String!]
 }
 
 input EventDefinitionFieldInput {
@@ -7387,7 +7391,7 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"referrer", "device", "page", "country"}
+	fieldsInOrder := [...]string{"referrer", "device", "page", "country", "eventName", "eventPath"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -7422,6 +7426,20 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 				return it, err
 			}
 			it.Country = data
+		case "eventName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eventName"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.EventName = data
+		case "eventPath":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eventPath"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.EventPath = data
 		}
 	}
 

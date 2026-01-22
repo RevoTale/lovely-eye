@@ -117,6 +117,7 @@ export function AnalyticsContent(props: AnalyticsContentProps): React.JSX.Elemen
       ) : null}
 
       <EventsSection
+        siteId={siteId}
         loading={eventsLoading}
         eventsResult={eventsResult}
         eventsCounts={eventsCounts}

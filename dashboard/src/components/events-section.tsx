@@ -7,6 +7,7 @@ import { EventsCard } from '@/components/events-card';
 import { EventCountsCard } from '@/components/event-counts-card';
 
 interface EventsSectionProps {
+  siteId: string;
   loading: boolean;
   eventsResult: EventsQuery['events'] | undefined;
   eventsCounts: EventCountsQuery['eventCounts'];
@@ -16,6 +17,7 @@ interface EventsSectionProps {
 }
 
 export function EventsSection({
+  siteId,
   loading,
   eventsResult,
   eventsCounts,
@@ -42,13 +44,14 @@ export function EventsSection({
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <EventsCard
+        siteId={siteId}
         events={eventsResult.events}
         total={eventsResult.total}
         page={page}
         pageSize={pageSize}
         onPageChange={onPageChange}
       />
-      <EventCountsCard eventCounts={eventCountsData} />
+      <EventCountsCard siteId={siteId} eventCounts={eventCountsData} />
     </div>
   );
 }

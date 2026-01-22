@@ -30,6 +30,10 @@ type FilterInput struct {
 	Page []string `json:"page,omitempty"`
 	// Filter by country (stored country name)
 	Country []string `json:"country,omitempty"`
+	// Filter by event name
+	EventName []string `json:"eventName,omitempty"`
+	// Filter by event path
+	EventPath []string `json:"eventPath,omitempty"`
 }
 
 type GeoIPCountry struct {

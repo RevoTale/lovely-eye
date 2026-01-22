@@ -1,10 +1,12 @@
 
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui';
+import { FilterLink } from '@/components/filter-link';
 import { EventFieldsFragmentDoc, EventPropertyFieldsFragmentDoc } from '@/gql/graphql';
 import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
 import { PaginationControls } from '@/components/pagination-controls';
 
 interface EventsCardProps {
+  siteId: string;
   events: Array<FragmentType<typeof EventFieldsFragmentDoc>>;
   total: number;
   page: number;
@@ -17,6 +19,7 @@ const FALLBACK_PATH = '/';
 const EMPTY_STRING = '';
 
 export function EventsCard({
+  siteId,
   events,
   total,
   page,
@@ -42,10 +45,22 @@ export function EventsCard({
               <div key={event.id} className="border rounded-md p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{event.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <FilterLink
+                      siteId={siteId}
+                      filterKey="eventName"
+                      value={event.name}
+                      className="text-sm font-medium truncate hover:underline underline-offset-2 block"
+                    >
+                      {event.name}
+                    </FilterLink>
+                    <FilterLink
+                      siteId={siteId}
+                      filterKey="eventPath"
+                      value={event.path === EMPTY_STRING ? FALLBACK_PATH : event.path}
+                      className="text-xs text-muted-foreground truncate hover:underline underline-offset-2 block"
+                    >
                       {event.path === EMPTY_STRING ? FALLBACK_PATH : event.path}
-                    </p>
+                    </FilterLink>
                   </div>
                   <span className="text-xs text-muted-foreground shrink-0">
                     {new Date(event.createdAt).toLocaleString()}

@@ -28,7 +28,7 @@ export function DashboardPage(): ReactElement {
   const countriesPage = useMemo(() => parsePage(search.countriesPage), [search.countriesPage]);
   const statsBucket = useMemo(() => normalizeStatsBucket(search.statsBucket), [search.statsBucket]);
 
-  const { referrers, devices, pages, countries, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
+  const { referrers, devices, pages, countries, eventNames, eventPaths, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
   const filterInput = useMemo<FilterInput | null>(() => {
     if (Object.keys(filter).length === EMPTY_COUNT) {
       return null;
@@ -38,12 +38,14 @@ export function DashboardPage(): ReactElement {
       device: filter['device'] ?? null,
       page: filter['page'] ?? null,
       country: filter['country'] ?? null,
+      eventName: filter['eventName'] ?? null,
+      eventPath: filter['eventPath'] ?? null,
     };
   }, [filter]);
 
   const filterKey = useMemo(
-    () => [referrers, devices, pages, countries].map((v) => v.join(',')).join('|'),
-    [referrers, devices, pages, countries]
+    () => [referrers, devices, pages, countries, eventNames, eventPaths].map((v) => v.join(',')).join('|'),
+    [referrers, devices, pages, countries, eventNames, eventPaths]
   );
 
   const dateRangeForChart = useMemo(() => {

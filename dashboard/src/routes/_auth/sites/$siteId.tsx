@@ -19,6 +19,8 @@ const searchSchema = z.object({
   device: filterValue,
   page: filterValue,
   country: filterValue,
+  eventName: filterValue,
+  eventPath: filterValue,
 });
 
 export const Route = createFileRoute('/_auth/sites/$siteId')({

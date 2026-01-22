@@ -31,11 +31,11 @@ func parseDateRangeInput(input *model.DateRangeInput) (time.Time, time.Time) {
 	return from, to
 }
 
-func parseFilterInput(input *model.FilterInput) (referrer []string, device []string, page []string, country []string) {
+func parseFilterInput(input *model.FilterInput) (referrer []string, device []string, page []string, country []string, eventName []string, eventPath []string) {
 	if input == nil {
-		return nil, nil, nil, nil
+		return nil, nil, nil, nil, nil, nil
 	}
-	return input.Referrer, input.Device, input.Page, input.Country
+	return input.Referrer, input.Device, input.Page, input.Country, input.EventName, input.EventPath
 }
 
 func convertToGraphQLEvent(e *models.Event) *model.Event {
@@ -61,7 +61,6 @@ func convertToGraphQLEvent(e *models.Event) *model.Event {
 		CreatedAt:  createdAt,
 	}
 }
-
 
 func convertToGraphQLEvents(events []*models.Event, total int) *model.EventsResult {
 	result := &model.EventsResult{
@@ -104,16 +103,16 @@ func convertToGraphQLEventDefinitions(definitions []*models.EventDefinition) []*
 		for _, field := range def.Fields {
 			// Convert FieldType enum to string
 			var fieldTypeStr string
-	switch field.Type {
-	case models.FieldTypeString:
-		fieldTypeStr = "STRING"
-	case models.FieldTypeInt:
-		fieldTypeStr = "INT"
-	case models.FieldTypeBool:
-		fieldTypeStr = "BOOLEAN"
-	default:
-		fieldTypeStr = "STRING"
-	}
+			switch field.Type {
+			case models.FieldTypeString:
+				fieldTypeStr = "STRING"
+			case models.FieldTypeInt:
+				fieldTypeStr = "INT"
+			case models.FieldTypeBool:
+				fieldTypeStr = "BOOLEAN"
+			default:
+				fieldTypeStr = "STRING"
+			}
 
 			fields = append(fields, &model.EventDefinitionField{
 				ID:        strconv.FormatInt(field.ID, 10),

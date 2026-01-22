@@ -284,7 +284,7 @@ func TestGetAvgSessionDurationWithFilter_EmptyResult(t *testing.T) {
 				pages = []string{*tt.page}
 			}
 
-			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, referrers, devices, pages, nil)
+			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, referrers, devices, pages, nil, nil, nil)
 			fmt.Println(got)
 			if err != nil {
 				t.Errorf("GetAvgSessionDurationWithFilter() error = %v, want nil", err)
@@ -370,7 +370,7 @@ func TestGetAvgSessionDurationWithFilter_WithData(t *testing.T) {
 				pages = []string{*tt.page}
 			}
 
-			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, referrers, devices, pages, nil)
+			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, referrers, devices, pages, nil, nil, nil)
 			if err != nil {
 				t.Errorf("GetAvgSessionDurationWithFilter() error = %v", err)
 			}

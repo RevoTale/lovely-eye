@@ -170,13 +170,13 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 
 	// Create Event record (Type=EventTypePageview=0)
 	event := &models.Event{
-		SessionID: session.ID,
-		Time:      nowUnix,
-		Hour:      nowUnix / 3600,
-		Day:       nowUnix / 86400,
-		Path:      input.Path,
-		Name:      input.Title,
-		Type:      models.EventTypePageview,
+		SessionID:    session.ID,
+		Time:         nowUnix,
+		Hour:         nowUnix / 3600,
+		Day:          nowUnix / 86400,
+		Path:         input.Path,
+		Name:         input.Title,
+		Type:         models.EventTypePageview,
 		DefinitionID: nil,
 	}
 
@@ -400,10 +400,12 @@ const (
 )
 
 type DashboardFilter struct {
-	Referrer []string
-	Device   []string
-	Page     []string
-	Country  []string
+	Referrer  []string
+	Device    []string
+	Page      []string
+	Country   []string
+	EventName []string
+	EventPath []string
 }
 
 func (s *AnalyticsService) GetDashboardOverview(ctx context.Context, siteID int64, from, to time.Time) (*DashboardOverview, error) {
@@ -453,11 +455,11 @@ func (s *AnalyticsService) RefreshGeoIPDatabase(ctx context.Context) (GeoIPStatu
 }
 
 func (s *AnalyticsService) GetDashboardOverviewWithFilter(ctx context.Context, siteID int64, from, to time.Time, filter DashboardFilter) (*DashboardOverview, error) {
-	visitors, _ := s.analyticsRepo.GetVisitorCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
-	pageViews, _ := s.analyticsRepo.GetPageViewCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
-	sessions, _ := s.analyticsRepo.GetSessionCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
-	bounceRate, _ := s.analyticsRepo.GetBounceRateWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
-	avgDuration, _ := s.analyticsRepo.GetAvgSessionDurationWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	visitors, _ := s.analyticsRepo.GetVisitorCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
+	pageViews, _ := s.analyticsRepo.GetPageViewCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
+	sessions, _ := s.analyticsRepo.GetSessionCountWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
+	bounceRate, _ := s.analyticsRepo.GetBounceRateWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
+	avgDuration, _ := s.analyticsRepo.GetAvgSessionDurationWithFilter(ctx, siteID, from, to, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
 
 	return &DashboardOverview{
 		Visitors:    visitors,
@@ -469,7 +471,7 @@ func (s *AnalyticsService) GetDashboardOverviewWithFilter(ctx context.Context, s
 }
 
 func (s *AnalyticsService) GetTopPagesWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.PageStats, int, error) {
-	stats, total, err := s.analyticsRepo.GetTopPagesWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, total, err := s.analyticsRepo.GetTopPagesWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
 	if err != nil {
 		return nil, 0, fmt.Errorf("get top pages with filter paged: %w", err)
 	}
@@ -477,7 +479,7 @@ func (s *AnalyticsService) GetTopPagesWithFilterPaged(ctx context.Context, siteI
 }
 
 func (s *AnalyticsService) GetTopReferrersWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.ReferrerStats, int, error) {
-	stats, total, err := s.analyticsRepo.GetTopReferrersWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, total, err := s.analyticsRepo.GetTopReferrersWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
 	if err != nil {
 		return nil, 0, fmt.Errorf("get top referrers with filter paged: %w", err)
 	}
@@ -485,7 +487,7 @@ func (s *AnalyticsService) GetTopReferrersWithFilterPaged(ctx context.Context, s
 }
 
 func (s *AnalyticsService) GetDeviceStatsWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.DeviceStats, int, int, error) {
-	stats, total, totalVisitors, err := s.analyticsRepo.GetDeviceStatsWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, total, totalVisitors, err := s.analyticsRepo.GetDeviceStatsWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
 	if err != nil {
 		return nil, 0, 0, fmt.Errorf("get device stats with filter paged: %w", err)
 	}
@@ -493,7 +495,7 @@ func (s *AnalyticsService) GetDeviceStatsWithFilterPaged(ctx context.Context, si
 }
 
 func (s *AnalyticsService) GetCountryStatsWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.CountryStats, int, int, error) {
-	stats, total, totalVisitors, err := s.analyticsRepo.GetCountryStatsWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, total, totalVisitors, err := s.analyticsRepo.GetCountryStatsWithFilterPaged(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
 	if err != nil {
 		return nil, 0, 0, fmt.Errorf("get country stats with filter paged: %w", err)
 	}
@@ -501,7 +503,7 @@ func (s *AnalyticsService) GetCountryStatsWithFilterPaged(ctx context.Context, s
 }
 
 func (s *AnalyticsService) GetBrowserStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, filter DashboardFilter) ([]repository.BrowserStats, error) {
-	stats, err := s.analyticsRepo.GetBrowserStatsWithFilter(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, err := s.analyticsRepo.GetBrowserStatsWithFilter(ctx, siteID, from, to, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
 	if err != nil {
 		return nil, fmt.Errorf("get browser stats with filter: %w", err)
 	}
@@ -509,7 +511,7 @@ func (s *AnalyticsService) GetBrowserStatsWithFilter(ctx context.Context, siteID
 }
 
 func (s *AnalyticsService) GetTimeSeriesStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, bucket TimeBucket, limit int, filter DashboardFilter) ([]repository.DailyVisitorStats, error) {
-	stats, err := s.analyticsRepo.GetTimeSeriesStatsWithFilter(ctx, siteID, from, to, bucket, limit, filter.Referrer, filter.Device, filter.Page, filter.Country)
+	stats, err := s.analyticsRepo.GetTimeSeriesStatsWithFilter(ctx, siteID, from, to, bucket, limit, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
 	if err != nil {
 		return nil, fmt.Errorf("get time series stats with filter: %w", err)
 	}
@@ -562,13 +564,13 @@ func (s *AnalyticsService) GetEventsWithTotal(ctx context.Context, siteID int64,
 }
 
 // GetEventsWithTotalAndFilter retrieves events with total count for pagination and filtering
-func (s *AnalyticsService) GetEventsWithTotalAndFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit, offset int) ([]*models.Event, int, error) {
-	events, err := s.analyticsRepo.GetEventsWithFilter(ctx, siteID, from, to, referrer, device, page, country, limit, offset)
+func (s *AnalyticsService) GetEventsWithTotalAndFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country, eventName, eventPath []string, limit, offset int) ([]*models.Event, int, error) {
+	events, err := s.analyticsRepo.GetEventsWithFilter(ctx, siteID, from, to, referrer, device, page, country, eventName, eventPath, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("get events with filter: %w", err)
 	}
 
-	total, err := s.analyticsRepo.GetEventCountWithFilter(ctx, siteID, from, to, referrer, device, page, country)
+	total, err := s.analyticsRepo.GetEventCountWithFilter(ctx, siteID, from, to, referrer, device, page, country, eventName, eventPath)
 	if err != nil {
 		return nil, 0, fmt.Errorf("get event count with filter: %w", err)
 	}
@@ -583,8 +585,8 @@ type EventCountWithEvent struct {
 }
 
 // GetEventCounts retrieves aggregated event counts by name
-func (s *AnalyticsService) GetEventCounts(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country []string, limit, offset int) ([]EventCountWithEvent, error) {
-	results, err := s.analyticsRepo.GetEventCountsGrouped(ctx, siteID, from, to, referrer, device, page, country, limit, offset)
+func (s *AnalyticsService) GetEventCounts(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country, eventName, eventPath []string, limit, offset int) ([]EventCountWithEvent, error) {
+	results, err := s.analyticsRepo.GetEventCountsGrouped(ctx, siteID, from, to, referrer, device, page, country, eventName, eventPath, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("get event counts grouped: %w", err)
 	}
