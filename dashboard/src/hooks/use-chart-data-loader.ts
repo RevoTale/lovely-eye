@@ -47,15 +47,15 @@ export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseCha
   });
 
   useEffect(() => {
+    setLoadedData([]);
+    setIsLoadingMore(false);
+  }, [filterKey]);
+
+  useEffect(() => {
     if (data?.dashboard.dailyStats !== undefined) {
       setLoadedData(getFragmentData(DailyStatsFieldsFragmentDoc, data.dashboard.dailyStats));
     }
   }, [data]);
-
-  useEffect(() => {
-    setLoadedData([]);
-    setIsLoadingMore(false);
-  }, [filterKey]);
 
   const loadNextBatch = useCallback(async () => {
     if (isLoadingMore || loading || data?.dashboard === undefined) return;
