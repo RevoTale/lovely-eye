@@ -1,4 +1,5 @@
-import React from 'react';
+
+import { useState, type ReactElement } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import {
   EventDefinitionsDocument,
@@ -14,10 +15,13 @@ interface EventDefinitionsSectionProps {
 
 export function EventDefinitionsSection({
   siteId,
-}: EventDefinitionsSectionProps): React.JSX.Element {
-  const [actionError, setActionError] = React.useState('');
+}: EventDefinitionsSectionProps): ReactElement {
+  const EVENT_DEFS_PAGE_SIZE = 100;
+  const EVENT_DEFS_PAGE_OFFSET = 0;
+  const paging = { limit: EVENT_DEFS_PAGE_SIZE, offset: EVENT_DEFS_PAGE_OFFSET };
+  const [actionError, setActionError] = useState('');
   const { data: eventDefinitionsData } = useQuery(EventDefinitionsDocument, {
-    variables: { siteId },
+    variables: { siteId, paging },
   });
 
   const [upsertEventDefinition, { loading: savingDefinition }] = useMutation(UpsertEventDefinitionDocument);
@@ -33,7 +37,7 @@ export function EventDefinitionsSection({
           siteId,
           input,
         },
-        refetchQueries: [{ query: EventDefinitionsDocument, variables: { siteId } }],
+        refetchQueries: [{ query: EventDefinitionsDocument, variables: { siteId, paging } }],
       });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to save event definition');
@@ -48,7 +52,7 @@ export function EventDefinitionsSection({
           siteId,
           name: nameToDelete,
         },
-        refetchQueries: [{ query: EventDefinitionsDocument, variables: { siteId } }],
+        refetchQueries: [{ query: EventDefinitionsDocument, variables: { siteId, paging } }],
       });
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Failed to delete event definition');

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Badge } from '@/components/ui';
 import { Link } from '@/router';
 import { normalizeFilterValue, removeFilterValue, updateFilterSearch } from '@/lib/filter-utils';
@@ -8,6 +8,8 @@ interface FilterSearch {
   device?: string | string[] | undefined;
   page?: string | string[] | undefined;
   country?: string | string[] | undefined;
+  eventName?: string | string[] | undefined;
+  eventPath?: string | string[] | undefined;
 }
 
 interface ActiveFiltersProps {
@@ -22,11 +24,15 @@ export function ActiveFilters({ siteId, search }: ActiveFiltersProps): React.JSX
   const devices = normalizeFilterValue(search.device);
   const pages = normalizeFilterValue(search.page);
   const countries = normalizeFilterValue(search.country);
+  const eventNames = normalizeFilterValue(search.eventName);
+  const eventPaths = normalizeFilterValue(search.eventPath);
   const hasFilters =
     referrers.length > EMPTY_COUNT ||
     devices.length > EMPTY_COUNT ||
     pages.length > EMPTY_COUNT ||
-    countries.length > EMPTY_COUNT;
+    countries.length > EMPTY_COUNT ||
+    eventNames.length > EMPTY_COUNT ||
+    eventPaths.length > EMPTY_COUNT;
   if (!hasFilters) {
     return null;
   }
@@ -90,6 +96,36 @@ export function ActiveFilters({ siteId, search }: ActiveFiltersProps): React.JSX
         >
           <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
             <span className="text-xs">Country: {country}</span>
+            <span className="ml-1 text-xs">×</span>
+          </Badge>
+        </Link>
+      ))}
+      {eventNames.map((eventName) => (
+        <Link
+          key={`event-name-${eventName}`}
+          to="/sites/$siteId"
+          params={{ siteId }}
+          search={(prev) => ({
+            ...updateFilterSearch(prev, 'eventName', removeFilterValue(prev.eventName, eventName)),
+          })}
+        >
+          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
+            <span className="text-xs">Event: {eventName}</span>
+            <span className="ml-1 text-xs">×</span>
+          </Badge>
+        </Link>
+      ))}
+      {eventPaths.map((eventPath) => (
+        <Link
+          key={`event-path-${eventPath}`}
+          to="/sites/$siteId"
+          params={{ siteId }}
+          search={(prev) => ({
+            ...updateFilterSearch(prev, 'eventPath', removeFilterValue(prev.eventPath, eventPath)),
+          })}
+        >
+          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
+            <span className="text-xs">Event Path: {eventPath}</span>
             <span className="ml-1 text-xs">×</span>
           </Badge>
         </Link>

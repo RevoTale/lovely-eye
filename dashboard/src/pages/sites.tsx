@@ -1,19 +1,29 @@
-import React from 'react';
+
 import { useQuery } from '@apollo/client/react';
-import { SitesDocument, type SitesQuery } from '@/gql/graphql';
+import { SitesDocument, SiteSummaryFieldsFragmentDoc } from '@/gql/graphql';
+import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
 import { Link } from '@/router';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton, Badge } from '@/components/ui';
 import { Plus, Globe, ExternalLink, TrendingUp } from 'lucide-react';
 
-type SiteListItem = SitesQuery['sites'][number];
+type SiteListItem = FragmentType<typeof SiteSummaryFieldsFragmentDoc>;
 
 const EMPTY_COUNT = 0;
 const FIRST_INDEX = 0;
 const EXTRA_DOMAIN_OFFSET = 1;
 const SKELETON_CARD_COUNT = 3;
+const SITES_PAGE_SIZE = 100;
+const SITES_PAGE_OFFSET = 0;
 
 export function SitesPage(): React.JSX.Element {
-  const { data, loading, error } = useQuery(SitesDocument);
+  const { data, loading, error } = useQuery(SitesDocument, {
+    variables: {
+      paging: {
+        limit: SITES_PAGE_SIZE,
+        offset: SITES_PAGE_OFFSET,
+      },
+    },
+  });
 
   if (loading) {
     return (
@@ -51,6 +61,7 @@ export function SitesPage(): React.JSX.Element {
   }
 
   const sites: SiteListItem[] = data?.sites ?? [];
+  const siteItems = getFragmentData(SiteSummaryFieldsFragmentDoc, sites);
 
   return (
     <div className="space-y-8">
@@ -87,7 +98,7 @@ export function SitesPage(): React.JSX.Element {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {sites.map((site) => (
+          {siteItems.map((site) => (
             <Link key={site.id} to="/sites/$siteId" params={{ siteId: site.id }}>
               <Card className="group hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer h-full">
                 <CardHeader>

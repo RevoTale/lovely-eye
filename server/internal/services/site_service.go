@@ -54,7 +54,7 @@ func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*model
 	}
 
 	for _, domain := range normalizedDomains {
-		existing, _ := s.siteRepo.GetByDomain(ctx, domain)
+		existing, _ := s.siteRepo.GetByDomainForUser(ctx, input.UserID, domain)
 		if existing != nil {
 			return nil, ErrSiteExists
 		}
@@ -100,8 +100,8 @@ func (s *SiteService) GetByPublicKey(ctx context.Context, publicKey string) (*mo
 	return site, nil
 }
 
-func (s *SiteService) GetUserSites(ctx context.Context, userID int64) ([]*models.Site, error) {
-	sites, err := s.siteRepo.GetByUserID(ctx, userID)
+func (s *SiteService) GetUserSites(ctx context.Context, userID int64, limit, offset int) ([]*models.Site, error) {
+	sites, err := s.siteRepo.GetByUserID(ctx, userID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user sites: %w", err)
 	}
@@ -136,7 +136,7 @@ func (s *SiteService) Update(ctx context.Context, id, userID int64, input Update
 		}
 
 		for _, domain := range normalizedDomains {
-			existing, _ := s.siteRepo.GetByDomain(ctx, domain)
+			existing, _ := s.siteRepo.GetByDomainForUser(ctx, userID, domain)
 			if existing != nil && existing.ID != site.ID {
 				return nil, ErrSiteExists
 			}

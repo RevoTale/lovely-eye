@@ -19,14 +19,20 @@ func NewEventDefinitionRepository(db *bun.DB) *EventDefinitionRepository {
 	return &EventDefinitionRepository{db: db}
 }
 
-func (r *EventDefinitionRepository) GetBySite(ctx context.Context, siteID int64) ([]*models.EventDefinition, error) {
+func (r *EventDefinitionRepository) GetBySite(ctx context.Context, siteID int64, limit, offset int) ([]*models.EventDefinition, error) {
 	var defs []*models.EventDefinition
-	err := r.db.NewSelect().
+	q := r.db.NewSelect().
 		Model(&defs).
 		Where("site_id = ?", siteID).
 		Relation("Fields").
-		Order("name ASC").
-		Scan(ctx)
+		Order("name ASC")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+	err := q.Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get event definitions by site: %w", err)
 	}

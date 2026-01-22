@@ -30,7 +30,7 @@ func (r *SiteRepository) GetByID(ctx context.Context, id int64) (*models.Site, e
 		Model(site).
 		Where("id = ?", id).
 		Relation("Domains", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.Order("position ASC")
+			return q.Order("position ASC", "id ASC")
 		}).
 		Relation("BlockedIPs", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Order("ip ASC")
@@ -51,7 +51,7 @@ func (r *SiteRepository) GetByPublicKey(ctx context.Context, publicKey string) (
 		Model(site).
 		Where("public_key = ?", publicKey).
 		Relation("Domains", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.Order("position ASC")
+			return q.Order("position ASC", "id ASC")
 		}).
 		Relation("BlockedIPs", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Order("ip ASC")
@@ -66,34 +66,43 @@ func (r *SiteRepository) GetByPublicKey(ctx context.Context, publicKey string) (
 	return site, nil
 }
 
-func (r *SiteRepository) GetByDomain(ctx context.Context, domain string) (*models.Site, error) {
+func (r *SiteRepository) GetByDomainForUser(ctx context.Context, userID int64, domain string) (*models.Site, error) {
 	site := new(models.Site)
 	err := r.db.NewSelect().
 		Model(site).
 		Join("JOIN site_domains AS sd ON sd.site_id = s.id").
+		Where("s.user_id = ?", userID).
 		Where("sd.domain = ?", domain).
+		Order("s.id ASC").
+		Limit(1).
 		Scan(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get site by domain: %w", err)
+		return nil, fmt.Errorf("failed to get site by domain for user: %w", err)
 	}
 	return site, nil
 }
 
-func (r *SiteRepository) GetByUserID(ctx context.Context, userID int64) ([]*models.Site, error) {
+func (r *SiteRepository) GetByUserID(ctx context.Context, userID int64, limit, offset int) ([]*models.Site, error) {
 	var sites []*models.Site
-	err := r.db.NewSelect().
+	q := r.db.NewSelect().
 		Model(&sites).
 		Where("user_id = ?", userID).
 		Relation("Domains", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.Order("position ASC")
+			return q.Order("position ASC", "id ASC")
 		}).
 		Relation("BlockedIPs", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Order("ip ASC")
 		}).
 		Relation("BlockedCountries", func(q *bun.SelectQuery) *bun.SelectQuery {
 			return q.Order("country_code ASC")
-		}).
-		Scan(ctx)
+		})
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	if offset > 0 {
+		q = q.Offset(offset)
+	}
+	err := q.Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get sites by user id: %w", err)
 	}

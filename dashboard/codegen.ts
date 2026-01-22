@@ -7,14 +7,16 @@ const config: CodegenConfig = {
     './src/gql/': {
       preset: 'client',
       presetConfig: {
-        fragmentMasking: false,
+        fragmentMasking: true,
       },
       config: {
         strictScalars: true,
         scalars: { Time: 'string' },
-        enumsAsTypes: true,
-        avoidOptionals: { field: true, inputValue: false, object: true },
+        enumsAsConst: true,
+        avoidOptionals: { field: true, inputValue: true, object: true },
         nonOptionalTypename: true,
+        maybeValue: 'T | null',
+        inputMaybeValue: 'T | null',
         useTypeImports: true,
       },
     },

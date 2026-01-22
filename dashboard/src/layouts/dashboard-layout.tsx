@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect, type ReactElement } from 'react';
 import { Outlet } from '@tanstack/react-router';
 import { useAuth } from '@/hooks';
 import { Link, useNavigate } from '@/router';
@@ -22,7 +22,7 @@ const LOGO_SIZE = 32;
 const USERNAME_INITIALS_START = 0;
 const USERNAME_INITIALS_END = 2;
 
-export function DashboardLayout(): React.JSX.Element {
+export function DashboardLayout(): ReactElement {
   const { user, logout, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 

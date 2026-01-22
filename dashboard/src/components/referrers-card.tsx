@@ -1,13 +1,13 @@
-import React from 'react';
+
 import { Badge, Progress } from '@/components/ui';
 import { Globe, ExternalLink, TrendingUp } from 'lucide-react';
-import type { ReferrerStats } from '@/gql/graphql';
+import type { ReferrerStatsFieldsFragment } from '@/gql/graphql';
 import { BoardCard, BoardCardSkeleton } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
 
 interface ReferrersCardProps {
-  referrers: ReferrerStats[];
+  referrers: ReferrerStatsFieldsFragment[];
   totalCount: number;
   totalVisitors: number;
   siteId: string;

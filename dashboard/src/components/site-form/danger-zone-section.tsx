@@ -1,4 +1,5 @@
-import React from 'react';
+
+import { useState, type ReactElement } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { DeleteSiteDocument, SitesDocument } from '@/gql/graphql';
 import { DangerZoneCard } from '@/components/site-form/danger-zone-card';
@@ -11,11 +12,14 @@ interface DangerZoneSectionProps {
 export function DangerZoneSection({
   siteId,
   onDeleted,
-}: DangerZoneSectionProps): React.JSX.Element {
-  const [actionError, setActionError] = React.useState('');
-  const [confirmingDelete, setConfirmingDelete] = React.useState(false);
+}: DangerZoneSectionProps): ReactElement {
+  const SITES_PAGE_SIZE = 100;
+  const SITES_PAGE_OFFSET = 0;
+  const sitesPaging = { limit: SITES_PAGE_SIZE, offset: SITES_PAGE_OFFSET };
+  const [actionError, setActionError] = useState('');
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteSite, { loading: deleting }] = useMutation(DeleteSiteDocument, {
-    refetchQueries: [{ query: SitesDocument }],
+    refetchQueries: [{ query: SitesDocument, variables: { paging: sitesPaging } }],
     onCompleted: () => {
       onDeleted();
     },

@@ -1,10 +1,10 @@
-import React, { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactElement } from 'react';
 import { useAuth } from '@/hooks';
 import { Link, useNavigate } from '@/router';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Logo } from '@/components/logo';
 
-export function RegisterPage(): React.JSX.Element {
+export function RegisterPage(): ReactElement {
   const MIN_PASSWORD_LENGTH = 8;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');

@@ -1,45 +1,42 @@
 mutation CreateSite($input: CreateSiteInput!) {
   createSite(input: $input) {
-    id
-    domains
-    name
-    publicKey
-    createdAt
+    ...SiteDetailsFields
   }
 }
 
 query GeoIPStatus {
   geoIPStatus {
-    state
-    dbPath
-    source
-    lastError
-    updatedAt
+    ...GeoIPStatusFields
   }
 }
 
 query Site($id: ID!) {
   site(id: $id) {
-    id
-    domains
-    name
-    publicKey
-    trackCountry
-    blockedIPs
-    blockedCountries
-    createdAt
+    ...SiteDetailsFields
   }
 }
 
 mutation UpdateSite($id: ID!, $input: UpdateSiteInput!) {
   updateSite(id: $id, input: $input) {
-    id
-    domains
-    name
-    publicKey
-    trackCountry
-    blockedIPs
-    blockedCountries
-    createdAt
+    ...SiteDetailsFields
   }
+}
+
+fragment GeoIPStatusFields on GeoIPStatus {
+  state
+  dbPath
+  source
+  lastError
+  updatedAt
+}
+
+fragment SiteDetailsFields on Site {
+  id
+  domains
+  name
+  publicKey
+  trackCountry
+  blockedIPs
+  blockedCountries
+  createdAt
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Trash2 } from 'lucide-react';
 

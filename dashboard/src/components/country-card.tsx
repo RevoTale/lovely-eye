@@ -1,13 +1,13 @@
-import React from 'react';
+
 import { Globe } from 'lucide-react';
 import { Badge, Progress } from '@/components/ui';
-import type { CountryStats } from '@/gql/graphql';
+import type { CountryStatsFieldsFragment } from '@/gql/graphql';
 import { BoardCard, BoardCardSkeleton } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
 
 interface CountryCardProps {
-  countries: CountryStats[];
+  countries: CountryStatsFieldsFragment[];
   total: number;
   totalVisitors: number;
   page: number;

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { useQuery, useMutation } from '@apollo/client/react';
 import {
@@ -7,8 +7,15 @@ import {
   CreateSiteDocument,
   UpdateSiteDocument,
   GeoIpStatusDocument,
-  type SiteQuery,
+  SiteDetailsFieldsFragmentDoc,
+  GeoIpStatusFieldsFragmentDoc,
+  type CreateSiteMutation,
+  type CreateSiteMutationVariables,
+  type UpdateSiteMutation,
+  type UpdateSiteMutationVariables,
+  type SiteDetailsFieldsFragment,
 } from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 import { Button, Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
 import { ArrowLeft } from 'lucide-react';
 import { Link, siteDetailRoute } from '@/router';
@@ -19,13 +26,16 @@ import { SiteInfoCard } from '@/components/site-form/site-info-card';
 import { TrackingCodeSection } from '@/components/site-form/tracking-code-section';
 import { TrafficBlockingSection } from '@/components/site-form/traffic-blocking-section';
 
-type SiteDetails = NonNullable<SiteQuery['site']>;
+type SiteDetails = SiteDetailsFieldsFragment;
 
 export function SiteFormPage(): React.JSX.Element {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const navigate = useNavigate();
   const isNew = siteId === 'new';
   const GEO_IP_POLL_INTERVAL_MS = 5000;
+  const SITES_PAGE_SIZE = 100;
+  const SITES_PAGE_OFFSET = 0;
+  const sitesPaging = { limit: SITES_PAGE_SIZE, offset: SITES_PAGE_OFFSET };
 
   const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
     variables: { id: siteId },
@@ -37,17 +47,26 @@ export function SiteFormPage(): React.JSX.Element {
     pollInterval: GEO_IP_POLL_INTERVAL_MS,
   });
 
-  const [createSite, { loading: creating }] = useMutation(CreateSiteDocument, {
-    refetchQueries: [{ query: SitesDocument }],
-    onCompleted: (data) => {
-      void navigate({ to: '/sites/$siteId', params: { siteId: data.createSite.id } });
+  const [createSite, { loading: creating }] = useMutation<CreateSiteMutation, CreateSiteMutationVariables>(CreateSiteDocument, {
+    refetchQueries: [{ query: SitesDocument, variables: { paging: sitesPaging } }],
+    onCompleted: (data: CreateSiteMutation) => {
+      const createdSite = getFragmentData(SiteDetailsFieldsFragmentDoc, data.createSite);
+      void navigate({ to: '/sites/$siteId', params: { siteId: createdSite.id } });
     },
   });
 
-  const [updateSite, { loading: updating }] = useMutation(UpdateSiteDocument);
+  const [updateSite, { loading: updating }] = useMutation<UpdateSiteMutation, UpdateSiteMutationVariables>(UpdateSiteDocument);
 
-  const site: SiteDetails | undefined = siteData?.site ?? undefined;
-  const geoIPStatus = geoIPData?.geoIPStatus;
+  const siteDataValue = siteData?.site;
+  const geoIPStatusValue = geoIPData?.geoIPStatus;
+  const site: SiteDetails | undefined =
+    siteDataValue === null || siteDataValue === undefined
+      ? undefined
+      : getFragmentData(SiteDetailsFieldsFragmentDoc, siteDataValue);
+  const geoIPStatus =
+    geoIPStatusValue === undefined
+      ? undefined
+      : getFragmentData(GeoIpStatusFieldsFragmentDoc, geoIPStatusValue);
   const handleSubmit = async (nameValue: string, domainsValue: string[]): Promise<void> => {
     await createSite({
       variables: {
@@ -67,6 +86,9 @@ export function SiteFormPage(): React.JSX.Element {
         input: {
           name: nameValue,
           domains: domainsValue,
+          trackCountry: null,
+          blockedIPs: null,
+          blockedCountries: null,
         },
       },
     });
@@ -110,7 +132,6 @@ export function SiteFormPage(): React.JSX.Element {
       </div>
 
       <SiteInfoCard
-        siteId={site?.id}
         isNew={isNew}
         initialName={site?.name ?? ''}
         initialDomains={site?.domains ?? []}

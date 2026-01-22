@@ -1,4 +1,5 @@
-import React from 'react';
+
+import { useState, type ReactElement } from 'react';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui';
 import { CheckCircle2, Copy, RefreshCw } from 'lucide-react';
 
@@ -26,8 +27,8 @@ export function TrackingCodeCard({
   onConfirmRegenerate,
   onCancelRegenerate,
   onViewAnalytics,
-}: TrackingCodeCardProps): React.JSX.Element {
-  const [copiedValue, setCopiedValue] = React.useState<string | null>(null);
+}: TrackingCodeCardProps): ReactElement {
+  const [copiedValue, setCopiedValue] = useState<string | null>(null);
 
   const handleCopy = async (value: string): Promise<void> => {
     await navigator.clipboard.writeText(value);

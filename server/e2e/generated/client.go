@@ -345,13 +345,13 @@ type EventFieldType string
 
 const (
 	EventFieldTypeString  EventFieldType = "STRING"
-	EventFieldTypeNumber  EventFieldType = "NUMBER"
+	EventFieldTypeInt     EventFieldType = "INT"
 	EventFieldTypeBoolean EventFieldType = "BOOLEAN"
 )
 
 var AllEventFieldType = []EventFieldType{
 	EventFieldTypeString,
-	EventFieldTypeNumber,
+	EventFieldTypeInt,
 	EventFieldTypeBoolean,
 }
 
@@ -426,6 +426,10 @@ type FilterInput struct {
 	Page []string `json:"page"`
 	// Filter by country (stored country name)
 	Country []string `json:"country"`
+	// Filter by event name
+	EventName []string `json:"eventName"`
+	// Filter by event path
+	EventPath []string `json:"eventPath"`
 }
 
 // GetReferrer returns FilterInput.Referrer, and is useful for accessing the field via an interface.
@@ -439,6 +443,12 @@ func (v *FilterInput) GetPage() []string { return v.Page }
 
 // GetCountry returns FilterInput.Country, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetCountry() []string { return v.Country }
+
+// GetEventName returns FilterInput.EventName, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetEventName() []string { return v.EventName }
+
+// GetEventPath returns FilterInput.EventPath, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetEventPath() []string { return v.EventPath }
 
 type LoginInput struct {
 	Username string `json:"username"`
@@ -737,6 +747,7 @@ type __DashboardInput struct {
 	Filter           *FilterInput    `json:"filter,omitempty"`
 	TopPagesPaging   PagingInput     `json:"topPagesPaging"`
 	ReferrersPaging  PagingInput     `json:"referrersPaging"`
+	BrowsersPaging   PagingInput     `json:"browsersPaging"`
 	DevicesPaging    PagingInput     `json:"devicesPaging"`
 	CountriesPaging  PagingInput     `json:"countriesPaging"`
 	DailyStatsBucket *TimeBucket     `json:"dailyStatsBucket"`
@@ -757,6 +768,9 @@ func (v *__DashboardInput) GetTopPagesPaging() PagingInput { return v.TopPagesPa
 
 // GetReferrersPaging returns __DashboardInput.ReferrersPaging, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetReferrersPaging() PagingInput { return v.ReferrersPaging }
+
+// GetBrowsersPaging returns __DashboardInput.BrowsersPaging, and is useful for accessing the field via an interface.
+func (v *__DashboardInput) GetBrowsersPaging() PagingInput { return v.BrowsersPaging }
 
 // GetDevicesPaging returns __DashboardInput.DevicesPaging, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetDevicesPaging() PagingInput { return v.DevicesPaging }
@@ -830,6 +844,14 @@ type __SiteInput struct {
 // GetId returns __SiteInput.Id, and is useful for accessing the field via an interface.
 func (v *__SiteInput) GetId() string { return v.Id }
 
+// __SitesInput is used internally by genqlient
+type __SitesInput struct {
+	Paging PagingInput `json:"paging"`
+}
+
+// GetPaging returns __SitesInput.Paging, and is useful for accessing the field via an interface.
+func (v *__SitesInput) GetPaging() PagingInput { return v.Paging }
+
 // __UpsertEventDefinitionInput is used internally by genqlient
 type __UpsertEventDefinitionInput struct {
 	SiteId string               `json:"siteId"`
@@ -881,7 +903,7 @@ func CreateSite(
 
 // The query executed by Dashboard.
 const Dashboard_Operation = `
-query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $topPagesPaging: PagingInput!, $referrersPaging: PagingInput!, $devicesPaging: PagingInput!, $countriesPaging: PagingInput!, $dailyStatsBucket: TimeBucket, $dailyStatsLimit: Int) {
+query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $topPagesPaging: PagingInput!, $referrersPaging: PagingInput!, $browsersPaging: PagingInput!, $devicesPaging: PagingInput!, $countriesPaging: PagingInput!, $dailyStatsBucket: TimeBucket, $dailyStatsLimit: Int) {
 	dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
 		visitors
 		pageViews
@@ -903,7 +925,7 @@ query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput,
 				visitors
 			}
 		}
-		browsers {
+		browsers(paging: $browsersPaging) {
 			browser
 			visitors
 		}
@@ -941,6 +963,7 @@ func Dashboard(
 	filter *FilterInput,
 	topPagesPaging PagingInput,
 	referrersPaging PagingInput,
+	browsersPaging PagingInput,
 	devicesPaging PagingInput,
 	countriesPaging PagingInput,
 	dailyStatsBucket *TimeBucket,
@@ -955,6 +978,7 @@ func Dashboard(
 			Filter:           filter,
 			TopPagesPaging:   topPagesPaging,
 			ReferrersPaging:  referrersPaging,
+			BrowsersPaging:   browsersPaging,
 			DevicesPaging:    devicesPaging,
 			CountriesPaging:  countriesPaging,
 			DailyStatsBucket: dailyStatsBucket,
@@ -1265,8 +1289,8 @@ func Site(
 
 // The query executed by Sites.
 const Sites_Operation = `
-query Sites {
-	sites {
+query Sites ($paging: PagingInput!) {
+	sites(paging: $paging) {
 		id
 		domains
 		name
@@ -1278,10 +1302,14 @@ query Sites {
 func Sites(
 	ctx_ context.Context,
 	client_ graphql.Client,
+	paging PagingInput,
 ) (data_ *SitesResponse, err_ error) {
 	req_ := &graphql.Request{
 		OpName: "Sites",
 		Query:  Sites_Operation,
+		Variables: &__SitesInput{
+			Paging: paging,
+		},
 	}
 
 	data_ = &SitesResponse{}

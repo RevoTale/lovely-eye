@@ -1,14 +1,16 @@
-import React from 'react';
+
+import { DashboardStatsFieldsFragmentDoc, RealtimeStatsFieldsFragmentDoc } from '@/gql/graphql';
 import type {
-  CountryStats,
-  DashboardQuery,
-  DeviceStats,
-  EventCount,
-  EventsResult,
-  PageStats,
-  ReferrerStats,
-  RealtimeStats,
+  CountryStatsFieldsFragment,
+  DeviceStatsFieldsFragment,
+  EventCountsQuery,
+  EventsQuery,
+  FilterInput,
+  PageStatsFieldsFragment,
+  ReferrerStatsFieldsFragment,
+  RealtimeQuery,
 } from '@/gql/graphql';
+import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
 import { Users, Eye, Clock, TrendingDown } from 'lucide-react';
 import { StatCard } from '@/components/stat-card';
 import { OverviewChartSection } from '@/components/overview-chart-section';
@@ -22,38 +24,38 @@ import { formatDuration } from '@/lib/dashboard-utils';
 
 interface AnalyticsContentProps {
   siteId: string;
-  stats: DashboardQuery['dashboard'];
+  stats: FragmentType<typeof DashboardStatsFieldsFragmentDoc>;
   dateRange: { from: Date; to: Date } | null;
-  filter: Record<string, string[]> | null;
+  filter: FilterInput | null;
   chartBucket: 'daily' | 'hourly';
   onChartBucketChange: (bucket: 'daily' | 'hourly') => void;
-  realtime: RealtimeStats | undefined;
+  realtime: RealtimeQuery['realtime'] | undefined;
   eventsLoading: boolean;
-  eventsResult: EventsResult | undefined;
-  eventsCounts: EventCount[];
+  eventsResult: EventsQuery['events'] | undefined;
+  eventsCounts: EventCountsQuery['eventCounts'];
   eventsPage: number;
   eventsPageSize: number;
   onEventsPageChange: (page: number) => void;
-  topPages: PageStats[];
+  topPages: PageStatsFieldsFragment[];
   topPagesTotal: number;
   topPagesPage: number;
   topPagesPageSize: number;
   topPagesLoading?: boolean;
   onTopPagesPageChange: (page: number) => void;
-  referrers: ReferrerStats[];
+  referrers: ReferrerStatsFieldsFragment[];
   referrersTotal: number;
   referrersPage: number;
   referrersPageSize: number;
   referrersLoading?: boolean;
   onReferrersPageChange: (page: number) => void;
-  countries: CountryStats[];
+  countries: CountryStatsFieldsFragment[];
   countriesTotal: number;
   countriesTotalVisitors: number;
   countriesPage: number;
   countriesPageSize: number;
   countriesLoading?: boolean;
   onCountriesPageChange: (page: number) => void;
-  devices: DeviceStats[];
+  devices: DeviceStatsFieldsFragment[];
   devicesTotal: number;
   devicesTotalVisitors: number;
   devicesPage: number;
@@ -71,7 +73,10 @@ export function AnalyticsContent(props: AnalyticsContentProps): React.JSX.Elemen
     countries, countriesTotal, countriesTotalVisitors, countriesPage, countriesPageSize, countriesLoading = false, onCountriesPageChange,
     devices, devicesTotal, devicesTotalVisitors, devicesPage, devicesPageSize, devicesLoading = false, onDevicesPageChange,
   } = props;
-  const activePages = realtime?.activePages;
+  const statsData = getFragmentData(DashboardStatsFieldsFragmentDoc, stats);
+  const realtimeData =
+    realtime === undefined ? undefined : getFragmentData(RealtimeStatsFieldsFragmentDoc, realtime);
+  const activePages = realtimeData?.activePages;
   const hasActivePages = activePages !== undefined;
 
   return (
@@ -79,22 +84,22 @@ export function AnalyticsContent(props: AnalyticsContentProps): React.JSX.Elemen
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Visitors"
-          value={stats.visitors.toLocaleString()}
+          value={statsData.visitors.toLocaleString()}
           icon={Users}
         />
         <StatCard
           title="Page Views"
-          value={stats.pageViews.toLocaleString()}
+          value={statsData.pageViews.toLocaleString()}
           icon={Eye}
         />
         <StatCard
           title="Avg. Session"
-          value={formatDuration(stats.avgDuration)}
+          value={formatDuration(statsData.avgDuration)}
           icon={Clock}
         />
         <StatCard
           title="Bounce Rate"
-          value={`${String(Math.round(stats.bounceRate))}%`}
+          value={`${String(Math.round(statsData.bounceRate))}%`}
           icon={TrendingDown}
         />
       </div>
@@ -112,6 +117,7 @@ export function AnalyticsContent(props: AnalyticsContentProps): React.JSX.Elemen
       ) : null}
 
       <EventsSection
+        siteId={siteId}
         loading={eventsLoading}
         eventsResult={eventsResult}
         eventsCounts={eventsCounts}
@@ -133,7 +139,7 @@ export function AnalyticsContent(props: AnalyticsContentProps): React.JSX.Elemen
         <ReferrersCard
           referrers={referrers}
           totalCount={referrersTotal}
-          totalVisitors={stats.visitors}
+          totalVisitors={statsData.visitors}
           siteId={siteId}
           page={referrersPage}
           pageSize={referrersPageSize}

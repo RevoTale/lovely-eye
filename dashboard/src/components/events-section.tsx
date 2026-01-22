@@ -1,19 +1,23 @@
-import React from 'react';
+
 import { Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
-import type { EventsResult, EventCount } from '@/gql/graphql';
+import { EventCountFieldsFragmentDoc } from '@/gql/graphql';
+import type { EventCountsQuery, EventsQuery } from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 import { EventsCard } from '@/components/events-card';
 import { EventCountsCard } from '@/components/event-counts-card';
 
 interface EventsSectionProps {
+  siteId: string;
   loading: boolean;
-  eventsResult: EventsResult | undefined;
-  eventsCounts: EventCount[];
+  eventsResult: EventsQuery['events'] | undefined;
+  eventsCounts: EventCountsQuery['eventCounts'];
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
 }
 
 export function EventsSection({
+  siteId,
   loading,
   eventsResult,
   eventsCounts,
@@ -21,7 +25,8 @@ export function EventsSection({
   pageSize,
   onPageChange,
 }: EventsSectionProps): React.JSX.Element | null {
-  if (loading) {
+  const eventCountsData = getFragmentData(EventCountFieldsFragmentDoc, eventsCounts);
+  if (eventsResult === undefined || loading) {
     return (
       <Card>
         <CardHeader>
@@ -34,20 +39,19 @@ export function EventsSection({
     );
   }
 
-  if (eventsResult === undefined) {
-    return null;
-  }
+
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <EventsCard
+        siteId={siteId}
         events={eventsResult.events}
         total={eventsResult.total}
         page={page}
         pageSize={pageSize}
         onPageChange={onPageChange}
       />
-      <EventCountsCard eventCounts={eventsCounts} />
+      <EventCountsCard siteId={siteId} eventCounts={eventCountsData} />
     </div>
   );
 }

@@ -1,13 +1,13 @@
-import React from 'react';
+
 import { Badge, Progress } from '@/components/ui';
-import type { PageStats } from '@/gql/graphql';
+import type { PageStatsFieldsFragment } from '@/gql/graphql';
 import { Globe } from 'lucide-react';
 import { BoardCard, BoardCardSkeleton } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
 
 interface TopPagesCardProps {
-  pages: PageStats[];
+  pages: PageStatsFieldsFragment[];
   total: number;
   page: number;
   pageSize: number;

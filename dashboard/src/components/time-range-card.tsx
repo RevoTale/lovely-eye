@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Tabs, TabsList, TabsTrigger, Label } from '@/components/ui';
 import type { DatePreset } from '@/lib/date-range';
 import { formatDateInput, isDatePreset, isValidDateInput, isValidTimeInput, normalizeTimeInput } from '@/lib/date-range';
@@ -31,7 +31,7 @@ export function TimeRangeCard({
   toTime,
   onPresetChange,
   onApplyRange,
-}: TimeRangeCardProps): React.JSX.Element {
+}: TimeRangeCardProps): ReactElement {
   const isCustom = preset === 'custom';
   const displayFromTime = normalizeTimeInput(fromTime, '00:00');
   const displayToTime = normalizeTimeInput(toTime, '23:59');

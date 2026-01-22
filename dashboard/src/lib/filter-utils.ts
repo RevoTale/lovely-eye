@@ -44,15 +44,14 @@ export function removeFilterValue(current: SearchValue, value: string): string[]
   return next.length > EMPTY_COUNT ? next : undefined;
 }
 
-export function updateFilterSearch<T extends Record<string, unknown>>(
-  prev: T,
-  key: keyof T,
+export function updateFilterSearch(
+  prev: Record<string, unknown>,
+  key: string,
   value: string[] | undefined
-): T {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- generic record reconstruction requires assertion
-  const result: T = Object.fromEntries(Object.entries(prev).filter(([k]) => k !== key)) as T;
+): Record<string, unknown> {
+  const { [key]: _removed, ...rest } = prev;
   if (value === undefined || value.length === EMPTY_COUNT) {
-    return result;
+    return rest;
   }
-  return Object.assign(result, { [key]: value });
+  return { ...rest, [key]: value };
 }

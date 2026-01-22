@@ -1,15 +1,16 @@
-import React from 'react';
+
 import { Card, CardContent, CardHeader, CardTitle, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { TrendingUp } from 'lucide-react';
 import { CHART_CONFIG, CHART_MARGIN, TICK_MARGIN } from '@/lib/chart-config';
 import { ChartSkeleton } from '@/components/chart-skeleton';
 import { useChartDataLoader } from '@/hooks/use-chart-data-loader';
+import type { FilterInput } from '@/gql/graphql';
 
 interface OverviewChartSectionProps {
   siteId: string;
   dateRange: { from: Date; to: Date } | null;
-  filter: Record<string, string[]> | null;
+  filter: FilterInput | null;
   bucket: 'daily' | 'hourly';
   onBucketChange: (bucket: 'daily' | 'hourly') => void;
 }

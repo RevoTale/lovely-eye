@@ -65,8 +65,9 @@ func (r *dashboardStatsResolver) TopReferrers(ctx context.Context, obj *model.Da
 }
 
 // Browsers is the resolver for the browsers field.
-func (r *dashboardStatsResolver) Browsers(ctx context.Context, obj *model.DashboardStats) ([]*model.BrowserStats, error) {
-	stats, err := r.AnalyticsService.GetBrowserStatsWithFilter(ctx, obj.SiteID, obj.From, obj.To, 10, obj.Filter)
+func (r *dashboardStatsResolver) Browsers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) ([]*model.BrowserStats, error) {
+	limit, offset := normalizePaging(paging)
+	stats, err := r.AnalyticsService.GetBrowserStatsWithFilter(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get browser stats: %w", err)
 	}
@@ -441,15 +442,16 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 }
 
 // Sites is the resolver for the sites field.
-func (r *queryResolver) Sites(ctx context.Context) ([]*model.Site, error) {
+func (r *queryResolver) Sites(ctx context.Context, paging model.PagingInput) ([]*model.Site, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
 	}
 
-	sites, err := r.SiteService.GetUserSites(ctx, claims.UserID)
+	limit, offset := normalizePaging(paging)
+	sites, err := r.SiteService.GetUserSites(ctx, claims.UserID, limit, offset)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user sites: %w", err)
+		return nil, fmt.Errorf("failed to get sites: %w", err)
 	}
 
 	var result []*model.Site
@@ -523,6 +525,12 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 		if filter.Country != nil {
 			filterOpts.Country = filter.Country
 		}
+		if filter.EventName != nil {
+			filterOpts.EventName = filter.EventName
+		}
+		if filter.EventPath != nil {
+			filterOpts.EventPath = filter.EventPath
+		}
 	}
 
 	stats, err := r.AnalyticsService.GetDashboardOverviewWithFilter(ctx, id, from, to, filterOpts)
@@ -584,7 +592,7 @@ func (r *queryResolver) GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, er
 }
 
 // GeoIPCountries is the resolver for the geoIPCountries field.
-func (r *queryResolver) GeoIPCountries(ctx context.Context, search *string) ([]*model.GeoIPCountry, error) {
+func (r *queryResolver) GeoIPCountries(ctx context.Context, search *string, paging model.PagingInput) ([]*model.GeoIPCountry, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
@@ -600,8 +608,18 @@ func (r *queryResolver) GeoIPCountries(ctx context.Context, search *string) ([]*
 		return nil, fmt.Errorf("failed to get geoip countries: %w", err)
 	}
 
-	result := make([]*model.GeoIPCountry, 0, len(countries))
-	for _, country := range countries {
+	limit, offset := normalizePaging(paging)
+	if offset >= len(countries) {
+		return []*model.GeoIPCountry{}, nil
+	}
+
+	end := offset + limit
+	if end > len(countries) {
+		end = len(countries)
+	}
+
+	result := make([]*model.GeoIPCountry, 0, end-offset)
+	for _, country := range countries[offset:end] {
 		result = append(result, &model.GeoIPCountry{
 			Code: country.Code,
 			Name: country.Name,
@@ -632,7 +650,7 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 	from, to := parseDateRangeInput(dateRange)
 
 	// Default pagination
-	lim := 50
+	lim := defaultEventsPage
 	off := 0
 	if limit != nil {
 		lim = *limit
@@ -640,16 +658,20 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 	if offset != nil {
 		off = *offset
 	}
+	lim = clampLimit(lim, maxPageSize)
+	if off < 0 {
+		off = 0
+	}
 
 	// Get filters
-	referrer, device, page, country := parseFilterInput(filter)
+	referrer, device, page, country, eventName, eventPath := parseFilterInput(filter)
 
 	var events []*models.Event
 	var total int
-	if filter == nil || (len(referrer) == 0 && len(device) == 0 && len(page) == 0 && len(country) == 0) {
+	if filter == nil || (len(referrer) == 0 && len(device) == 0 && len(page) == 0 && len(country) == 0 && len(eventName) == 0 && len(eventPath) == 0) {
 		events, total, err = r.AnalyticsService.GetEventsWithTotal(ctx, id, from, to, lim, off)
 	} else {
-		events, total, err = r.AnalyticsService.GetEventsWithTotalAndFilter(ctx, id, from, to, referrer, device, page, country, lim, off)
+		events, total, err = r.AnalyticsService.GetEventsWithTotalAndFilter(ctx, id, from, to, referrer, device, page, country, eventName, eventPath, lim, off)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events: %w", err)
@@ -659,7 +681,7 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 }
 
 // EventCounts is the resolver for the eventCounts field.
-func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int) ([]*model.EventCount, error) {
+func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) ([]*model.EventCount, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
@@ -679,16 +701,12 @@ func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRang
 	// Parse date range
 	from, to := parseDateRangeInput(dateRange)
 
-	// Default limit
-	lim := 50
-	if limit != nil {
-		lim = *limit
-	}
+	limit, offset := normalizePaging(paging)
 
 	// Get filters
-	referrer, device, page, country := parseFilterInput(filter)
+	referrer, device, page, country, eventName, eventPath := parseFilterInput(filter)
 
-	eventCounts, err := r.AnalyticsService.GetEventCounts(ctx, id, from, to, referrer, device, page, country, lim)
+	eventCounts, err := r.AnalyticsService.GetEventCounts(ctx, id, from, to, referrer, device, page, country, eventName, eventPath, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get event counts: %w", err)
 	}
@@ -706,7 +724,7 @@ func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRang
 }
 
 // EventDefinitions is the resolver for the eventDefinitions field.
-func (r *queryResolver) EventDefinitions(ctx context.Context, siteID string) ([]*model.EventDefinition, error) {
+func (r *queryResolver) EventDefinitions(ctx context.Context, siteID string, paging model.PagingInput) ([]*model.EventDefinition, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
 		return nil, errors.New("unauthorized")
@@ -722,7 +740,8 @@ func (r *queryResolver) EventDefinitions(ctx context.Context, siteID string) ([]
 		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
-	definitions, err := r.EventDefService.List(ctx, id)
+	limit, offset := normalizePaging(paging)
+	definitions, err := r.EventDefService.List(ctx, id, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list event definitions: %w", err)
 	}
@@ -731,8 +750,9 @@ func (r *queryResolver) EventDefinitions(ctx context.Context, siteID string) ([]
 }
 
 // ActivePages is the resolver for the activePages field.
-func (r *realtimeStatsResolver) ActivePages(ctx context.Context, obj *model.RealtimeStats) ([]*model.ActivePageStats, error) {
-	activePages, err := r.AnalyticsService.GetActivePages(ctx, obj.SiteID)
+func (r *realtimeStatsResolver) ActivePages(ctx context.Context, obj *model.RealtimeStats, paging model.PagingInput) ([]*model.ActivePageStats, error) {
+	limit, offset := normalizePaging(paging)
+	activePages, err := r.AnalyticsService.GetActivePages(ctx, obj.SiteID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active pages: %w", err)
 	}
@@ -765,3 +785,42 @@ type dashboardStatsResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type realtimeStatsResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+/*
+	func (r *userResolver) Sites(ctx context.Context, obj *model.User, paging model.PagingInput) ([]*model.Site, error) {
+	claims := auth.GetUserFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized")
+	}
+
+	userID, err := strconv.ParseInt(obj.ID, 10, 64)
+	if err != nil {
+		return nil, errors.New("invalid user ID")
+	}
+
+	if claims.UserID != userID {
+		return nil, errors.New("unauthorized")
+	}
+
+	limit, offset := normalizePagingWithMax(paging, maxSitesPageSize)
+	sites, err := r.SiteService.GetUserSites(ctx, userID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user sites: %w", err)
+	}
+
+	result := make([]*model.Site, 0, len(sites))
+	for _, site := range sites {
+		result = append(result, buildGraphQLSite(site))
+	}
+
+	return result, nil
+}
+func (r *Resolver) User() UserResolver { return &userResolver{r} }
+type userResolver struct{ *Resolver }
+*/

@@ -1,4 +1,5 @@
-import React from 'react';
+
+import { useState, type ReactElement } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { RefreshGeoIpDatabaseDocument, UpdateSiteDocument } from '@/gql/graphql';
 import { CountryTrackingCard } from '@/components/country-tracking-card';
@@ -22,15 +23,11 @@ export function CountryTrackingSection({
   siteName,
   initialTrackCountry,
   geoIPStatus,
-}: CountryTrackingSectionProps): React.JSX.Element {
-  const [trackCountry, setTrackCountry] = React.useState(initialTrackCountry);
-  const [actionError, setActionError] = React.useState('');
+}: CountryTrackingSectionProps): ReactElement {
+  const [trackCountry, setTrackCountry] = useState(initialTrackCountry);
+  const [actionError, setActionError] = useState('');
   const [updateSite, { loading: updating }] = useMutation(UpdateSiteDocument);
   const [refreshGeoIP, { loading: refreshing }] = useMutation(RefreshGeoIpDatabaseDocument);
-
-  React.useEffect(() => {
-    setTrackCountry(initialTrackCountry);
-  }, [initialTrackCountry, siteId]);
 
   const handleToggle = async (enabled: boolean): Promise<void> => {
     if (siteId === undefined || siteId === '' || siteName === undefined || siteName === '') {
@@ -46,6 +43,9 @@ export function CountryTrackingSection({
           input: {
             name: siteName,
             trackCountry: enabled,
+            domains: null,
+            blockedIPs: null,
+            blockedCountries: null,
           },
         },
       });

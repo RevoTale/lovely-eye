@@ -5,12 +5,17 @@ import {
   LoginDocument,
   RegisterDocument,
   LogoutDocument,
-  type MeQuery,
+  AuthUserDetailsFieldsFragmentDoc,
+  type AuthUserDetailsFieldsFragment,
   type LoginInput,
   type RegisterInput,
 } from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 
-type AuthUser = NonNullable<MeQuery['me']>;
+type AuthUser = AuthUserDetailsFieldsFragment;
+
+const SITES_PAGE_SIZE = 100;
+const SITES_PAGE_OFFSET = 0;
 
 export interface AuthContextType {
   user: AuthUser | null;
@@ -33,6 +38,12 @@ export function AuthProvider({ children, authErrorHandlerRef }: AuthProviderProp
   const client = useApolloClient();
 
   const { loading: meLoading, data: meData, refetch } = useQuery(MeDocument, {
+    variables: {
+      sitesPaging: {
+        limit: SITES_PAGE_SIZE,
+        offset: SITES_PAGE_OFFSET,
+      },
+    },
     fetchPolicy: 'network-only',
     errorPolicy: 'ignore',
   });
@@ -74,7 +85,11 @@ export function AuthProvider({ children, authErrorHandlerRef }: AuthProviderProp
     await refetch();
   }, [logoutMutation, refetch]);
 
-  const user = meData?.me ?? null;
+  const userData = meData?.me;
+  const user =
+    userData !== null && userData !== undefined
+      ? getFragmentData(AuthUserDetailsFieldsFragmentDoc, userData)
+      : null;
 
   const value: AuthContextType = {
     user,

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
 
 const STAT_PLACEHOLDER_COUNT = 4;

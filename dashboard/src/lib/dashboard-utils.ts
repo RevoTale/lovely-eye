@@ -1,4 +1,20 @@
 import { normalizeFilterValue } from '@/lib/filter-utils';
+import {
+  CountryStatsFieldsFragmentDoc,
+  DashboardStatsFieldsFragmentDoc,
+  DeviceStatsFieldsFragmentDoc,
+  PageStatsFieldsFragmentDoc,
+  ReferrerStatsFieldsFragmentDoc,
+} from '@/gql/graphql';
+import type {
+  CountryStatsFieldsFragment,
+  DashboardStatsFieldsFragment,
+  DashboardQuery,
+  DeviceStatsFieldsFragment,
+  PageStatsFieldsFragment,
+  ReferrerStatsFieldsFragment,
+} from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 
 const EMPTY_COUNT = 0;
 const FIRST_INDEX = 0;
@@ -25,6 +41,8 @@ interface FilterResult {
   devices: string[];
   pages: string[];
   countries: string[];
+  eventNames: string[];
+  eventPaths: string[];
   decodedSearch: Record<string, unknown>;
   filter: Record<string, string[]>;
 }
@@ -34,6 +52,8 @@ export function buildFilters(search: Record<string, string | string[] | undefine
   const devices = normalizeFilterValue(search['device']);
   const pages = normalizeFilterValue(search['page']);
   const countries = normalizeFilterValue(search['country']);
+  const eventNames = normalizeFilterValue(search['eventName']);
+  const eventPaths = normalizeFilterValue(search['eventPath']);
 
   const decodedSearch = {
     ...search,
@@ -41,6 +61,8 @@ export function buildFilters(search: Record<string, string | string[] | undefine
     ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
     ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
     ...(countries.length > EMPTY_COUNT ? { country: countries } : {}),
+    ...(eventNames.length > EMPTY_COUNT ? { eventName: eventNames } : {}),
+    ...(eventPaths.length > EMPTY_COUNT ? { eventPath: eventPaths } : {}),
   };
 
   const filter = {
@@ -48,47 +70,83 @@ export function buildFilters(search: Record<string, string | string[] | undefine
     ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
     ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
     ...(countries.length > EMPTY_COUNT ? { country: countries } : {}),
+    ...(eventNames.length > EMPTY_COUNT ? { eventName: eventNames } : {}),
+    ...(eventPaths.length > EMPTY_COUNT ? { eventPath: eventPaths } : {}),
   };
 
-  return { referrers, devices, pages, countries, decodedSearch, filter };
+  return { referrers, devices, pages, countries, eventNames, eventPaths, decodedSearch, filter };
 }
 
 interface StatsDataResult {
-  topPages: never[];
+  topPages: PageStatsFieldsFragment[];
   topPagesTotal: number;
-  referrersItems: never[];
+  referrersItems: ReferrerStatsFieldsFragment[];
   referrersTotal: number;
-  devicesItems: never[];
+  devicesItems: DeviceStatsFieldsFragment[];
   devicesTotal: number;
   devicesTotalVisitors: number;
-  countriesItems: never[];
+  countriesItems: CountryStatsFieldsFragment[];
   countriesTotal: number;
   countriesTotalVisitors: number;
 }
 
-export function extractStatsData(stats: unknown): StatsDataResult {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- Stats data structure from GraphQL query, types narrowed for component usage
-  const statsData: Record<string, { items?: unknown[]; total?: number; totalVisitors?: number }> | null | undefined = stats as Record<string, { items?: unknown[]; total?: number; totalVisitors?: number }> | null | undefined;
-  const topPagesResult = statsData?.['topPages'];
-  const referrersResult = statsData?.['topReferrers'];
-  const devicesResult = statsData?.['devices'];
-  const countriesResult = statsData?.['countries'];
+export function createEmptyDashboardStats(): DashboardStatsFieldsFragment {
+  return {
+    __typename: 'DashboardStats',
+    visitors: EMPTY_COUNT,
+    pageViews: EMPTY_COUNT,
+    sessions: EMPTY_COUNT,
+    bounceRate: EMPTY_COUNT,
+    avgDuration: EMPTY_COUNT,
+    topPages: {
+      __typename: 'PagedPageStats',
+      total: EMPTY_COUNT,
+      items: [],
+    },
+    topReferrers: {
+      __typename: 'PagedReferrerStats',
+      total: EMPTY_COUNT,
+      items: [],
+    },
+    browsers: [],
+    devices: {
+      __typename: 'PagedDeviceStats',
+      total: EMPTY_COUNT,
+      totalVisitors: EMPTY_COUNT,
+      items: [],
+    },
+    countries: {
+      __typename: 'PagedCountryStats',
+      total: EMPTY_COUNT,
+      totalVisitors: EMPTY_COUNT,
+      items: [],
+    },
+  };
+}
+
+export function extractStatsData(
+  stats: DashboardQuery['dashboard'] | undefined,
+): StatsDataResult {
+  const normalizedStats =
+    stats === undefined
+      ? createEmptyDashboardStats()
+      : getFragmentData(DashboardStatsFieldsFragmentDoc, stats);
+  const topPages = getFragmentData(PageStatsFieldsFragmentDoc, normalizedStats.topPages.items);
+  const referrersItems = getFragmentData(ReferrerStatsFieldsFragmentDoc, normalizedStats.topReferrers.items);
+  const devicesItems = getFragmentData(DeviceStatsFieldsFragmentDoc, normalizedStats.devices.items);
+  const countriesItems = getFragmentData(CountryStatsFieldsFragmentDoc, normalizedStats.countries.items);
 
   return {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- GraphQL types are narrowed for component usage
-    topPages: (topPagesResult?.items ?? []) as never[],
-    topPagesTotal: topPagesResult?.total ?? EMPTY_COUNT,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- GraphQL types are narrowed for component usage
-    referrersItems: (referrersResult?.items ?? []) as never[],
-    referrersTotal: referrersResult?.total ?? EMPTY_COUNT,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- GraphQL types are narrowed for component usage
-    devicesItems: (devicesResult?.items ?? []) as never[],
-    devicesTotal: devicesResult?.total ?? EMPTY_COUNT,
-    devicesTotalVisitors: devicesResult?.totalVisitors ?? EMPTY_COUNT,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- GraphQL types are narrowed for component usage
-    countriesItems: (countriesResult?.items ?? []) as never[],
-    countriesTotal: countriesResult?.total ?? EMPTY_COUNT,
-    countriesTotalVisitors: countriesResult?.totalVisitors ?? EMPTY_COUNT,
+    topPages,
+    topPagesTotal: normalizedStats.topPages.total,
+    referrersItems,
+    referrersTotal: normalizedStats.topReferrers.total,
+    devicesItems,
+    devicesTotal: normalizedStats.devices.total,
+    devicesTotalVisitors: normalizedStats.devices.totalVisitors,
+    countriesItems,
+    countriesTotal: normalizedStats.countries.total,
+    countriesTotalVisitors: normalizedStats.countries.totalVisitors,
   };
 }
 

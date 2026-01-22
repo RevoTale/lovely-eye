@@ -1,4 +1,5 @@
-import React from 'react';
+
+import { useMemo, useState, type ReactElement } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { RegenerateSiteKeyDocument } from '@/gql/graphql';
 import { TrackingCodeCard } from '@/components/site-form/tracking-code-card';
@@ -13,9 +14,9 @@ export function TrackingCodeSection({
   siteId,
   publicKey,
   onViewAnalytics,
-}: TrackingCodeSectionProps): React.JSX.Element {
-  const [actionError, setActionError] = React.useState('');
-  const [confirmingRegenerate, setConfirmingRegenerate] = React.useState(false);
+}: TrackingCodeSectionProps): ReactElement {
+  const [actionError, setActionError] = useState('');
+  const [confirmingRegenerate, setConfirmingRegenerate] = useState(false);
   const [regenerateKey, { loading: regenerating }] = useMutation(RegenerateSiteKeyDocument);
 
   const handleRegenerateKey = async (): Promise<void> => {
@@ -31,7 +32,7 @@ export function TrackingCodeSection({
     }
   };
 
-  const { trackingScript, trackingSnippet } = React.useMemo(() => {
+  const { trackingScript, trackingSnippet } = useMemo(() => {
     const basePath = window.__ENV__?.BASE_PATH ?? '';
     const trackerUrl = `${window.location.origin}${basePath}/tracker.js`;
 

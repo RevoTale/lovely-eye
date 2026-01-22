@@ -1,6 +1,10 @@
-query GeoIPCountries($search: String) {
-  geoIPCountries(search: $search) {
-    code
-    name
+query GeoIPCountries($search: String, $paging: PagingInput!) {
+  geoIPCountries(search: $search, paging: $paging) {
+    ...TrafficBlockingCountryFields
   }
+}
+
+fragment TrafficBlockingCountryFields on GeoIPCountry {
+  code
+  name
 }

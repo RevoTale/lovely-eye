@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, type ReactElement } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { siteDetailRoute } from '@/router';
 import { ActiveFilters } from '@/components/active-filters';
@@ -11,11 +11,12 @@ import { useDashboardData, PAGE_SIZES } from '@/hooks/use-dashboard-data';
 import { parsePage, normalizeStatsBucket, buildFilters, extractStatsData } from '@/lib/dashboard-utils';
 import { clearPaginationParams, updatePageParam } from '@/lib/dashboard-navigation';
 import { AnalyticsSkeleton } from '@/components/analytics-skeleton';
+import type { FilterInput } from '@/gql/graphql';
 
 const EMPTY_COUNT = 0;
 const DEFAULT_STATS_BUCKET = 'daily';
 
-export function DashboardPage(): React.JSX.Element {
+export function DashboardPage(): ReactElement {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const search = useSearch({ from: siteDetailRoute.id });
   const navigate = useNavigate();
@@ -27,11 +28,24 @@ export function DashboardPage(): React.JSX.Element {
   const countriesPage = useMemo(() => parsePage(search.countriesPage), [search.countriesPage]);
   const statsBucket = useMemo(() => normalizeStatsBucket(search.statsBucket), [search.statsBucket]);
 
-  const { referrers, devices, pages, countries, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
+  const { referrers, devices, pages, countries, eventNames, eventPaths, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
+  const filterInput = useMemo<FilterInput | null>(() => {
+    if (Object.keys(filter).length === EMPTY_COUNT) {
+      return null;
+    }
+    return {
+      referrer: filter['referrer'] ?? null,
+      device: filter['device'] ?? null,
+      page: filter['page'] ?? null,
+      country: filter['country'] ?? null,
+      eventName: filter['eventName'] ?? null,
+      eventPath: filter['eventPath'] ?? null,
+    };
+  }, [filter]);
 
   const filterKey = useMemo(
-    () => [referrers, devices, pages, countries].map((v) => v.join(',')).join('|'),
-    [referrers, devices, pages, countries]
+    () => [referrers, devices, pages, countries, eventNames, eventPaths].map((v) => v.join(',')).join('|'),
+    [referrers, devices, pages, countries, eventNames, eventPaths]
   );
 
   const dateRangeForChart = useMemo(() => {
@@ -43,7 +57,7 @@ export function DashboardPage(): React.JSX.Element {
     useDashboardData({
       siteId,
       dateRange,
-      filter: Object.keys(filter).length > EMPTY_COUNT ? filter : null,
+      filter: filterInput,
       eventsPage,
       topPagesPage,
       referrersPage,
@@ -125,7 +139,7 @@ export function DashboardPage(): React.JSX.Element {
           siteId={siteId}
           stats={stats}
           dateRange={dateRangeForChart}
-          filter={Object.keys(filter).length > EMPTY_COUNT ? filter : null}
+          filter={filterInput}
           chartBucket={statsBucket}
           onChartBucketChange={setStatsBucket}
           realtime={realtime}
@@ -176,7 +190,7 @@ export function DashboardPage(): React.JSX.Element {
         <AnalyticsSkeleton
           siteId={siteId}
           dateRangeForChart={dateRangeForChart}
-          filter={Object.keys(filter).length > EMPTY_COUNT ? filter : null}
+          filter={filterInput}
           statsBucket={statsBucket}
           realtime={realtime}
           onStatsBucketChange={setStatsBucket}

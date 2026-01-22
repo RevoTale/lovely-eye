@@ -1,8 +1,8 @@
-import React from 'react';
+
 import { Link } from '@/router';
 import { addFilterValue } from '@/lib/filter-utils';
 
-type FilterKey = 'referrer' | 'device' | 'page' | 'country';
+type FilterKey = 'referrer' | 'device' | 'page' | 'country' | 'eventName' | 'eventPath';
 
 interface FilterLinkProps {
   siteId: string;

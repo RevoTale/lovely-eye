@@ -6,6 +6,7 @@ query Dashboard(
   $filter: FilterInput,
   $topPagesPaging: PagingInput!,
   $referrersPaging: PagingInput!,
+  $browsersPaging: PagingInput!,
   $devicesPaging: PagingInput!,
   $countriesPaging: PagingInput!,
   # @genqlient(pointer: true)
@@ -34,7 +35,7 @@ query Dashboard(
         visitors
       }
     }
-    browsers {
+    browsers(paging: $browsersPaging) {
       browser
       visitors
     }

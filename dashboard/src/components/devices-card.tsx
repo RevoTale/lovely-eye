@@ -1,13 +1,13 @@
-import React from 'react';
+
 import { Badge, Progress } from '@/components/ui';
-import type { DeviceStats } from '@/gql/graphql';
+import type { DeviceStatsFieldsFragment } from '@/gql/graphql';
 import { Monitor, Smartphone } from 'lucide-react';
 import { BoardCard, BoardCardSkeleton } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
 
 interface DevicesCardProps {
-  devices: DeviceStats[];
+  devices: DeviceStatsFieldsFragment[];
   total: number;
   totalVisitors: number;
   page: number;

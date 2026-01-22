@@ -47,9 +47,9 @@ type SiteDomain struct {
 	bun.BaseModel `bun:"table:site_domains,alias:sd"`
 
 	ID        int64     `bun:"id,pk,autoincrement" json:"id"`
-	SiteID    int64     `bun:"site_id,notnull" json:"site_id"`
-	Domain    string    `bun:"domain,unique,notnull" json:"domain"`
-	Position  int       `bun:"position,notnull,default:0" json:"position"`
+	SiteID    int64     `bun:"site_id,notnull,unique:site_domains_site_id_domain,index:site_domains_site_id_position" json:"site_id"`
+	Domain    string    `bun:"domain,notnull,unique:site_domains_site_id_domain" json:"domain"`
+	Position  int       `bun:"position,notnull,default:0,index:site_domains_site_id_position" json:"position"`
 	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
 
@@ -178,8 +178,8 @@ type EventDefinition struct {
 	bun.BaseModel `bun:"table:event_definitions,alias:ed"`
 
 	ID        int64     `bun:"id,pk,autoincrement" json:"id"`
-	SiteID    int64     `bun:"site_id,notnull" json:"site_id"`
-	Name      string    `bun:"name,notnull" json:"name"`
+	SiteID    int64     `bun:"site_id,notnull,unique:event_definitions_site_id_name" json:"site_id"`
+	Name      string    `bun:"name,notnull,unique:event_definitions_site_id_name" json:"name"`
 	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp" json:"created_at"`
 	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp" json:"updated_at"`
 

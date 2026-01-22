@@ -78,7 +78,7 @@ type ComplexityRoot struct {
 	DashboardStats struct {
 		AvgDuration  func(childComplexity int) int
 		BounceRate   func(childComplexity int) int
-		Browsers     func(childComplexity int) int
+		Browsers     func(childComplexity int, paging model.PagingInput) int
 		Countries    func(childComplexity int, paging model.PagingInput) int
 		DailyStats   func(childComplexity int, bucket *model.TimeBucket, limit *int, offset *int) int
 		Devices      func(childComplexity int, paging model.PagingInput) int
@@ -190,19 +190,19 @@ type ComplexityRoot struct {
 
 	Query struct {
 		Dashboard        func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) int
-		EventCounts      func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int) int
-		EventDefinitions func(childComplexity int, siteID string) int
+		EventCounts      func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) int
+		EventDefinitions func(childComplexity int, siteID string, paging model.PagingInput) int
 		Events           func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) int
-		GeoIPCountries   func(childComplexity int, search *string) int
+		GeoIPCountries   func(childComplexity int, search *string, paging model.PagingInput) int
 		GeoIPStatus      func(childComplexity int) int
 		Me               func(childComplexity int) int
 		Realtime         func(childComplexity int, siteID string) int
 		Site             func(childComplexity int, id string) int
-		Sites            func(childComplexity int) int
+		Sites            func(childComplexity int, paging model.PagingInput) int
 	}
 
 	RealtimeStats struct {
-		ActivePages func(childComplexity int) int
+		ActivePages func(childComplexity int, paging model.PagingInput) int
 		Visitors    func(childComplexity int) int
 	}
 
@@ -236,7 +236,7 @@ type ComplexityRoot struct {
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Role      func(childComplexity int) int
-		Sites     func(childComplexity int) int
+		Sites     func(childComplexity int, paging model.PagingInput) int
 		Username  func(childComplexity int) int
 	}
 }
@@ -244,7 +244,7 @@ type ComplexityRoot struct {
 type DashboardStatsResolver interface {
 	TopPages(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedPageStats, error)
 	TopReferrers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedReferrerStats, error)
-	Browsers(ctx context.Context, obj *model.DashboardStats) ([]*model.BrowserStats, error)
+	Browsers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) ([]*model.BrowserStats, error)
 	Devices(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedDeviceStats, error)
 	Countries(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedCountryStats, error)
 	DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int, offset *int) ([]*model.DailyStats, error)
@@ -264,18 +264,18 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
-	Sites(ctx context.Context) ([]*model.Site, error)
+	Sites(ctx context.Context, paging model.PagingInput) ([]*model.Site, error)
 	Site(ctx context.Context, id string) (*model.Site, error)
 	Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) (*model.DashboardStats, error)
 	Realtime(ctx context.Context, siteID string) (*model.RealtimeStats, error)
 	GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, error)
-	GeoIPCountries(ctx context.Context, search *string) ([]*model.GeoIPCountry, error)
+	GeoIPCountries(ctx context.Context, search *string, paging model.PagingInput) ([]*model.GeoIPCountry, error)
 	Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) (*model.EventsResult, error)
-	EventCounts(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int) ([]*model.EventCount, error)
-	EventDefinitions(ctx context.Context, siteID string) ([]*model.EventDefinition, error)
+	EventCounts(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) ([]*model.EventCount, error)
+	EventDefinitions(ctx context.Context, siteID string, paging model.PagingInput) ([]*model.EventDefinition, error)
 }
 type RealtimeStatsResolver interface {
-	ActivePages(ctx context.Context, obj *model.RealtimeStats) ([]*model.ActivePageStats, error)
+	ActivePages(ctx context.Context, obj *model.RealtimeStats, paging model.PagingInput) ([]*model.ActivePageStats, error)
 }
 
 type executableSchema struct {
@@ -385,7 +385,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.complexity.DashboardStats.Browsers(childComplexity), true
+		args, err := ec.field_DashboardStats_browsers_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.DashboardStats.Browsers(childComplexity, args["paging"].(model.PagingInput)), true
 	case "DashboardStats.countries":
 		if e.complexity.DashboardStats.Countries == nil {
 			break
@@ -865,7 +870,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.EventCounts(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput), args["limit"].(*int)), true
+		return e.complexity.Query.EventCounts(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput), args["paging"].(model.PagingInput)), true
 	case "Query.eventDefinitions":
 		if e.complexity.Query.EventDefinitions == nil {
 			break
@@ -876,7 +881,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.EventDefinitions(childComplexity, args["siteId"].(string)), true
+		return e.complexity.Query.EventDefinitions(childComplexity, args["siteId"].(string), args["paging"].(model.PagingInput)), true
 	case "Query.events":
 		if e.complexity.Query.Events == nil {
 			break
@@ -898,7 +903,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.GeoIPCountries(childComplexity, args["search"].(*string)), true
+		return e.complexity.Query.GeoIPCountries(childComplexity, args["search"].(*string), args["paging"].(model.PagingInput)), true
 	case "Query.geoIPStatus":
 		if e.complexity.Query.GeoIPStatus == nil {
 			break
@@ -938,14 +943,24 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.complexity.Query.Sites(childComplexity), true
+		args, err := ec.field_Query_sites_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Sites(childComplexity, args["paging"].(model.PagingInput)), true
 
 	case "RealtimeStats.activePages":
 		if e.complexity.RealtimeStats.ActivePages == nil {
 			break
 		}
 
-		return e.complexity.RealtimeStats.ActivePages(childComplexity), true
+		args, err := ec.field_RealtimeStats_activePages_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.RealtimeStats.ActivePages(childComplexity, args["paging"].(model.PagingInput)), true
 	case "RealtimeStats.visitors":
 		if e.complexity.RealtimeStats.Visitors == nil {
 			break
@@ -1064,7 +1079,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			break
 		}
 
-		return e.complexity.User.Sites(childComplexity), true
+		args, err := ec.field_User_sites_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.User.Sites(childComplexity, args["paging"].(model.PagingInput)), true
 	case "User.username":
 		if e.complexity.User.Username == nil {
 			break
@@ -1191,7 +1211,7 @@ var sources = []*ast.Source{
   username: String!
   role: String!
   createdAt: Time!
-  sites: [Site!]
+  sites(paging: PagingInput!): [Site!]
 }
 
 type Site {
@@ -1230,7 +1250,7 @@ type DashboardStats {
   avgDuration: Float!
   topPages(paging: PagingInput!): PagedPageStats!
   topReferrers(paging: PagingInput!): PagedReferrerStats!
-  browsers: [BrowserStats!]!
+  browsers(paging: PagingInput!): [BrowserStats!]!
   devices(paging: PagingInput!): PagedDeviceStats!
   countries(paging: PagingInput!): PagedCountryStats!
   dailyStats(bucket: TimeBucket = DAILY, limit: Int, offset: Int): [DailyStats!]!
@@ -1311,7 +1331,7 @@ type RealtimeStats {
   """Visitors active in last 5 minutes"""
   visitors: Int!
   """Active pages with visitor count"""
-  activePages: [ActivePageStats!]!
+  activePages(paging: PagingInput!): [ActivePageStats!]!
 }
 
 type GeoIPStatus {
@@ -1359,7 +1379,7 @@ type EventCount {
 
 enum EventFieldType {
   STRING
-  NUMBER
+  INT
   BOOLEAN
 }
 
@@ -1419,6 +1439,10 @@ input FilterInput {
   page: [String!]
   """Filter by country (stored country name)"""
   country: [String!]
+  """Filter by event name"""
+  eventName: [String!]
+  """Filter by event path"""
+  eventPath: [String!]
 }
 
 input EventDefinitionFieldInput {
@@ -1437,18 +1461,18 @@ scalar Time
 
 type Query {
   me: User
-  sites: [Site!]!
+  sites(paging: PagingInput!): [Site!]!
   site(id: ID!): Site
   dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
   realtime(siteId: ID!): RealtimeStats!
   geoIPStatus: GeoIPStatus!
-  geoIPCountries(search: String): [GeoIPCountry!]!
+  geoIPCountries(search: String, paging: PagingInput!): [GeoIPCountry!]!
   """Get events for a site with pagination"""
   events(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, limit: Int, offset: Int): EventsResult!
   """Get event counts aggregated by event with the most recent occurrence"""
-  eventCounts(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, limit: Int): [EventCount!]!
+  eventCounts(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, paging: PagingInput!): [EventCount!]!
   """Get event definitions for a site"""
-  eventDefinitions(siteId: ID!): [EventDefinition!]!
+  eventDefinitions(siteId: ID!, paging: PagingInput!): [EventDefinition!]!
 }
 
 type Mutation {
@@ -1475,6 +1499,17 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 // endregion ************************** generated!.gotpl **************************
 
 // region    ***************************** args.gotpl *****************************
+
+func (ec *executionContext) field_DashboardStats_browsers_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
+	if err != nil {
+		return nil, err
+	}
+	args["paging"] = arg0
+	return args, nil
+}
 
 func (ec *executionContext) field_DashboardStats_countries_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
@@ -1705,11 +1740,11 @@ func (ec *executionContext) field_Query_eventCounts_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "limit", ec.unmarshalOInt2ᚖint)
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
 	if err != nil {
 		return nil, err
 	}
-	args["limit"] = arg3
+	args["paging"] = arg3
 	return args, nil
 }
 
@@ -1721,6 +1756,11 @@ func (ec *executionContext) field_Query_eventDefinitions_args(ctx context.Contex
 		return nil, err
 	}
 	args["siteId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
+	if err != nil {
+		return nil, err
+	}
+	args["paging"] = arg1
 	return args, nil
 }
 
@@ -1763,6 +1803,11 @@ func (ec *executionContext) field_Query_geoIPCountries_args(ctx context.Context,
 		return nil, err
 	}
 	args["search"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
+	if err != nil {
+		return nil, err
+	}
+	args["paging"] = arg1
 	return args, nil
 }
 
@@ -1785,6 +1830,39 @@ func (ec *executionContext) field_Query_site_args(ctx context.Context, rawArgs m
 		return nil, err
 	}
 	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_sites_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
+	if err != nil {
+		return nil, err
+	}
+	args["paging"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_RealtimeStats_activePages_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
+	if err != nil {
+		return nil, err
+	}
+	args["paging"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_User_sites_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
+	if err != nil {
+		return nil, err
+	}
+	args["paging"] = arg0
 	return args, nil
 }
 
@@ -2417,7 +2495,8 @@ func (ec *executionContext) _DashboardStats_browsers(ctx context.Context, field 
 		field,
 		ec.fieldContext_DashboardStats_browsers,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.DashboardStats().Browsers(ctx, obj)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.DashboardStats().Browsers(ctx, obj, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNBrowserStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐBrowserStatsᚄ,
@@ -2426,7 +2505,7 @@ func (ec *executionContext) _DashboardStats_browsers(ctx context.Context, field 
 	)
 }
 
-func (ec *executionContext) fieldContext_DashboardStats_browsers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_DashboardStats_browsers(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "DashboardStats",
 		Field:      field,
@@ -2441,6 +2520,17 @@ func (ec *executionContext) fieldContext_DashboardStats_browsers(_ context.Conte
 			}
 			return nil, fmt.Errorf("no field named %q was found under type BrowserStats", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_DashboardStats_browsers_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4476,7 +4566,8 @@ func (ec *executionContext) _Query_sites(ctx context.Context, field graphql.Coll
 		field,
 		ec.fieldContext_Query_sites,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().Sites(ctx)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().Sites(ctx, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNSite2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSiteᚄ,
@@ -4485,7 +4576,7 @@ func (ec *executionContext) _Query_sites(ctx context.Context, field graphql.Coll
 	)
 }
 
-func (ec *executionContext) fieldContext_Query_sites(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_sites(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -4512,6 +4603,17 @@ func (ec *executionContext) fieldContext_Query_sites(_ context.Context, field gr
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Site", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_sites_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -4736,7 +4838,7 @@ func (ec *executionContext) _Query_geoIPCountries(ctx context.Context, field gra
 		ec.fieldContext_Query_geoIPCountries,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().GeoIPCountries(ctx, fc.Args["search"].(*string))
+			return ec.resolvers.Query().GeoIPCountries(ctx, fc.Args["search"].(*string), fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNGeoIPCountry2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPCountryᚄ,
@@ -4830,7 +4932,7 @@ func (ec *executionContext) _Query_eventCounts(ctx context.Context, field graphq
 		ec.fieldContext_Query_eventCounts,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().EventCounts(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["limit"].(*int))
+			return ec.resolvers.Query().EventCounts(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNEventCount2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCountᚄ,
@@ -4877,7 +4979,7 @@ func (ec *executionContext) _Query_eventDefinitions(ctx context.Context, field g
 		ec.fieldContext_Query_eventDefinitions,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().EventDefinitions(ctx, fc.Args["siteId"].(string))
+			return ec.resolvers.Query().EventDefinitions(ctx, fc.Args["siteId"].(string), fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNEventDefinition2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinitionᚄ,
@@ -5066,7 +5168,8 @@ func (ec *executionContext) _RealtimeStats_activePages(ctx context.Context, fiel
 		field,
 		ec.fieldContext_RealtimeStats_activePages,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.RealtimeStats().ActivePages(ctx, obj)
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.RealtimeStats().ActivePages(ctx, obj, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNActivePageStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐActivePageStatsᚄ,
@@ -5075,7 +5178,7 @@ func (ec *executionContext) _RealtimeStats_activePages(ctx context.Context, fiel
 	)
 }
 
-func (ec *executionContext) fieldContext_RealtimeStats_activePages(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_RealtimeStats_activePages(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "RealtimeStats",
 		Field:      field,
@@ -5090,6 +5193,17 @@ func (ec *executionContext) fieldContext_RealtimeStats_activePages(_ context.Con
 			}
 			return nil, fmt.Errorf("no field named %q was found under type ActivePageStats", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_RealtimeStats_activePages_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -5632,7 +5746,7 @@ func (ec *executionContext) _User_sites(ctx context.Context, field graphql.Colle
 	)
 }
 
-func (ec *executionContext) fieldContext_User_sites(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_User_sites(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "User",
 		Field:      field,
@@ -5659,6 +5773,17 @@ func (ec *executionContext) fieldContext_User_sites(_ context.Context, field gra
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Site", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_User_sites_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -7266,7 +7391,7 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"referrer", "device", "page", "country"}
+	fieldsInOrder := [...]string{"referrer", "device", "page", "country", "eventName", "eventPath"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -7301,6 +7426,20 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 				return it, err
 			}
 			it.Country = data
+		case "eventName":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eventName"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.EventName = data
+		case "eventPath":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eventPath"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.EventPath = data
 		}
 	}
 

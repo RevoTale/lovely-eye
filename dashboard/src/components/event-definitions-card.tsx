@@ -1,6 +1,11 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactElement } from 'react';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, Input, Label } from '@/components/ui';
-import type { EventDefinition, EventDefinitionInput, EventDefinitionFieldInput, EventFieldType } from '@/gql/graphql';
+import {
+  EventDefinitionFieldFieldsFragmentDoc,
+  EventDefinitionFieldsFragmentDoc,
+} from '@/gql/graphql';
+import type { EventDefinitionInput, EventDefinitionFieldInput, EventFieldType } from '@/gql/graphql';
+import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
 
 const DEFAULT_MAX_LENGTH = 500;
 const EMPTY_COUNT = 0;
@@ -16,16 +21,16 @@ interface EventFieldTypeOption {
 
 const FIELD_TYPES: EventFieldTypeOption[] = [
   { label: 'String', value: 'STRING' },
-  { label: 'Number', value: 'NUMBER' },
+  { label: 'Int', value: 'INT' },
   { label: 'Boolean', value: 'BOOLEAN' },
 ];
 
 function isEventFieldType(value: string): value is EventFieldType {
-  return value === 'STRING' || value === 'NUMBER' || value === 'BOOLEAN';
+  return value === 'STRING' || value === 'INT' || value === 'BOOLEAN';
 }
 
 interface EventDefinitionsCardProps {
-  definitions: EventDefinition[];
+  definitions: Array<FragmentType<typeof EventDefinitionFieldsFragmentDoc>>;
   saving: boolean;
   deleting: boolean;
   onSave: (input: EventDefinitionInput) => Promise<void>;
@@ -38,7 +43,11 @@ export function EventDefinitionsCard({
   deleting,
   onSave,
   onDelete,
-}: EventDefinitionsCardProps): React.JSX.Element {
+}: EventDefinitionsCardProps): ReactElement {
+  const definitionItems = useMemo(
+    () => getFragmentData(EventDefinitionFieldsFragmentDoc, definitions),
+    [definitions]
+  );
   const [draftName, setDraftName] = useState('');
   const [draftFields, setDraftFields] = useState<EventDefinitionFieldInput[]>([]);
   const [originalName, setOriginalName] = useState<string | null>(null);
@@ -50,8 +59,8 @@ export function EventDefinitionsCard({
   const hasOriginalName = originalName !== null && originalName !== '';
 
   const sortedDefinitions = useMemo(
-    () => [...definitions].sort((a, b) => a.name.localeCompare(b.name)),
-    [definitions]
+    () => [...definitionItems].sort((a, b) => a.name.localeCompare(b.name)),
+    [definitionItems]
   );
 
   const resetDraft = (): void => {
@@ -63,15 +72,18 @@ export function EventDefinitionsCard({
     setError('');
   };
 
-  const startEdit = (definition: EventDefinition): void => {
+  const startEdit = (definition: (typeof definitionItems)[number]): void => {
     setDraftName(definition.name);
     setDraftFields(
-      definition.fields.map((field) => ({
-        key: field.key,
-        type: field.type,
-        required: field.required,
-        maxLength: field.maxLength,
-      }))
+      definition.fields.map((field) => {
+        const fieldData = getFragmentData(EventDefinitionFieldFieldsFragmentDoc, field);
+        return {
+          key: fieldData.key,
+          type: fieldData.type,
+          required: fieldData.required,
+          maxLength: fieldData.maxLength,
+        };
+      })
     );
     setOriginalName(definition.name);
     setEditorOpen(true);
@@ -86,7 +98,7 @@ export function EventDefinitionsCard({
       const trimmedKey = field.key.trim();
       const key = trimmedKey === '' ? `field_${index + FIRST_INDEX_OFFSET}` : trimmedKey;
       switch (field.type) {
-        case 'NUMBER':
+        case 'INT':
           return `${key}: ${EXAMPLE_NUMBER}`;
         case 'BOOLEAN':
           return `${key}: true`;

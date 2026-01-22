@@ -1,4 +1,5 @@
-import React from 'react';
+
+import { useMemo, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui';
 import { Globe, Loader2, Plus, Save, X } from 'lucide-react';
 import { getNormalizedDomains, normalizeDomainInput } from '@/components/site-form/utils';
@@ -9,7 +10,6 @@ interface DomainEntry {
 }
 
 interface SiteInfoCardProps {
-  siteId?: string | undefined;
   isNew: boolean;
   initialName: string;
   initialDomains: string[];
@@ -31,7 +31,6 @@ const MAX_NAME_LENGTH = 100;
 const SECONDARY_DOMAIN_START = 2;
 
 export function SiteInfoCard({
-  siteId,
   isNew,
   initialName,
   initialDomains,
@@ -40,10 +39,10 @@ export function SiteInfoCard({
   onCreate,
   onSaveDomains,
   onCancel,
-}: SiteInfoCardProps): React.JSX.Element {
-  const [name, setName] = React.useState(initialName);
-  const [formError, setFormError] = React.useState('');
-  const nextDomainIdRef = React.useRef(
+}: SiteInfoCardProps): ReactElement {
+  const [name, setName] = useState(initialName);
+  const [formError, setFormError] = useState('');
+  const nextDomainIdRef = useRef(
     initialDomains.length > EMPTY_COUNT
       ? initialDomains.length + DOMAIN_ID_INCREMENT
       : SECONDARY_DOMAIN_START
@@ -59,19 +58,9 @@ export function SiteInfoCard({
     }));
   };
 
-  const [domains, setDomains] = React.useState<DomainEntry[]>(() => buildDomainEntries(initialDomains));
+  const [domains, setDomains] = useState<DomainEntry[]>(() => buildDomainEntries(initialDomains));
 
-  React.useEffect(() => {
-    setName(initialName);
-    setDomains(buildDomainEntries(initialDomains));
-    setFormError('');
-    nextDomainIdRef.current =
-      initialDomains.length > EMPTY_COUNT
-        ? initialDomains.length + DOMAIN_ID_INCREMENT
-        : SECONDARY_DOMAIN_START;
-  }, [initialDomains, initialName, siteId]);
-
-  const hasDomainChanges = React.useMemo(() => {
+  const hasDomainChanges = useMemo(() => {
     const currentDomains = getNormalizedDomains(domains.map((entry) => entry.value));
     const savedDomains = getNormalizedDomains(initialDomains);
     if (currentDomains.length !== savedDomains.length) return true;
@@ -101,7 +90,7 @@ export function SiteInfoCard({
     return uniqueDomains;
   };
 
-  const handleSubmit = async (event: React.FormEvent): Promise<void> => {
+  const handleSubmit = async (event: FormEvent): Promise<void> => {
     event.preventDefault();
     const trimmedName = name.trim();
     const validatedDomains = validateDomains();

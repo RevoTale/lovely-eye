@@ -4,60 +4,18 @@ query Dashboard(
   $filter: FilterInput
   $topPagesPaging: PagingInput!
   $referrersPaging: PagingInput!
+  $browsersPaging: PagingInput!
   $devicesPaging: PagingInput!
   $countriesPaging: PagingInput!
 ) {
   dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
-    visitors
-    pageViews
-    sessions
-    bounceRate
-    avgDuration
-    topPages(paging: $topPagesPaging) {
-      total
-      items {
-        path
-        views
-        visitors
-      }
-    }
-    topReferrers(paging: $referrersPaging) {
-      total
-      items {
-        referrer
-        visitors
-      }
-    }
-    browsers {
-      browser
-      visitors
-    }
-    devices(paging: $devicesPaging) {
-      total
-      totalVisitors
-      items {
-        device
-        visitors
-      }
-    }
-    countries(paging: $countriesPaging) {
-      total
-      totalVisitors
-      items {
-        country
-        visitors
-      }
-    }
+    ...DashboardStatsFields
   }
 }
 
-query Realtime($siteId: ID!) {
+query Realtime($siteId: ID!, $activePagesPaging: PagingInput!) {
   realtime(siteId: $siteId) {
-    visitors
-    activePages {
-      path
-      visitors
-    }
+    ...RealtimeStatsFields
   }
 }
 
@@ -65,31 +23,14 @@ query Events($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $li
   events(siteId: $siteId, dateRange: $dateRange, filter: $filter, limit: $limit, offset: $offset) {
     total
     events {
-      id
-      name
-      path
-      createdAt
-      properties {
-        key
-        value
-      }
+      ...EventFields
     }
   }
 }
 
-query EventCounts($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $limit: Int) {
-  eventCounts(siteId: $siteId, dateRange: $dateRange, filter: $filter, limit: $limit) {
-    count
-    event {
-      id
-      name
-      path
-      createdAt
-      properties {
-        key
-        value
-      }
-    }
+query EventCounts($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $paging: PagingInput!) {
+  eventCounts(siteId: $siteId, dateRange: $dateRange, filter: $filter, paging: $paging) {
+    ...EventCountFields
   }
 }
 
@@ -103,10 +44,111 @@ query ChartData(
 ) {
   dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
     dailyStats(bucket: $bucket, limit: $limit, offset: $offset) {
-      date
-      visitors
-      pageViews
-      sessions
+      ...DailyStatsFields
+    }
+  }
+}
+
+fragment PageStatsFields on PageStats {
+  path
+  views
+  visitors
+}
+
+fragment ReferrerStatsFields on ReferrerStats {
+  referrer
+  visitors
+}
+
+fragment BrowserStatsFields on BrowserStats {
+  browser
+  visitors
+}
+
+fragment DeviceStatsFields on DeviceStats {
+  device
+  visitors
+}
+
+fragment CountryStatsFields on CountryStats {
+  country
+  visitors
+}
+
+fragment ActivePageStatsFields on ActivePageStats {
+  path
+  visitors
+}
+
+fragment DailyStatsFields on DailyStats {
+  date
+  visitors
+  pageViews
+  sessions
+}
+
+fragment EventPropertyFields on EventProperty {
+  key
+  value
+}
+
+fragment EventFields on Event {
+  id
+  name
+  path
+  createdAt
+  properties {
+    ...EventPropertyFields
+  }
+}
+
+fragment EventCountFields on EventCount {
+  count
+  event {
+    ...EventFields
+  }
+}
+
+fragment RealtimeStatsFields on RealtimeStats {
+  visitors
+  activePages(paging: $activePagesPaging) {
+    ...ActivePageStatsFields
+  }
+}
+
+fragment DashboardStatsFields on DashboardStats {
+  visitors
+  pageViews
+  sessions
+  bounceRate
+  avgDuration
+  topPages(paging: $topPagesPaging) {
+    total
+    items {
+      ...PageStatsFields
+    }
+  }
+  topReferrers(paging: $referrersPaging) {
+    total
+    items {
+      ...ReferrerStatsFields
+    }
+  }
+  browsers(paging: $browsersPaging) {
+    ...BrowserStatsFields
+  }
+  devices(paging: $devicesPaging) {
+    total
+    totalVisitors
+    items {
+      ...DeviceStatsFields
+    }
+  }
+  countries(paging: $countriesPaging) {
+    total
+    totalVisitors
+    items {
+      ...CountryStatsFields
     }
   }
 }

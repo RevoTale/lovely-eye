@@ -1,9 +1,10 @@
-import React from 'react';
+
+import { useEffect, useState, type ReactElement } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui';
 
-export function ThemeToggle(): React.JSX.Element {
-  const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
+export function ThemeToggle(): ReactElement {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('theme');
       if (stored === 'dark' || stored === 'light') {
@@ -14,7 +15,7 @@ export function ThemeToggle(): React.JSX.Element {
     return 'light';
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     const { document } = window;
     const { documentElement } = document;
     const root = documentElement;
