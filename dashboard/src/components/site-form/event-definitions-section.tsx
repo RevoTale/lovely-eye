@@ -15,7 +15,9 @@ interface EventDefinitionsSectionProps {
 export function EventDefinitionsSection({
   siteId,
 }: EventDefinitionsSectionProps): React.JSX.Element {
-  const paging = { limit: 100, offset: 0 };
+  const EVENT_DEFS_PAGE_SIZE = 100;
+  const EVENT_DEFS_PAGE_OFFSET = 0;
+  const paging = { limit: EVENT_DEFS_PAGE_SIZE, offset: EVENT_DEFS_PAGE_OFFSET };
   const [actionError, setActionError] = React.useState('');
   const { data: eventDefinitionsData } = useQuery(EventDefinitionsDocument, {
     variables: { siteId, paging },

@@ -42,6 +42,7 @@ export function TrafficBlockingCard({
   const MAX_IPS = 500;
 const SEARCH_MIN_LENGTH = 2;
 const COUNTRY_PAGE_SIZE = 100;
+const COUNTRY_PAGE_OFFSET = 0;
   const SEARCH_SINGLE_MATCH_COUNT = 1;
 
   const buildBlockedIPEntries = (values: string[]): BlockedIPEntry[] =>
@@ -75,7 +76,7 @@ const COUNTRY_PAGE_SIZE = 100;
       search: trimmedCountrySearch,
       paging: {
         limit: COUNTRY_PAGE_SIZE,
-        offset: 0,
+        offset: COUNTRY_PAGE_OFFSET,
       },
     },
     skip: !shouldSearchCountries,

@@ -16,12 +16,12 @@ interface EventFieldTypeOption {
 
 const FIELD_TYPES: EventFieldTypeOption[] = [
   { label: 'String', value: 'STRING' },
-  { label: 'Number', value: 'NUMBER' },
+  { label: 'Int', value: 'INT' },
   { label: 'Boolean', value: 'BOOLEAN' },
 ];
 
 function isEventFieldType(value: string): value is EventFieldType {
-  return value === 'STRING' || value === 'NUMBER' || value === 'BOOLEAN';
+  return value === 'STRING' || value === 'INT' || value === 'BOOLEAN';
 }
 
 interface EventDefinitionsCardProps {
@@ -86,7 +86,7 @@ export function EventDefinitionsCard({
       const trimmedKey = field.key.trim();
       const key = trimmedKey === '' ? `field_${index + FIRST_INDEX_OFFSET}` : trimmedKey;
       switch (field.type) {
-        case 'NUMBER':
+        case 'INT':
           return `${key}: ${EXAMPLE_NUMBER}`;
         case 'BOOLEAN':
           return `${key}: true`;

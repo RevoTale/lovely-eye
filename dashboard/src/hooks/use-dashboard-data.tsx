@@ -22,6 +22,7 @@ const COUNTRIES_PAGE_SIZE = 6;
 const ACTIVE_PAGES_PAGE_SIZE = 10;
 const EMPTY_COUNT = 0;
 const PAGE_INDEX_OFFSET = 1;
+const ZERO_OFFSET = 0;
 const DASHBOARD_POLL_INTERVAL_MS = 60000;
 const REALTIME_POLL_INTERVAL_MS = 5000;
 
@@ -71,7 +72,7 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
       },
       browsersPaging: {
         limit: BROWSERS_PAGE_SIZE,
-        offset: 0,
+        offset: ZERO_OFFSET,
       },
       devicesPaging: {
         limit: DEVICES_PAGE_SIZE,
@@ -91,7 +92,7 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
       siteId,
       activePagesPaging: {
         limit: ACTIVE_PAGES_PAGE_SIZE,
-        offset: 0,
+        offset: ZERO_OFFSET,
       },
     },
     skip: !hasSiteId,
@@ -117,7 +118,7 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
       filter: Object.keys(filter ?? {}).length > EMPTY_COUNT ? filter : null,
       paging: {
         limit: EVENTS_COUNT_LIMIT,
-        offset: 0,
+        offset: ZERO_OFFSET,
       },
     },
     skip: !hasSiteId,

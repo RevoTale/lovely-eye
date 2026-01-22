@@ -26,7 +26,9 @@ export function SiteFormPage(): React.JSX.Element {
   const navigate = useNavigate();
   const isNew = siteId === 'new';
   const GEO_IP_POLL_INTERVAL_MS = 5000;
-  const sitesPaging = { limit: 100, offset: 0 };
+  const SITES_PAGE_SIZE = 100;
+  const SITES_PAGE_OFFSET = 0;
+  const sitesPaging = { limit: SITES_PAGE_SIZE, offset: SITES_PAGE_OFFSET };
 
   const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
     variables: { id: siteId },

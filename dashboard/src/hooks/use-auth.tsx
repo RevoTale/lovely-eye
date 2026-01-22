@@ -13,6 +13,7 @@ import {
 type AuthUser = NonNullable<MeQuery['me']>;
 
 const SITES_PAGE_SIZE = 100;
+const SITES_PAGE_OFFSET = 0;
 
 export interface AuthContextType {
   user: AuthUser | null;
@@ -38,7 +39,7 @@ export function AuthProvider({ children, authErrorHandlerRef }: AuthProviderProp
     variables: {
       sitesPaging: {
         limit: SITES_PAGE_SIZE,
-        offset: 0,
+        offset: SITES_PAGE_OFFSET,
       },
     },
     fetchPolicy: 'network-only',
