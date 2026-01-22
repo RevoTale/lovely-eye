@@ -28,6 +28,9 @@ export function TrafficBlockingSection({
         input: {
           name: siteName,
           blockedIPs,
+          trackCountry: null,
+          domains: null,
+          blockedCountries: null,
         },
       },
       refetchQueries: [{ query: SiteDocument, variables: { id: siteId } }],
@@ -42,6 +45,9 @@ export function TrafficBlockingSection({
         input: {
           name: siteName,
           blockedCountries,
+          trackCountry: null,
+          domains: null,
+          blockedIPs: null,
         },
       },
       refetchQueries: [{ query: SiteDocument, variables: { id: siteId } }],

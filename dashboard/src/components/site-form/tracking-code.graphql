@@ -1,9 +1,13 @@
 mutation RegenerateSiteKey($id: ID!) {
   regenerateSiteKey(id: $id) {
-    id
-    domains
-    name
-    publicKey
-    createdAt
+    ...TrackingCodeSiteSummaryFields
   }
+}
+
+fragment TrackingCodeSiteSummaryFields on Site {
+  id
+  domains
+  name
+  publicKey
+  createdAt
 }

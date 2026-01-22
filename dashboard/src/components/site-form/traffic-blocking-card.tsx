@@ -1,7 +1,8 @@
 
 import { useMemo, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { useQuery } from '@apollo/client/react';
-import { GeoIpCountriesDocument } from '@/gql/graphql';
+import { GeoIpCountriesDocument, TrafficBlockingCountryFieldsFragmentDoc } from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui';
 import { Loader2, Shield, X } from 'lucide-react';
 import { getNormalizedBlockedIPs, normalizeCountryCodesPreserveOrder, normalizeIPInput } from '@/components/site-form/utils';
@@ -74,7 +75,10 @@ const COUNTRY_PAGE_OFFSET = 0;
     skip: !shouldSearchCountries,
   });
 
-  const geoIPCountries = useMemo(() => geoIPCountriesData?.geoIPCountries ?? [], [geoIPCountriesData]);
+  const geoIPCountries = getFragmentData(
+    TrafficBlockingCountryFieldsFragmentDoc,
+    geoIPCountriesData?.geoIPCountries ?? []
+  );
   const blockedIPCount = useMemo(
     () => getNormalizedBlockedIPs(blockedIPs.map(({ value }) => value)).length,
     [blockedIPs]

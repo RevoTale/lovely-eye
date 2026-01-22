@@ -1,9 +1,13 @@
 mutation RefreshGeoIPDatabase {
   refreshGeoIPDatabase {
-    state
-    dbPath
-    source
-    lastError
-    updatedAt
+    ...CountryTrackingGeoIPStatusFields
   }
+}
+
+fragment CountryTrackingGeoIPStatusFields on GeoIPStatus {
+  state
+  dbPath
+  source
+  lastError
+  updatedAt
 }

@@ -1,9 +1,13 @@
 query Sites($paging: PagingInput!) {
   sites(paging: $paging) {
-    id
-    domains
-    name
-    publicKey
-    createdAt
+    ...SiteSummaryFields
   }
+}
+
+fragment SiteSummaryFields on Site {
+  id
+  domains
+  name
+  publicKey
+  createdAt
 }

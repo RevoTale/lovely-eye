@@ -1,25 +1,31 @@
 
 import { Badge } from '@/components/ui';
 import { Activity, Settings } from 'lucide-react';
-import type { RealtimeStats, Site } from '@/gql/graphql';
+import { RealtimeStatsFieldsFragmentDoc, SiteDetailsFieldsFragmentDoc } from '@/gql/graphql';
+import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
 import { Link } from '@/router';
 
 interface DashboardHeaderProps {
-  site: Site;
+  site: FragmentType<typeof SiteDetailsFieldsFragmentDoc>;
   siteId: string;
-  realtime: RealtimeStats | undefined;
+  realtime: FragmentType<typeof RealtimeStatsFieldsFragmentDoc> | undefined;
 }
 
 export function DashboardHeader({ site, siteId, realtime }: DashboardHeaderProps): React.JSX.Element {
   const EMPTY_COUNT = 0;
-  const domainList = site.domains.length > EMPTY_COUNT ? site.domains : [''];
+  const ZERO_VISITORS = 0;
+  const siteData = getFragmentData(SiteDetailsFieldsFragmentDoc, site);
+  const realtimeData =
+    realtime === undefined ? undefined : getFragmentData(RealtimeStatsFieldsFragmentDoc, realtime);
+  const domainList = siteData.domains.length > EMPTY_COUNT ? siteData.domains : [''];
   const domainLabel = domainList.join(' · ');
-  const hasRealtime = realtime !== undefined;
+  const hasRealtime = realtimeData !== undefined;
+  const realtimeVisitors = hasRealtime ? realtimeData.visitors : ZERO_VISITORS;
 
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
-        <h1 className="text-3xl font-bold tracking-tight break-words">{site.name}</h1>
+        <h1 className="text-3xl font-bold tracking-tight break-words">{siteData.name}</h1>
         <p className="text-muted-foreground mt-1 break-all">{domainLabel}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -36,7 +42,7 @@ export function DashboardHeader({ site, siteId, realtime }: DashboardHeaderProps
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
             <Activity className="h-4 w-4" />
-            <span className="font-semibold">{realtime.visitors}</span>
+            <span className="font-semibold">{realtimeVisitors}</span>
             <span className="text-muted-foreground">online</span>
           </Badge>
         ) : null}

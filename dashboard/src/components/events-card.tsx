@@ -1,10 +1,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui';
-import type { Event } from '@/gql/graphql';
+import { EventFieldsFragmentDoc, EventPropertyFieldsFragmentDoc } from '@/gql/graphql';
+import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
 import { PaginationControls } from '@/components/pagination-controls';
 
 interface EventsCardProps {
-  events: Event[];
+  events: Array<FragmentType<typeof EventFieldsFragmentDoc>>;
   total: number;
   page: number;
   pageSize: number;
@@ -22,6 +23,8 @@ export function EventsCard({
   pageSize,
   onPageChange,
 }: EventsCardProps): React.JSX.Element {
+  const eventItems = getFragmentData(EventFieldsFragmentDoc, events);
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader>
@@ -31,11 +34,11 @@ export function EventsCard({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {events.length === EMPTY_COUNT ? (
+        {eventItems.length === EMPTY_COUNT ? (
           <p className="text-sm text-muted-foreground text-center py-6">No events recorded yet.</p>
         ) : (
           <div className="space-y-4">
-            {events.map((event) => (
+            {eventItems.map((event) => (
               <div key={event.id} className="border rounded-md p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
@@ -50,11 +53,14 @@ export function EventsCard({
                 </div>
                 {event.properties.length > EMPTY_COUNT ? (
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {event.properties.map((property) => (
-                      <Badge key={`${event.id}-${property.key}`} variant="outline" className="max-w-full">
-                        <span className="break-all">{property.key}: {property.value}</span>
-                      </Badge>
-                    ))}
+                    {event.properties.map((property) => {
+                      const propertyData = getFragmentData(EventPropertyFieldsFragmentDoc, property);
+                      return (
+                        <Badge key={`${event.id}-${propertyData.key}`} variant="outline" className="max-w-full">
+                          <span className="break-all">{propertyData.key}: {propertyData.value}</span>
+                        </Badge>
+                      );
+                    })}
                   </div>
                 ) : null}
               </div>

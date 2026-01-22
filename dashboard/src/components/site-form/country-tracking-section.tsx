@@ -43,6 +43,9 @@ export function CountryTrackingSection({
           input: {
             name: siteName,
             trackCountry: enabled,
+            domains: null,
+            blockedIPs: null,
+            blockedCountries: null,
           },
         },
       });

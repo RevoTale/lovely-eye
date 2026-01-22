@@ -1,25 +1,13 @@
 query Me($sitesPaging: PagingInput!) {
   me {
-    id
-    username
-    role
-    createdAt
-    sites(paging: $sitesPaging) {
-      id
-      domains
-      name
-      publicKey
-      createdAt
-    }
+    ...AuthUserDetailsFields
   }
 }
 
 mutation Login($input: LoginInput!) {
   login(input: $input) {
     user {
-      id
-      username
-      role
+      ...AuthUserFields
     }
   }
 }
@@ -27,13 +15,35 @@ mutation Login($input: LoginInput!) {
 mutation Register($input: RegisterInput!) {
   register(input: $input) {
     user {
-      id
-      username
-      role
+      ...AuthUserFields
     }
   }
 }
 
 mutation Logout {
   logout
+}
+
+fragment AuthUserFields on User {
+  id
+  username
+  role
+}
+
+fragment AuthSiteSummaryFields on Site {
+  id
+  domains
+  name
+  publicKey
+  createdAt
+}
+
+fragment AuthUserDetailsFields on User {
+  id
+  username
+  role
+  createdAt
+  sites(paging: $sitesPaging) {
+    ...AuthSiteSummaryFields
+  }
 }

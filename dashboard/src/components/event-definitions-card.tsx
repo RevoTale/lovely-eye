@@ -1,6 +1,11 @@
 import { useMemo, useState, type ReactElement } from 'react';
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Checkbox, Input, Label } from '@/components/ui';
-import type { EventDefinition, EventDefinitionInput, EventDefinitionFieldInput, EventFieldType } from '@/gql/graphql';
+import {
+  EventDefinitionFieldFieldsFragmentDoc,
+  EventDefinitionFieldsFragmentDoc,
+} from '@/gql/graphql';
+import type { EventDefinitionInput, EventDefinitionFieldInput, EventFieldType } from '@/gql/graphql';
+import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
 
 const DEFAULT_MAX_LENGTH = 500;
 const EMPTY_COUNT = 0;
@@ -25,7 +30,7 @@ function isEventFieldType(value: string): value is EventFieldType {
 }
 
 interface EventDefinitionsCardProps {
-  definitions: EventDefinition[];
+  definitions: Array<FragmentType<typeof EventDefinitionFieldsFragmentDoc>>;
   saving: boolean;
   deleting: boolean;
   onSave: (input: EventDefinitionInput) => Promise<void>;
@@ -39,6 +44,10 @@ export function EventDefinitionsCard({
   onSave,
   onDelete,
 }: EventDefinitionsCardProps): ReactElement {
+  const definitionItems = useMemo(
+    () => getFragmentData(EventDefinitionFieldsFragmentDoc, definitions),
+    [definitions]
+  );
   const [draftName, setDraftName] = useState('');
   const [draftFields, setDraftFields] = useState<EventDefinitionFieldInput[]>([]);
   const [originalName, setOriginalName] = useState<string | null>(null);
@@ -50,8 +59,8 @@ export function EventDefinitionsCard({
   const hasOriginalName = originalName !== null && originalName !== '';
 
   const sortedDefinitions = useMemo(
-    () => [...definitions].sort((a, b) => a.name.localeCompare(b.name)),
-    [definitions]
+    () => [...definitionItems].sort((a, b) => a.name.localeCompare(b.name)),
+    [definitionItems]
   );
 
   const resetDraft = (): void => {
@@ -63,15 +72,18 @@ export function EventDefinitionsCard({
     setError('');
   };
 
-  const startEdit = (definition: EventDefinition): void => {
+  const startEdit = (definition: (typeof definitionItems)[number]): void => {
     setDraftName(definition.name);
     setDraftFields(
-      definition.fields.map((field) => ({
-        key: field.key,
-        type: field.type,
-        required: field.required,
-        maxLength: field.maxLength,
-      }))
+      definition.fields.map((field) => {
+        const fieldData = getFragmentData(EventDefinitionFieldFieldsFragmentDoc, field);
+        return {
+          key: fieldData.key,
+          type: fieldData.type,
+          required: fieldData.required,
+          maxLength: fieldData.maxLength,
+        };
+      })
     );
     setOriginalName(definition.name);
     setEditorOpen(true);

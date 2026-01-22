@@ -11,6 +11,7 @@ import { useDashboardData, PAGE_SIZES } from '@/hooks/use-dashboard-data';
 import { parsePage, normalizeStatsBucket, buildFilters, extractStatsData } from '@/lib/dashboard-utils';
 import { clearPaginationParams, updatePageParam } from '@/lib/dashboard-navigation';
 import { AnalyticsSkeleton } from '@/components/analytics-skeleton';
+import type { FilterInput } from '@/gql/graphql';
 
 const EMPTY_COUNT = 0;
 const DEFAULT_STATS_BUCKET = 'daily';
@@ -28,6 +29,17 @@ export function DashboardPage(): ReactElement {
   const statsBucket = useMemo(() => normalizeStatsBucket(search.statsBucket), [search.statsBucket]);
 
   const { referrers, devices, pages, countries, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
+  const filterInput = useMemo<FilterInput | null>(() => {
+    if (Object.keys(filter).length === EMPTY_COUNT) {
+      return null;
+    }
+    return {
+      referrer: filter['referrer'] ?? null,
+      device: filter['device'] ?? null,
+      page: filter['page'] ?? null,
+      country: filter['country'] ?? null,
+    };
+  }, [filter]);
 
   const filterKey = useMemo(
     () => [referrers, devices, pages, countries].map((v) => v.join(',')).join('|'),
@@ -43,7 +55,7 @@ export function DashboardPage(): ReactElement {
     useDashboardData({
       siteId,
       dateRange,
-      filter: Object.keys(filter).length > EMPTY_COUNT ? filter : null,
+      filter: filterInput,
       eventsPage,
       topPagesPage,
       referrersPage,
@@ -125,7 +137,7 @@ export function DashboardPage(): ReactElement {
           siteId={siteId}
           stats={stats}
           dateRange={dateRangeForChart}
-          filter={Object.keys(filter).length > EMPTY_COUNT ? filter : null}
+          filter={filterInput}
           chartBucket={statsBucket}
           onChartBucketChange={setStatsBucket}
           realtime={realtime}
@@ -176,7 +188,7 @@ export function DashboardPage(): ReactElement {
         <AnalyticsSkeleton
           siteId={siteId}
           dateRangeForChart={dateRangeForChart}
-          filter={Object.keys(filter).length > EMPTY_COUNT ? filter : null}
+          filter={filterInput}
           statsBucket={statsBucket}
           realtime={realtime}
           onStatsBucketChange={setStatsBucket}

@@ -5,11 +5,14 @@ import {
   EventsDocument,
   EventCountsDocument,
   SiteDocument,
-  type DashboardQuery,
-  type RealtimeStats,
-  type EventsResult,
-  type EventCount,
-  type Site,
+} from '@/gql/graphql';
+import type {
+  DashboardQuery,
+  EventsQuery,
+  FilterInput,
+  EventCountsQuery,
+  RealtimeQuery,
+  SiteQuery,
 } from '@/gql/graphql';
 
 const EVENTS_PAGE_SIZE = 5;
@@ -29,7 +32,7 @@ const REALTIME_POLL_INTERVAL_MS = 5000;
 interface UseDashboardDataParams {
   siteId: string;
   dateRange: { from: string; to: string } | null | undefined;
-  filter: Record<string, string[]> | null;
+  filter: FilterInput | null;
   eventsPage: number;
   topPagesPage: number;
   referrersPage: number;
@@ -38,11 +41,11 @@ interface UseDashboardDataParams {
 }
 
 interface DashboardData {
-  site: Site | null | undefined;
+  site: SiteQuery['site'] | undefined;
   stats: DashboardQuery['dashboard'] | undefined;
-  realtime: RealtimeStats | undefined;
-  eventsResult: EventsResult | undefined;
-  eventsCounts: EventCount[];
+  realtime: RealtimeQuery['realtime'] | undefined;
+  eventsResult: EventsQuery['events'] | undefined;
+  eventsCounts: EventCountsQuery['eventCounts'];
   siteLoading: boolean;
   dashboardLoading: boolean;
   eventsLoading: boolean;
@@ -61,7 +64,7 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
     variables: {
       siteId,
       dateRange: dateRange ?? null,
-      filter: Object.keys(filter ?? {}).length > EMPTY_COUNT ? filter : null,
+      filter: filter === null || Object.keys(filter).length === EMPTY_COUNT ? null : filter,
       topPagesPaging: {
         limit: TOP_PAGES_PAGE_SIZE,
         offset: (topPagesPage - PAGE_INDEX_OFFSET) * TOP_PAGES_PAGE_SIZE,
@@ -103,7 +106,7 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
     variables: {
       siteId,
       dateRange: dateRange ?? null,
-      filter: Object.keys(filter ?? {}).length > EMPTY_COUNT ? filter : null,
+      filter: filter === null || Object.keys(filter).length === EMPTY_COUNT ? null : filter,
       limit: EVENTS_PAGE_SIZE,
       offset: (eventsPage - PAGE_INDEX_OFFSET) * EVENTS_PAGE_SIZE,
     },
@@ -115,7 +118,7 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
     variables: {
       siteId,
       dateRange: dateRange ?? null,
-      filter: Object.keys(filter ?? {}).length > EMPTY_COUNT ? filter : null,
+      filter: filter === null || Object.keys(filter).length === EMPTY_COUNT ? null : filter,
       paging: {
         limit: EVENTS_COUNT_LIMIT,
         offset: ZERO_OFFSET,

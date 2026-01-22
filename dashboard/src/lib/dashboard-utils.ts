@@ -1,5 +1,20 @@
 import { normalizeFilterValue } from '@/lib/filter-utils';
-import type { DashboardQuery } from '@/gql/graphql';
+import {
+  CountryStatsFieldsFragmentDoc,
+  DashboardStatsFieldsFragmentDoc,
+  DeviceStatsFieldsFragmentDoc,
+  PageStatsFieldsFragmentDoc,
+  ReferrerStatsFieldsFragmentDoc,
+} from '@/gql/graphql';
+import type {
+  CountryStatsFieldsFragment,
+  DashboardStatsFieldsFragment,
+  DashboardQuery,
+  DeviceStatsFieldsFragment,
+  PageStatsFieldsFragment,
+  ReferrerStatsFieldsFragment,
+} from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 
 const EMPTY_COUNT = 0;
 const FIRST_INDEX = 0;
@@ -55,19 +70,19 @@ export function buildFilters(search: Record<string, string | string[] | undefine
 }
 
 interface StatsDataResult {
-  topPages: DashboardQuery['dashboard']['topPages']['items'];
+  topPages: PageStatsFieldsFragment[];
   topPagesTotal: number;
-  referrersItems: DashboardQuery['dashboard']['topReferrers']['items'];
+  referrersItems: ReferrerStatsFieldsFragment[];
   referrersTotal: number;
-  devicesItems: DashboardQuery['dashboard']['devices']['items'];
+  devicesItems: DeviceStatsFieldsFragment[];
   devicesTotal: number;
   devicesTotalVisitors: number;
-  countriesItems: DashboardQuery['dashboard']['countries']['items'];
+  countriesItems: CountryStatsFieldsFragment[];
   countriesTotal: number;
   countriesTotalVisitors: number;
 }
 
-export function createEmptyDashboardStats(): DashboardQuery['dashboard'] {
+export function createEmptyDashboardStats(): DashboardStatsFieldsFragment {
   return {
     __typename: 'DashboardStats',
     visitors: EMPTY_COUNT,
@@ -101,18 +116,27 @@ export function createEmptyDashboardStats(): DashboardQuery['dashboard'] {
   };
 }
 
-export function extractStatsData(stats: DashboardQuery['dashboard'] | undefined): StatsDataResult {
-  const normalizedStats = stats ?? createEmptyDashboardStats();
+export function extractStatsData(
+  stats: DashboardQuery['dashboard'] | undefined,
+): StatsDataResult {
+  const normalizedStats =
+    stats === undefined
+      ? createEmptyDashboardStats()
+      : getFragmentData(DashboardStatsFieldsFragmentDoc, stats);
+  const topPages = getFragmentData(PageStatsFieldsFragmentDoc, normalizedStats.topPages.items);
+  const referrersItems = getFragmentData(ReferrerStatsFieldsFragmentDoc, normalizedStats.topReferrers.items);
+  const devicesItems = getFragmentData(DeviceStatsFieldsFragmentDoc, normalizedStats.devices.items);
+  const countriesItems = getFragmentData(CountryStatsFieldsFragmentDoc, normalizedStats.countries.items);
 
   return {
-    topPages: normalizedStats.topPages.items,
+    topPages,
     topPagesTotal: normalizedStats.topPages.total,
-    referrersItems: normalizedStats.topReferrers.items,
+    referrersItems,
     referrersTotal: normalizedStats.topReferrers.total,
-    devicesItems: normalizedStats.devices.items,
+    devicesItems,
     devicesTotal: normalizedStats.devices.total,
     devicesTotalVisitors: normalizedStats.devices.totalVisitors,
-    countriesItems: normalizedStats.countries.items,
+    countriesItems,
     countriesTotal: normalizedStats.countries.total,
     countriesTotalVisitors: normalizedStats.countries.totalVisitors,
   };

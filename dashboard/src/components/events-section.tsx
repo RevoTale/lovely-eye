@@ -1,13 +1,15 @@
 
 import { Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
-import type { EventsResult, EventCount } from '@/gql/graphql';
+import { EventCountFieldsFragmentDoc } from '@/gql/graphql';
+import type { EventCountsQuery, EventsQuery } from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 import { EventsCard } from '@/components/events-card';
 import { EventCountsCard } from '@/components/event-counts-card';
 
 interface EventsSectionProps {
   loading: boolean;
-  eventsResult: EventsResult | undefined;
-  eventsCounts: EventCount[];
+  eventsResult: EventsQuery['events'] | undefined;
+  eventsCounts: EventCountsQuery['eventCounts'];
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
@@ -21,6 +23,7 @@ export function EventsSection({
   pageSize,
   onPageChange,
 }: EventsSectionProps): React.JSX.Element | null {
+  const eventCountsData = getFragmentData(EventCountFieldsFragmentDoc, eventsCounts);
   if (loading) {
     return (
       <Card>
@@ -47,7 +50,7 @@ export function EventsSection({
         pageSize={pageSize}
         onPageChange={onPageChange}
       />
-      <EventCountsCard eventCounts={eventsCounts} />
+      <EventCountsCard eventCounts={eventCountsData} />
     </div>
   );
 }

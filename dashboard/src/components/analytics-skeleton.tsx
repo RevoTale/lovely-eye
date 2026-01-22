@@ -1,6 +1,7 @@
 
 import { AnalyticsContent } from '@/components/analytics-content';
-import type { RealtimeStats } from '@/gql/graphql';
+import { DashboardStatsFieldsFragmentDoc, type FilterInput, type RealtimeQuery } from '@/gql/graphql';
+import { makeFragmentData } from '@/gql/fragment-masking';
 import { createEmptyDashboardStats } from '@/lib/dashboard-utils';
 
 const EMPTY_COUNT = 0;
@@ -14,9 +15,9 @@ const COUNTRIES_PAGE_SIZE = 6;
 interface AnalyticsSkeletonProps {
   siteId: string;
   dateRangeForChart: { from: Date; to: Date } | null;
-  filter: Record<string, string[]> | null;
+  filter: FilterInput | null;
   statsBucket: 'daily' | 'hourly';
-  realtime: RealtimeStats | undefined;
+  realtime: RealtimeQuery['realtime'] | undefined;
   onStatsBucketChange: (bucket: 'daily' | 'hourly') => void;
   onPageChange: (key: string, page: number) => void;
 }
@@ -30,7 +31,7 @@ export function AnalyticsSkeleton({
   onStatsBucketChange,
   onPageChange,
 }: AnalyticsSkeletonProps): React.JSX.Element {
-  const emptyStats = createEmptyDashboardStats();
+  const emptyStats = makeFragmentData(createEmptyDashboardStats(), DashboardStatsFieldsFragmentDoc);
 
   return (
     <AnalyticsContent

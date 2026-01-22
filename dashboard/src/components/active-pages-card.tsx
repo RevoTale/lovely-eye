@@ -1,19 +1,18 @@
 
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui';
 import { FileText, Users } from 'lucide-react';
-
-interface ActivePage {
-  path: string;
-  visitors: number;
-}
+import { ActivePageStatsFieldsFragmentDoc } from '@/gql/graphql';
+import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
 
 interface ActivePagesCardProps {
-  activePages: ActivePage[];
+  activePages: Array<FragmentType<typeof ActivePageStatsFieldsFragmentDoc>>;
 }
 
 const EMPTY_COUNT = 0;
 
 export function ActivePagesCard({ activePages }: ActivePagesCardProps): React.JSX.Element {
+  const pageItems = getFragmentData(ActivePageStatsFieldsFragmentDoc, activePages);
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader>
@@ -35,8 +34,8 @@ export function ActivePagesCard({ activePages }: ActivePagesCardProps): React.JS
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {activePages.length > EMPTY_COUNT ? (
-            activePages.map((page, index) => (
+          {pageItems.length > EMPTY_COUNT ? (
+            pageItems.map((page, index) => (
               <div
                 key={index}
                 className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"

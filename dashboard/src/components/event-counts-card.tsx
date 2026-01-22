@@ -1,9 +1,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui';
-import type { EventCount } from '@/gql/graphql';
+import { EventFieldsFragmentDoc } from '@/gql/graphql';
+import type { EventCountFieldsFragment } from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 
 interface EventCountsCardProps {
-  eventCounts: EventCount[];
+  eventCounts: EventCountFieldsFragment[];
 }
 
 const EMPTY_COUNT = 0;
@@ -22,12 +24,15 @@ export function EventCountsCard({ eventCounts }: EventCountsCardProps): React.JS
           <p className="text-sm text-muted-foreground text-center py-6">No events recorded yet.</p>
         ) : (
           <div className="space-y-3">
-            {eventCounts.map((item) => (
-              <div key={item.event.id} className="flex items-center justify-between">
-                <span className="text-sm font-medium">{item.event.name}</span>
+            {eventCounts.map((item) => {
+              const event = getFragmentData(EventFieldsFragmentDoc, item.event);
+              return (
+                <div key={event.id} className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{event.name}</span>
                 <Badge variant="outline">{item.count}</Badge>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </CardContent>
