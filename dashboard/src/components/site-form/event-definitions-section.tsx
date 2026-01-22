@@ -1,5 +1,5 @@
 
-import * as React from 'react';
+import { useState, type ReactElement } from 'react';
 import { useQuery, useMutation } from '@apollo/client/react';
 import {
   EventDefinitionsDocument,
@@ -15,11 +15,11 @@ interface EventDefinitionsSectionProps {
 
 export function EventDefinitionsSection({
   siteId,
-}: EventDefinitionsSectionProps): React.JSX.Element {
+}: EventDefinitionsSectionProps): ReactElement {
   const EVENT_DEFS_PAGE_SIZE = 100;
   const EVENT_DEFS_PAGE_OFFSET = 0;
   const paging = { limit: EVENT_DEFS_PAGE_SIZE, offset: EVENT_DEFS_PAGE_OFFSET };
-  const [actionError, setActionError] = React.useState('');
+  const [actionError, setActionError] = useState('');
   const { data: eventDefinitionsData } = useQuery(EventDefinitionsDocument, {
     variables: { siteId, paging },
   });

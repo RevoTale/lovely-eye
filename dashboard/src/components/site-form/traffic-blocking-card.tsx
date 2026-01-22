@@ -1,5 +1,5 @@
 
-import * as React from 'react';
+import { useMemo, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GeoIpCountriesDocument } from '@/gql/graphql';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui';
@@ -12,7 +12,6 @@ interface BlockedIPEntry {
 }
 
 interface TrafficBlockingCardProps {
-  siteId?: string;
   initialBlockedIPs: string[];
   initialBlockedCountries: string[];
   savingBlockedIPs: boolean;
@@ -23,7 +22,6 @@ interface TrafficBlockingCardProps {
 }
 
 export function TrafficBlockingCard({
-  siteId,
   initialBlockedIPs,
   initialBlockedCountries,
   savingBlockedIPs,
@@ -31,7 +29,7 @@ export function TrafficBlockingCard({
   geoIPReady,
   onUpdateBlockedIPs,
   onUpdateBlockedCountries,
-}: TrafficBlockingCardProps): React.JSX.Element {
+}: TrafficBlockingCardProps): ReactElement {
   const EMPTY_COUNT = 0;
   const EMPTY_STRING = '';
   const FIRST_INDEX = 0;
@@ -49,26 +47,19 @@ const COUNTRY_PAGE_OFFSET = 0;
   const buildBlockedIPEntries = (values: string[]): BlockedIPEntry[] =>
     values.map((ip, index) => ({ id: String(index + ID_OFFSET), value: ip }));
 
-  const [blockedIPs, setBlockedIPs] = React.useState<BlockedIPEntry[]>(() =>
-    buildBlockedIPEntries(initialBlockedIPs)
+  const blockedIPs = useMemo(
+    () => buildBlockedIPEntries(initialBlockedIPs),
+    [initialBlockedIPs]
   );
-  const [blockedCountries, setBlockedCountries] = React.useState<string[]>(initialBlockedCountries);
-  const [blockedCountryNames, setBlockedCountryNames] = React.useState<Record<string, string>>({});
-  const [countrySearch, setCountrySearch] = React.useState('');
-  const [ipActionError, setIpActionError] = React.useState('');
-  const [countryActionError, setCountryActionError] = React.useState('');
-  const [newIPValue, setNewIPValue] = React.useState('');
-  const [newIPError, setNewIPError] = React.useState('');
-
-  React.useEffect(() => {
-    setBlockedIPs(buildBlockedIPEntries(initialBlockedIPs));
-    setBlockedCountries(initialBlockedCountries);
-    setCountrySearch('');
-    setIpActionError('');
-    setCountryActionError('');
-    setNewIPValue('');
-    setNewIPError('');
-  }, [initialBlockedCountries, initialBlockedIPs, siteId]);
+  const blockedCountries = useMemo(
+    () => initialBlockedCountries,
+    [initialBlockedCountries]
+  );
+  const [countrySearch, setCountrySearch] = useState('');
+  const [ipActionError, setIpActionError] = useState('');
+  const [countryActionError, setCountryActionError] = useState('');
+  const [newIPValue, setNewIPValue] = useState('');
+  const [newIPError, setNewIPError] = useState('');
 
   const trimmedCountrySearch = countrySearch.trim();
   const shouldSearchCountries = geoIPReady && trimmedCountrySearch.length >= SEARCH_MIN_LENGTH;
@@ -83,46 +74,30 @@ const COUNTRY_PAGE_OFFSET = 0;
     skip: !shouldSearchCountries,
   });
 
-  const geoIPCountries = React.useMemo(() => geoIPCountriesData?.geoIPCountries ?? [], [geoIPCountriesData]);
-  const blockedIPCount = React.useMemo(
+  const geoIPCountries = useMemo(() => geoIPCountriesData?.geoIPCountries ?? [], [geoIPCountriesData]);
+  const blockedIPCount = useMemo(
     () => getNormalizedBlockedIPs(blockedIPs.map(({ value }) => value)).length,
     [blockedIPs]
   );
-  const normalizedBlockedCountries = React.useMemo(
+  const normalizedBlockedCountries = useMemo(
     () => normalizeCountryCodesPreserveOrder(blockedCountries),
     [blockedCountries]
   );
   const { length: blockedCountryCount } = normalizedBlockedCountries;
-  const countryNameLookup = React.useMemo(
+  const countryNameLookup = useMemo(
     () => new Map(geoIPCountries.map((country) => [country.code, country.name] as const)),
     [geoIPCountries]
   );
   const isUpdating = savingBlockedIPs || savingBlockedCountries;
 
-  const availableCountries = React.useMemo(() => {
+  const availableCountries = useMemo(() => {
     const selected = new Set(normalizedBlockedCountries);
     return geoIPCountries.filter((country) => !selected.has(country.code));
   }, [geoIPCountries, normalizedBlockedCountries]);
-  const matchingCountries = React.useMemo(
+  const matchingCountries = useMemo(
     () => (shouldSearchCountries ? availableCountries : []),
     [availableCountries, shouldSearchCountries]
   );
-
-  React.useEffect(() => {
-    if (geoIPCountries.length === EMPTY_COUNT) {
-      return;
-    }
-    setBlockedCountryNames((prev) => {
-      const next = { ...prev };
-      for (const country of geoIPCountries) {
-        const { code, name } = country;
-        if (code !== EMPTY_STRING && name !== EMPTY_STRING && next[code] === undefined) {
-          next[code] = name;
-        }
-      }
-      return next;
-    });
-  }, [geoIPCountries]);
 
   const buildNextBlockedCountries = (code: string): string[] => {
     const trimmed = code.trim();
@@ -229,7 +204,7 @@ const COUNTRY_PAGE_OFFSET = 0;
     }
   };
 
-  const handleCountrySearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
+  const handleCountrySearchKeyDown = (event: KeyboardEvent<HTMLInputElement>): void => {
     if (event.key !== 'Enter') return;
     if (!shouldSearchCountries) return;
     const query = trimmedCountrySearch.toLowerCase();
@@ -362,9 +337,7 @@ const COUNTRY_PAGE_OFFSET = 0;
               blockedCountries.map((code) => {
                 const normalizedCode = code.trim().toUpperCase();
                 const displayName =
-                  countryNameLookup.get(normalizedCode) ??
-                  blockedCountryNames[normalizedCode] ??
-                  code;
+                  countryNameLookup.get(normalizedCode) ?? code;
                 const showCode = displayName.trim().toUpperCase() !== normalizedCode;
                 return (
                   <Badge key={code} variant="secondary" className="flex items-center gap-2">

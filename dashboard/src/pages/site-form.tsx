@@ -113,7 +113,6 @@ export function SiteFormPage(): React.JSX.Element {
       </div>
 
       <SiteInfoCard
-        siteId={site?.id}
         isNew={isNew}
         initialName={site?.name ?? ''}
         initialDomains={site?.domains ?? []}

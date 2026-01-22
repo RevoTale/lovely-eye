@@ -1,4 +1,5 @@
 import love from 'eslint-config-love';
+import importPlugin from 'eslint-plugin-import';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactPlugin from 'eslint-plugin-react';
 import globals from 'globals';
@@ -29,9 +30,14 @@ export default [
         ...globals.es2020,
       },
     },
+    plugins: {
+      ...(love.plugins ?? {}),
+      import: importPlugin,
+    },
     rules: {
       ...love.rules,
       complexity: ['error', 25],
+      'import/no-namespace': 'error',
     },
     settings: {
       react: {

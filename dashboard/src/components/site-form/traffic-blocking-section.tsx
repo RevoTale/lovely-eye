@@ -51,7 +51,6 @@ export function TrafficBlockingSection({
 
   return (
     <TrafficBlockingCard
-      siteId={siteId}
       initialBlockedIPs={initialBlockedIPs}
       initialBlockedCountries={initialBlockedCountries}
       savingBlockedIPs={savingBlockedIPs}
