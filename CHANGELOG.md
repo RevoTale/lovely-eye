@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.3.0](https://github.com/RevoTale/lovely-eye/compare/v1.2.1...v1.3.0) (2026-01-22)
+
+
+### Features
+
+* add filtering by the event name and pathname ([3eb9536](https://github.com/RevoTale/lovely-eye/commit/3eb95362688ed438da5c46597e6448e7efc14709))
+* enable fragment masking and strict codegen ([e223842](https://github.com/RevoTale/lovely-eye/commit/e223842a01a93dc5cb0ba6be668d99644d71be48))
+* paging and paging limits for every graphql method ([944a3dd](https://github.com/RevoTale/lovely-eye/commit/944a3ddb1b497a5e547b1f34cf11d2a500fe8bad))
+
+
+### Bug Fixes
+
+* chart disappearing on date presets change ([b2557d2](https://github.com/RevoTale/lovely-eye/commit/b2557d25c36623227e740c783e4d724d09f698f1))
+* eslint errors ([9bdebbf](https://github.com/RevoTale/lovely-eye/commit/9bdebbff66367332d550f57e13e99d1bf9f969ec))
+* prevent evets card flickering ([5f54ea4](https://github.com/RevoTale/lovely-eye/commit/5f54ea45eb4209cee53140cbe55f4b52b453642b))
+* prevent more flickering for the eventscard ([da0612e](https://github.com/RevoTale/lovely-eye/commit/da0612e0718f0f57fea41bf00fe6e69e79ca8a5d))
+* remove react explicit import ([7b9685d](https://github.com/RevoTale/lovely-eye/commit/7b9685dcbe517802b638245f7a65aa3c52ba1903))
+* since graphql paging changes update the dashboard graphql queries ([fcc29d3](https://github.com/RevoTale/lovely-eye/commit/fcc29d30f3be23b6bfa9abc851d18d148aef5192))
+* unwanted access to the site creation by other users. ([46e3307](https://github.com/RevoTale/lovely-eye/commit/46e3307ec06bfdf4f640f4ce55fe7cfb40425460))
+
 ## [1.2.1](https://github.com/RevoTale/lovely-eye/compare/v1.2.0...v1.2.1) (2026-01-21)
 
 
