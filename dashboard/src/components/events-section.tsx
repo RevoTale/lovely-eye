@@ -24,7 +24,7 @@ export function EventsSection({
   onPageChange,
 }: EventsSectionProps): React.JSX.Element | null {
   const eventCountsData = getFragmentData(EventCountFieldsFragmentDoc, eventsCounts);
-  if (loading) {
+  if (eventsResult === undefined || loading) {
     return (
       <Card>
         <CardHeader>
@@ -37,9 +37,7 @@ export function EventsSection({
     );
   }
 
-  if (eventsResult === undefined) {
-    return null;
-  }
+
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
