@@ -39,10 +39,9 @@ func parseFilterInput(input *model.FilterInput) (referrer []string, device []str
 }
 
 func convertToGraphQLEvent(e *models.Event) *model.Event {
-	// Convert unix timestamp to time.Time
+
 	createdAt := time.Unix(e.Time, 0)
 
-	// Convert EventData to EventProperty
 	properties := make([]*model.EventProperty, 0, len(e.Data))
 	for _, data := range e.Data {
 		if data.Field != nil {
@@ -69,10 +68,9 @@ func convertToGraphQLEvents(events []*models.Event, total int) *model.EventsResu
 	}
 
 	for _, e := range events {
-		// Convert unix timestamp to time.Time
+
 		createdAt := time.Unix(e.Time, 0)
 
-		// Convert EventData to EventProperty
 		properties := make([]*model.EventProperty, 0, len(e.Data))
 		for _, data := range e.Data {
 			if data.Field != nil {
@@ -101,7 +99,7 @@ func convertToGraphQLEventDefinitions(definitions []*models.EventDefinition) []*
 	for _, def := range definitions {
 		fields := make([]*model.EventDefinitionField, 0, len(def.Fields))
 		for _, field := range def.Fields {
-			// Convert FieldType enum to string
+
 			var fieldTypeStr string
 			switch field.Type {
 			case models.FieldTypeString:

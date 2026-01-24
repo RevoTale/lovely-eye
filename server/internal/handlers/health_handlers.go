@@ -26,7 +26,6 @@ func NewHealthHandler(db *bun.DB, dashboardPath string, connectTimeout time.Dura
 func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// Check database connection
 	pingCtx := r.Context()
 	if h.connectTimeout > 0 {
 		var cancel context.CancelFunc
@@ -38,7 +37,6 @@ func (h *HealthHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check dashboard files exist (skip check if dashboard path is empty for tests)
 	if h.dashboardPath != "" {
 		if _, err := os.Stat(filepath.Join(h.dashboardPath, "index.html")); err != nil {
 			http.Error(w, `{"status":"unhealthy","error":"dashboard files not found"}`, http.StatusServiceUnavailable)

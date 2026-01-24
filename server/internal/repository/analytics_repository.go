@@ -28,11 +28,10 @@ func (r *AnalyticsRepository) FindOrCreateClient(ctx context.Context, siteID int
 		Scan(ctx)
 
 	if err == nil {
-		// Client exists, return it
+
 		return client, nil
 	}
 
-	// Client doesn't exist, create new one
 	client = &models.Client{
 		SiteID:     siteID,
 		Hash:       hash,
@@ -214,11 +213,10 @@ func (r *AnalyticsRepository) GetEventCountWithFilter(ctx context.Context, siteI
 	return count, nil
 }
 
-// EventCountResult represents aggregated event count with the most recent event instance
 type EventCountResult struct {
 	Name  string
 	Count int
-	// Most recent event ID for this name (used to fetch full event details)
+
 	EventID int64
 }
 
@@ -259,7 +257,6 @@ func (r *AnalyticsRepository) GetEventCountsGrouped(ctx context.Context, siteID 
 	return results, nil
 }
 
-// GetEventsByIDs retrieves events by their IDs (used to fetch full event details for event counts)
 func (r *AnalyticsRepository) GetEventsByIDs(ctx context.Context, eventIDs []int64) ([]*models.Event, error) {
 	if len(eventIDs) == 0 {
 		return []*models.Event{}, nil
@@ -337,10 +334,10 @@ func (r *AnalyticsRepository) GetBounceRate(ctx context.Context, siteID int64, f
 	dialect := fmt.Sprint(r.db.Dialect().Name())
 	var bouncedExpr string
 	if dialect == "pg" || dialect == "postgres" || dialect == "postgresql" {
-		// PostgreSQL: Use FILTER clause
+
 		bouncedExpr = "COUNT(*) FILTER (WHERE page_view_count = 1)"
 	} else {
-		// SQLite: Use CASE
+
 		bouncedExpr = "SUM(CASE WHEN page_view_count = 1 THEN 1 ELSE 0 END)"
 	}
 
@@ -529,10 +526,10 @@ func (r *AnalyticsRepository) GetDailyStats(ctx context.Context, siteID int64, f
 	var stats []DailyVisitorStats
 	fromUnix := from.Unix()
 	toUnix := to.Unix()
-	bucketExpr := r.timeBucketExpression(TimeBucketDaily) // Just "enter_day" - integer column
+	bucketExpr := r.timeBucketExpression(TimeBucketDaily)
 	err := r.db.NewSelect().
 		Model((*models.Session)(nil)).
-		ColumnExpr(bucketExpr+" as date_bucket"). // Return integer, no conversion!
+		ColumnExpr(bucketExpr+" as date_bucket").
 		ColumnExpr("COUNT(DISTINCT client_id) as visitors").
 		ColumnExpr("SUM(page_view_count) as page_views").
 		ColumnExpr("COUNT(*) as sessions").
@@ -581,19 +578,19 @@ func (r *AnalyticsRepository) GetActivePages(ctx context.Context, siteID int64, 
 
 func applySessionFilters(q *bun.SelectQuery, referrer, device, page, country, eventName, eventPath []string) *bun.SelectQuery {
 	if len(referrer) > 0 {
-		// Apply referrer filter (empty string filters for direct traffic)
+
 		q = q.Where("s.referrer IN (?)", bun.In(referrer))
 	}
 	if len(device) > 0 {
-		// Join with clients if not already joined
+
 		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE device IN (?))", bun.In(device))
 	}
 	if len(page) > 0 {
-		// Need to join with events to filter by page
+
 		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE type = ? AND path IN (?))", models.EventTypePageview, bun.In(page))
 	}
 	if len(country) > 0 {
-		// Join with clients if not already joined
+
 		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE country IN (?))", bun.In(normalizeCountryValues(country)))
 	}
 	if len(eventName) > 0 {
@@ -610,7 +607,7 @@ func applyEventFilters(q *bun.SelectQuery, referrer, device, page, country, even
 		q = q.Where("e.path IN (?)", bun.In(page))
 	}
 	if len(referrer) > 0 || len(device) > 0 || len(country) > 0 || len(eventName) > 0 || len(eventPath) > 0 {
-		// Join with sessions for referrer/device/country filters
+
 		if len(referrer) > 0 {
 			q = q.Where("e.session_id IN (SELECT id FROM sessions WHERE referrer IN (?))", bun.In(referrer))
 		}
@@ -735,10 +732,10 @@ func (r *AnalyticsRepository) GetBounceRateWithFilter(ctx context.Context, siteI
 	dialect := fmt.Sprint(r.db.Dialect().Name())
 	var bouncedExpr string
 	if dialect == "pg" || dialect == "postgres" || dialect == "postgresql" {
-		// PostgreSQL: Use FILTER clause
+
 		bouncedExpr = "COUNT(*) FILTER (WHERE s.page_view_count = 1)"
 	} else {
-		// SQLite: Use CASE
+
 		bouncedExpr = "SUM(CASE WHEN s.page_view_count = 1 THEN 1 ELSE 0 END)"
 	}
 
@@ -1111,10 +1108,10 @@ func (r *AnalyticsRepository) GetTimeSeriesStatsWithFilter(ctx context.Context, 
 	var stats []DailyVisitorStats
 	fromUnix := from.Unix()
 	toUnix := to.Unix()
-	bucketExpr := r.timeBucketExpression(bucket) // Just "enter_day" or "enter_hour" - integer column
+	bucketExpr := r.timeBucketExpression(bucket)
 	q := r.db.NewSelect().
 		TableExpr("sessions s").
-		ColumnExpr(bucketExpr+" as date_bucket"). // Return integer, no conversion!
+		ColumnExpr(bucketExpr+" as date_bucket").
 		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		ColumnExpr("SUM(s.page_view_count) as page_views").
 		ColumnExpr("COUNT(*) as sessions").
@@ -1136,11 +1133,10 @@ func (r *AnalyticsRepository) GetTimeSeriesStatsWithFilter(ctx context.Context, 
 }
 
 func (r *AnalyticsRepository) timeBucketExpression(bucket TimeBucket) string {
-	// Returns the column name for time bucketing
-	// No need for date functions - we use pre-calculated integer buckets!
+
 	if bucket == TimeBucketHourly {
 		return "enter_hour"
 	}
-	// Daily bucket
+
 	return "enter_day"
 }

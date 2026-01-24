@@ -14,16 +14,9 @@ import (
 	"github.com/lovely-eye/server/internal/server"
 )
 
-// REST API endpoints:
-//   POST /api/collect  - Track page views (public)
-//   POST /api/event    - Track custom events (public)
-//
-// All other operations (auth, sites, dashboard) are via GraphQL at /graphql
-
 func main() {
 	cfg := config.Load()
 
-	// Initialize structured logger with configured log level
 	logHandler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: cfg.LogLevel,
 	})
@@ -34,16 +27,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create server: %v", err)
 	}
-	defer func ()  {
-		err:=srv.Close()
+	defer func() {
+		err := srv.Close()
 		if nil != err {
-			slog.Error("server close failed","error",err)
+			slog.Error("server close failed", "error", err)
 		}
 	}()
 
 	log.Println("Database migrations completed")
 
-	// Start server in goroutine
 	go func() {
 		addr := srv.HTTPServer.Addr
 		basePath := cfg.Server.BasePath
@@ -56,7 +48,6 @@ func main() {
 		}
 	}()
 
-	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit

@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 func TestGeoIPService_InvalidPath(t *testing.T) {
 	t.Parallel()
 
@@ -25,9 +24,9 @@ func TestGeoIPService_InvalidPath(t *testing.T) {
 
 	svc.SetEnabled(true)
 
-	if got,err := svc.ResolveCountry("8.8.8.8"); got.Name != "Unknown"  {
-		t.Fatalf("expected Unknown for public IP with missing DB, got %q %s", got,err.Error())
-		require.NoError(t,err)
+	if got, err := svc.ResolveCountry("8.8.8.8"); got.Name != "Unknown" {
+		t.Fatalf("expected Unknown for public IP with missing DB, got %q %s", got, err.Error())
+		require.NoError(t, err)
 	}
 }
 

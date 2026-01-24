@@ -43,39 +43,36 @@ func NewAnalyticsService(
 	}
 }
 
-// CollectInput represents data collected from the tracking script
 type CollectInput struct {
 	SiteKey     string `json:"site_key"`
 	Path        string `json:"path"`
 	Title       string `json:"title"`
 	Referrer    string `json:"referrer"`
 	ScreenWidth int    `json:"screen_width"`
-	UserAgent   string `json:"-"` // From header
-	IP          string `json:"-"` // From request
-	Origin      string `json:"-"` // From header
-	Referer     string `json:"-"` // From header
+	UserAgent   string `json:"-"`
+	IP          string `json:"-"`
+	Origin      string `json:"-"`
+	Referer     string `json:"-"`
 	UTMSource   string `json:"utm_source"`
 	UTMMedium   string `json:"utm_medium"`
 	UTMCampaign string `json:"utm_campaign"`
 }
 
-// EventInput represents custom event data
 type EventInput struct {
 	SiteKey    string `json:"site_key"`
 	Name       string `json:"name"`
 	Path       string `json:"path"`
-	Properties string `json:"properties"` // JSON string
+	Properties string `json:"properties"`
 	UserAgent  string `json:"-"`
 	IP         string `json:"-"`
 	Origin     string `json:"-"`
 	Referer    string `json:"-"`
 }
 
-// CollectPageView records a page view and manages sessions
 func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInput) error {
-	// Filter out bots
+
 	if s.botDetector.IsBot(input.UserAgent) {
-		return nil // Silently ignore bot traffic
+		return nil
 	}
 
 	site, err := s.siteRepo.GetByPublicKey(ctx, input.SiteKey)
@@ -92,7 +89,6 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 	// Generate anonymous visitor ID (SHA-256 hash) with daily salt rotation for privacy
 	visitorHash := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
 
-	// Parse user agent with proper library
 	ua := useragent.Parse(input.UserAgent)
 	device := categorizeDevice(ua)
 	browser := ua.Name
@@ -107,29 +103,26 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 
 	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
-		country,err = s.geoIPService.ResolveCountry(input.IP)
+		country, err = s.geoIPService.ResolveCountry(input.IP)
 		if err != nil {
 			err = fmt.Errorf("get country for ip %s: %w", input.IP, err)
-       		slog.Error("country resolve failed", "err", err)
+			slog.Error("country resolve failed", "err", err)
 		}
 	}
 
-	// Find or create Client record (stores stable attributes)
 	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.Name)
 	if err != nil {
 		return fmt.Errorf("find or create client: %w", err)
 	}
 
-	// Current time for timestamps
 	now := time.Now()
 	nowUnix := now.Unix()
 
-	// Try to find existing session (within 30 minutes)
 	sessionTimeout := now.Add(-30 * time.Minute)
 	session, err := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
 
 	if err != nil || session == nil {
-		// Create new session
+
 		session = &models.Session{
 			SiteID:        site.ID,
 			ClientID:      client.ID,
@@ -152,7 +145,7 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 			return fmt.Errorf("create session: %w", err)
 		}
 	} else {
-		// Update existing session
+
 		session.ExitTime = nowUnix
 		session.ExitHour = nowUnix / 3600
 		session.ExitDay = nowUnix / 86400
@@ -172,7 +165,6 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		return nil
 	}
 
-	// Create Event record (Type=EventTypePageview=0)
 	event := &models.Event{
 		SessionID:    session.ID,
 		Time:         nowUnix,
@@ -199,7 +191,6 @@ func (s *AnalyticsService) findOrCreateClient(ctx context.Context, siteID int64,
 	return client, nil
 }
 
-// getActiveSession finds an active session for a client (within timeout)
 func (s *AnalyticsService) getActiveSession(ctx context.Context, siteID, clientID int64, since time.Time) (*models.Session, error) {
 	session, err := s.analyticsRepo.GetActiveSession(ctx, siteID, clientID, since.Unix())
 	if err != nil {
@@ -208,7 +199,6 @@ func (s *AnalyticsService) getActiveSession(ctx context.Context, siteID, clientI
 	return session, nil
 }
 
-// getRecentPageViewEvent checks if the same page was viewed recently in the same session
 func (s *AnalyticsService) getRecentPageViewEvent(ctx context.Context, sessionID int64, path string, since int64) (*models.Event, error) {
 	event, err := s.analyticsRepo.GetRecentPageViewEvent(ctx, sessionID, path, since)
 	if err != nil {
@@ -217,11 +207,10 @@ func (s *AnalyticsService) getRecentPageViewEvent(ctx context.Context, sessionID
 	return event, nil
 }
 
-// CollectEvent records a custom event
 func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) error {
-	// Filter out bots
+
 	if s.botDetector.IsBot(input.UserAgent) {
-		return nil // Silently ignore bot traffic
+		return nil
 	}
 
 	site, err := s.siteRepo.GetByPublicKey(ctx, input.SiteKey)
@@ -258,7 +247,6 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 	// Generate anonymous visitor ID (SHA-256 hash)
 	visitorHash := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
 
-	// Parse user agent
 	ua := useragent.Parse(input.UserAgent)
 	device := categorizeDevice(ua)
 	browser := ua.Name
@@ -269,34 +257,30 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 	if os == "" {
 		os = "Other"
 	}
-	screenSize := "" // Not available for custom events
+	screenSize := ""
 
-	// Get country from IP (only if enabled for the site)
 	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
 		country, err = s.geoIPService.ResolveCountry(input.IP)
 		if err != nil {
 			err = fmt.Errorf("get country for ip %s: %w", input.IP, err)
-       		slog.Error("country resolve failed", "err", err)
+			slog.Error("country resolve failed", "err", err)
 		}
 	}
 
-	// Find or create Client record
 	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.Name)
 	if err != nil {
 		return fmt.Errorf("find or create client: %w", err)
 	}
 
-	// Current time for timestamps
 	now := time.Now()
 	nowUnix := now.Unix()
 
-	// Try to find existing session (within 30 minutes)
 	sessionTimeout := now.Add(-30 * time.Minute)
 	session, _ := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
 
 	if session == nil {
-		// Create new session for event-only session
+
 		entryPath := input.Path
 		if entryPath == "" {
 			entryPath = "/"
@@ -317,13 +301,13 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 			UTMMedium:     "",
 			UTMCampaign:   "",
 			Duration:      0,
-			PageViewCount: 0, // Event-only session starts with 0 pageviews
+			PageViewCount: 0,
 		}
 		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
 			return fmt.Errorf("create session: %w", err)
 		}
 	} else {
-		// Update existing session
+
 		session.ExitTime = nowUnix
 		session.ExitHour = nowUnix / 3600
 		session.ExitDay = nowUnix / 86400
@@ -336,7 +320,6 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		}
 	}
 
-	// Create Event record with Type=EventTypeCustom=1
 	event := &models.Event{
 		SessionID:    session.ID,
 		Time:         nowUnix,
@@ -352,26 +335,23 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		return fmt.Errorf("create event: %w", err)
 	}
 
-	// Store event properties in EventData table
 	if sanitizedProps != "" {
-		// Parse the JSON properties
+
 		var propsMap map[string]string
 		if err := json.Unmarshal([]byte(sanitizedProps), &propsMap); err != nil {
 			return fmt.Errorf("unmarshal sanitized properties: %w", err)
 		}
 
-		// Build a map of field keys to IDs for fast lookup
 		fieldMap := make(map[string]int64, len(definition.Fields))
 		for _, field := range definition.Fields {
 			fieldMap[field.Key] = field.ID
 		}
 
-		// Create EventData records for each property
 		eventDataList := make([]*models.EventData, 0, len(propsMap))
 		for key, value := range propsMap {
 			fieldID, exists := fieldMap[key]
 			if !exists {
-				continue // Skip if field not found in definition
+				continue
 			}
 
 			eventDataList = append(eventDataList, &models.EventData{
@@ -381,7 +361,6 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 			})
 		}
 
-		// Batch insert all event data
 		if len(eventDataList) > 0 {
 			if err := s.analyticsRepo.CreateEventDataBatch(ctx, eventDataList); err != nil {
 				return fmt.Errorf("create event data batch: %w", err)
@@ -527,7 +506,7 @@ func (s *AnalyticsService) GetTimeSeriesStatsWithFilter(ctx context.Context, sit
 }
 
 func (s *AnalyticsService) GetRealtimeVisitors(ctx context.Context, siteID int64) (int, error) {
-	// Visitors active in last 5 minutes
+
 	from := time.Now().Add(-5 * time.Minute)
 	to := time.Now()
 	count, err := s.analyticsRepo.GetVisitorCount(ctx, siteID, from, to)
@@ -538,7 +517,7 @@ func (s *AnalyticsService) GetRealtimeVisitors(ctx context.Context, siteID int64
 }
 
 func (s *AnalyticsService) GetActivePages(ctx context.Context, siteID int64, limit, offset int) ([]repository.ActivePageStats, error) {
-	// Get pages viewed in last 5 minutes
+
 	since := time.Now().Add(-5 * time.Minute)
 	stats, err := s.analyticsRepo.GetActivePages(ctx, siteID, since, limit, offset)
 	if err != nil {
@@ -547,7 +526,6 @@ func (s *AnalyticsService) GetActivePages(ctx context.Context, siteID int64, lim
 	return stats, nil
 }
 
-// GetEvents retrieves events for a site within a time range
 func (s *AnalyticsService) GetEvents(ctx context.Context, siteID int64, from, to time.Time, limit, offset int) ([]*models.Event, error) {
 	events, err := s.analyticsRepo.GetEvents(ctx, siteID, from, to, limit, offset)
 	if err != nil {
@@ -556,7 +534,6 @@ func (s *AnalyticsService) GetEvents(ctx context.Context, siteID int64, from, to
 	return events, nil
 }
 
-// GetEventsWithTotal retrieves events with total count for pagination
 func (s *AnalyticsService) GetEventsWithTotal(ctx context.Context, siteID int64, from, to time.Time, limit, offset int) ([]*models.Event, int, error) {
 	events, err := s.analyticsRepo.GetEvents(ctx, siteID, from, to, limit, offset)
 	if err != nil {
@@ -571,7 +548,6 @@ func (s *AnalyticsService) GetEventsWithTotal(ctx context.Context, siteID int64,
 	return events, total, nil
 }
 
-// GetEventsWithTotalAndFilter retrieves events with total count for pagination and filtering
 func (s *AnalyticsService) GetEventsWithTotalAndFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country, eventName, eventPath []string, limit, offset int) ([]*models.Event, int, error) {
 	events, err := s.analyticsRepo.GetEventsWithFilter(ctx, siteID, from, to, referrer, device, page, country, eventName, eventPath, limit, offset)
 	if err != nil {
@@ -586,13 +562,11 @@ func (s *AnalyticsService) GetEventsWithTotalAndFilter(ctx context.Context, site
 	return events, total, nil
 }
 
-// EventCountWithEvent represents an event count with its most recent event
 type EventCountWithEvent struct {
 	Event *models.Event
 	Count int
 }
 
-// GetEventCounts retrieves aggregated event counts by name
 func (s *AnalyticsService) GetEventCounts(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country, eventName, eventPath []string, limit, offset int) ([]EventCountWithEvent, error) {
 	results, err := s.analyticsRepo.GetEventCountsGrouped(ctx, siteID, from, to, referrer, device, page, country, eventName, eventPath, limit, offset)
 	if err != nil {
@@ -603,25 +577,21 @@ func (s *AnalyticsService) GetEventCounts(ctx context.Context, siteID int64, fro
 		return []EventCountWithEvent{}, nil
 	}
 
-	// Extract event IDs
 	eventIDs := make([]int64, len(results))
 	for i, result := range results {
 		eventIDs[i] = result.EventID
 	}
 
-	// Fetch full event details
 	events, err := s.analyticsRepo.GetEventsByIDs(ctx, eventIDs)
 	if err != nil {
 		return nil, fmt.Errorf("get events by IDs: %w", err)
 	}
 
-	// Create map of event ID to event
 	eventMap := make(map[int64]*models.Event, len(events))
 	for _, event := range events {
 		eventMap[event.ID] = event
 	}
 
-	// Build final result
 	eventCounts := make([]EventCountWithEvent, 0, len(results))
 	for _, result := range results {
 		event, ok := eventMap[result.EventID]
@@ -636,8 +606,6 @@ func (s *AnalyticsService) GetEventCounts(ctx context.Context, siteID int64, fro
 
 	return eventCounts, nil
 }
-
-// Helper functions for visitor identification and user agent parsing
 
 // generateVisitorID creates a privacy-preserving visitor identifier
 // Uses daily salt rotation to prevent long-term tracking while maintaining session continuity
@@ -698,7 +666,7 @@ func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionF
 			}
 			sanitized[key] = strValue
 		case models.FieldTypeInt:
-			// Accept both int and float for int type
+
 			switch v := value.(type) {
 			case float64:
 				sanitized[key] = int64(v)
@@ -745,7 +713,6 @@ func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionF
 	return string(bytes), true, nil
 }
 
-// categorizeDevice determines device type from parsed user agent
 func categorizeDevice(ua useragent.UserAgent) string {
 	if ua.Tablet {
 		return "tablet"
@@ -757,29 +724,25 @@ func categorizeDevice(ua useragent.UserAgent) string {
 		return "desktop"
 	}
 
-	// Fallback: manual detection when library doesn't recognize the device
-	// This handles simplified/incomplete user agent strings
 	uaString := strings.ToLower(ua.String)
 	if strings.Contains(uaString, "iphone") || strings.Contains(uaString, "android") {
 		if strings.Contains(uaString, "mobile") {
 			return "mobile"
 		}
-		// Android tablets don't have "mobile" in UA
+
 		if strings.Contains(uaString, "tablet") {
 			return "tablet"
 		}
-		// iPhone is always mobile
+
 		if strings.Contains(uaString, "iphone") {
 			return "mobile"
 		}
-		// iPad is tablet
+
 		if strings.Contains(uaString, "ipad") {
 			return "tablet"
 		}
 	}
 
-	// Default to desktop for unknown user agents
-	// This is more accurate than "other" since most traffic is desktop
 	return "desktop"
 }
 
@@ -875,10 +838,10 @@ func (s *AnalyticsService) isCountryBlocked(blocked []*models.SiteBlockedCountry
 	if len(blocked) == 0 || s.geoIPService == nil {
 		return false
 	}
-	c,err := s.geoIPService.ResolveCountry(ip)
+	c, err := s.geoIPService.ResolveCountry(ip)
 	if nil != err {
 		err = fmt.Errorf("get country for ip %s: %w", ip, err)
-    	slog.Error("country resolve failed", "err", err)
+		slog.Error("country resolve failed", "err", err)
 	}
 
 	if c == (Country{}) || c == LocalNetworkCountry {

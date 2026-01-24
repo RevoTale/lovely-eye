@@ -48,7 +48,6 @@ type GeoIPCountry struct {
 	Name string
 }
 
-// GeoIPService provides IP geolocation capabilities.
 type GeoIPService struct {
 	reader *geoip2.Reader
 	mu     sync.RWMutex
@@ -69,8 +68,6 @@ type GeoIPService struct {
 	countriesUpdatedAt *time.Time
 }
 
-// NewGeoIPService creates a new GeoIP service.
-// The database is downloaded on demand when country tracking is enabled.
 func NewGeoIPService(cfg GeoIPConfig) (*GeoIPService, error) {
 	service := &GeoIPService{
 		dbPath:            cfg.DBPath,
@@ -584,24 +581,26 @@ func (g *GeoIPService) setStatusError(state, message string) error {
 
 var ErrNoDBReader = errors.New("no IP reader")
 var UnknownCountry = Country{
-		Name: "Unknown",
-		ISOCode: "-",
-}
-var LocalNetworkCountry = Country{
-	Name: "Local Network",
+	Name:    "Unknown",
 	ISOCode: "-",
 }
+var LocalNetworkCountry = Country{
+	Name:    "Local Network",
+	ISOCode: "-",
+}
+
 type Country struct {
-	Name string
+	Name    string
 	ISOCode string
 }
-func (g *GeoIPService) ResolveCountry(ipStr string) (Country,error) {
+
+func (g *GeoIPService) ResolveCountry(ipStr string) (Country, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	ip,err := netip.ParseAddr(ipStr)
+	ip, err := netip.ParseAddr(ipStr)
 	if err != nil {
-		return UnknownCountry, fmt.Errorf("failed parse country IP: %s",err.Error())
+		return UnknownCountry, fmt.Errorf("failed parse country IP: %s", err.Error())
 	}
 
 	if ip.IsPrivate() {
@@ -614,13 +613,13 @@ func (g *GeoIPService) ResolveCountry(ipStr string) (Country,error) {
 
 	record, err := g.reader.Country(ip)
 	if err != nil {
-		return UnknownCountry, fmt.Errorf("failed to get country: %s",err.Error())
+		return UnknownCountry, fmt.Errorf("failed to get country: %s", err.Error())
 	}
 
 	return Country{
-		Name: record.Country.Names.English,
+		Name:    record.Country.Names.English,
 		ISOCode: record.Country.ISOCode,
-	},nil
+	}, nil
 }
 
 func (g *GeoIPService) Close() error {
@@ -634,4 +633,3 @@ func (g *GeoIPService) Close() error {
 	}
 	return nil
 }
-

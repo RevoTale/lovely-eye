@@ -9,26 +9,21 @@ import (
 	"github.com/Khan/genqlient/graphql"
 )
 
-// CreateSiteCreateSite includes the requested fields of the GraphQL type Site.
 type CreateSiteCreateSite struct {
 	Id string `json:"id"`
-	// All tracked domains (includes primary)
+
 	Domains []string `json:"domains"`
 	Name    string   `json:"name"`
-	// Used in tracking script
+
 	PublicKey string `json:"publicKey"`
 }
 
-// GetId returns CreateSiteCreateSite.Id, and is useful for accessing the field via an interface.
 func (v *CreateSiteCreateSite) GetId() string { return v.Id }
 
-// GetDomains returns CreateSiteCreateSite.Domains, and is useful for accessing the field via an interface.
 func (v *CreateSiteCreateSite) GetDomains() []string { return v.Domains }
 
-// GetName returns CreateSiteCreateSite.Name, and is useful for accessing the field via an interface.
 func (v *CreateSiteCreateSite) GetName() string { return v.Name }
 
-// GetPublicKey returns CreateSiteCreateSite.PublicKey, and is useful for accessing the field via an interface.
 func (v *CreateSiteCreateSite) GetPublicKey() string { return v.PublicKey }
 
 type CreateSiteInput struct {
@@ -36,27 +31,22 @@ type CreateSiteInput struct {
 	Name    string   `json:"name"`
 }
 
-// GetDomains returns CreateSiteInput.Domains, and is useful for accessing the field via an interface.
 func (v *CreateSiteInput) GetDomains() []string { return v.Domains }
 
-// GetName returns CreateSiteInput.Name, and is useful for accessing the field via an interface.
 func (v *CreateSiteInput) GetName() string { return v.Name }
 
-// CreateSiteResponse is returned by CreateSite on success.
 type CreateSiteResponse struct {
 	CreateSite CreateSiteCreateSite `json:"createSite"`
 }
 
-// GetCreateSite returns CreateSiteResponse.CreateSite, and is useful for accessing the field via an interface.
 func (v *CreateSiteResponse) GetCreateSite() CreateSiteCreateSite { return v.CreateSite }
 
-// DashboardDashboardDashboardStats includes the requested fields of the GraphQL type DashboardStats.
 type DashboardDashboardDashboardStats struct {
 	Visitors   int     `json:"visitors"`
 	PageViews  int     `json:"pageViews"`
 	Sessions   int     `json:"sessions"`
 	BounceRate float64 `json:"bounceRate"`
-	// Average session duration in seconds
+
 	AvgDuration  float64                                                        `json:"avgDuration"`
 	TopPages     DashboardDashboardDashboardStatsTopPagesPagedPageStats         `json:"topPages"`
 	TopReferrers DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats `json:"topReferrers"`
@@ -66,100 +56,78 @@ type DashboardDashboardDashboardStats struct {
 	DailyStats   []DashboardDashboardDashboardStatsDailyStats                   `json:"dailyStats"`
 }
 
-// GetVisitors returns DashboardDashboardDashboardStats.Visitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetVisitors() int { return v.Visitors }
 
-// GetPageViews returns DashboardDashboardDashboardStats.PageViews, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetPageViews() int { return v.PageViews }
 
-// GetSessions returns DashboardDashboardDashboardStats.Sessions, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetSessions() int { return v.Sessions }
 
-// GetBounceRate returns DashboardDashboardDashboardStats.BounceRate, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetBounceRate() float64 { return v.BounceRate }
 
-// GetAvgDuration returns DashboardDashboardDashboardStats.AvgDuration, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetAvgDuration() float64 { return v.AvgDuration }
 
-// GetTopPages returns DashboardDashboardDashboardStats.TopPages, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetTopPages() DashboardDashboardDashboardStatsTopPagesPagedPageStats {
 	return v.TopPages
 }
 
-// GetTopReferrers returns DashboardDashboardDashboardStats.TopReferrers, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetTopReferrers() DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats {
 	return v.TopReferrers
 }
 
-// GetBrowsers returns DashboardDashboardDashboardStats.Browsers, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetBrowsers() []DashboardDashboardDashboardStatsBrowsersBrowserStats {
 	return v.Browsers
 }
 
-// GetDevices returns DashboardDashboardDashboardStats.Devices, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetDevices() DashboardDashboardDashboardStatsDevicesPagedDeviceStats {
 	return v.Devices
 }
 
-// GetCountries returns DashboardDashboardDashboardStats.Countries, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetCountries() DashboardDashboardDashboardStatsCountriesPagedCountryStats {
 	return v.Countries
 }
 
-// GetDailyStats returns DashboardDashboardDashboardStats.DailyStats, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetDailyStats() []DashboardDashboardDashboardStatsDailyStats {
 	return v.DailyStats
 }
 
-// DashboardDashboardDashboardStatsBrowsersBrowserStats includes the requested fields of the GraphQL type BrowserStats.
 type DashboardDashboardDashboardStatsBrowsersBrowserStats struct {
 	Browser  string `json:"browser"`
 	Visitors int    `json:"visitors"`
 }
 
-// GetBrowser returns DashboardDashboardDashboardStatsBrowsersBrowserStats.Browser, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsBrowsersBrowserStats) GetBrowser() string { return v.Browser }
 
-// GetVisitors returns DashboardDashboardDashboardStatsBrowsersBrowserStats.Visitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsBrowsersBrowserStats) GetVisitors() int { return v.Visitors }
 
-// DashboardDashboardDashboardStatsCountriesPagedCountryStats includes the requested fields of the GraphQL type PagedCountryStats.
 type DashboardDashboardDashboardStatsCountriesPagedCountryStats struct {
 	Total         int                                                                           `json:"total"`
 	TotalVisitors int                                                                           `json:"totalVisitors"`
 	Items         []DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats `json:"items"`
 }
 
-// GetTotal returns DashboardDashboardDashboardStatsCountriesPagedCountryStats.Total, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStats) GetTotal() int { return v.Total }
 
-// GetTotalVisitors returns DashboardDashboardDashboardStatsCountriesPagedCountryStats.TotalVisitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStats) GetTotalVisitors() int {
 	return v.TotalVisitors
 }
 
-// GetItems returns DashboardDashboardDashboardStatsCountriesPagedCountryStats.Items, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStats) GetItems() []DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats {
 	return v.Items
 }
 
-// DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats includes the requested fields of the GraphQL type CountryStats.
 type DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats struct {
 	Country  string `json:"country"`
 	Visitors int    `json:"visitors"`
 }
 
-// GetCountry returns DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats.Country, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats) GetCountry() string {
 	return v.Country
 }
 
-// GetVisitors returns DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats.Visitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats) GetVisitors() int {
 	return v.Visitors
 }
 
-// DashboardDashboardDashboardStatsDailyStats includes the requested fields of the GraphQL type DailyStats.
 type DashboardDashboardDashboardStatsDailyStats struct {
 	Date      time.Time `json:"date"`
 	Visitors  int       `json:"visitors"`
@@ -167,128 +135,102 @@ type DashboardDashboardDashboardStatsDailyStats struct {
 	Sessions  int       `json:"sessions"`
 }
 
-// GetDate returns DashboardDashboardDashboardStatsDailyStats.Date, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDailyStats) GetDate() time.Time { return v.Date }
 
-// GetVisitors returns DashboardDashboardDashboardStatsDailyStats.Visitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDailyStats) GetVisitors() int { return v.Visitors }
 
-// GetPageViews returns DashboardDashboardDashboardStatsDailyStats.PageViews, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDailyStats) GetPageViews() int { return v.PageViews }
 
-// GetSessions returns DashboardDashboardDashboardStatsDailyStats.Sessions, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDailyStats) GetSessions() int { return v.Sessions }
 
-// DashboardDashboardDashboardStatsDevicesPagedDeviceStats includes the requested fields of the GraphQL type PagedDeviceStats.
 type DashboardDashboardDashboardStatsDevicesPagedDeviceStats struct {
 	Total         int                                                                       `json:"total"`
 	TotalVisitors int                                                                       `json:"totalVisitors"`
 	Items         []DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats `json:"items"`
 }
 
-// GetTotal returns DashboardDashboardDashboardStatsDevicesPagedDeviceStats.Total, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStats) GetTotal() int { return v.Total }
 
-// GetTotalVisitors returns DashboardDashboardDashboardStatsDevicesPagedDeviceStats.TotalVisitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStats) GetTotalVisitors() int {
 	return v.TotalVisitors
 }
 
-// GetItems returns DashboardDashboardDashboardStatsDevicesPagedDeviceStats.Items, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStats) GetItems() []DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats {
 	return v.Items
 }
 
-// DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats includes the requested fields of the GraphQL type DeviceStats.
 type DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats struct {
 	Device   string `json:"device"`
 	Visitors int    `json:"visitors"`
 }
 
-// GetDevice returns DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats.Device, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats) GetDevice() string {
 	return v.Device
 }
 
-// GetVisitors returns DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats.Visitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats) GetVisitors() int {
 	return v.Visitors
 }
 
-// DashboardDashboardDashboardStatsTopPagesPagedPageStats includes the requested fields of the GraphQL type PagedPageStats.
 type DashboardDashboardDashboardStatsTopPagesPagedPageStats struct {
 	Total int                                                                    `json:"total"`
 	Items []DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats `json:"items"`
 }
 
-// GetTotal returns DashboardDashboardDashboardStatsTopPagesPagedPageStats.Total, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsTopPagesPagedPageStats) GetTotal() int { return v.Total }
 
-// GetItems returns DashboardDashboardDashboardStatsTopPagesPagedPageStats.Items, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsTopPagesPagedPageStats) GetItems() []DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats {
 	return v.Items
 }
 
-// DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats includes the requested fields of the GraphQL type PageStats.
 type DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats struct {
 	Path     string `json:"path"`
 	Views    int    `json:"views"`
 	Visitors int    `json:"visitors"`
 }
 
-// GetPath returns DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats.Path, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats) GetPath() string {
 	return v.Path
 }
 
-// GetViews returns DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats.Views, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats) GetViews() int {
 	return v.Views
 }
 
-// GetVisitors returns DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats.Visitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsTopPagesPagedPageStatsItemsPageStats) GetVisitors() int {
 	return v.Visitors
 }
 
-// DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats includes the requested fields of the GraphQL type PagedReferrerStats.
 type DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats struct {
 	Total int                                                                                `json:"total"`
 	Items []DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats `json:"items"`
 }
 
-// GetTotal returns DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats.Total, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats) GetTotal() int {
 	return v.Total
 }
 
-// GetItems returns DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats.Items, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats) GetItems() []DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats {
 	return v.Items
 }
 
-// DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats includes the requested fields of the GraphQL type ReferrerStats.
 type DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats struct {
 	Referrer string `json:"referrer"`
 	Visitors int    `json:"visitors"`
 }
 
-// GetReferrer returns DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats.Referrer, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats) GetReferrer() string {
 	return v.Referrer
 }
 
-// GetVisitors returns DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats.Visitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsTopReferrersPagedReferrerStatsItemsReferrerStats) GetVisitors() int {
 	return v.Visitors
 }
 
-// DashboardResponse is returned by Dashboard on success.
 type DashboardResponse struct {
 	Dashboard DashboardDashboardDashboardStats `json:"dashboard"`
 }
 
-// GetDashboard returns DashboardResponse.Dashboard, and is useful for accessing the field via an interface.
 func (v *DashboardResponse) GetDashboard() DashboardDashboardDashboardStats { return v.Dashboard }
 
 type DateRangeInput struct {
@@ -296,19 +238,14 @@ type DateRangeInput struct {
 	To   time.Time `json:"to"`
 }
 
-// GetFrom returns DateRangeInput.From, and is useful for accessing the field via an interface.
 func (v *DateRangeInput) GetFrom() time.Time { return v.From }
 
-// GetTo returns DateRangeInput.To, and is useful for accessing the field via an interface.
 func (v *DateRangeInput) GetTo() time.Time { return v.To }
 
-// DeleteSiteResponse is returned by DeleteSite on success.
 type DeleteSiteResponse struct {
-	// Deletes site and all analytics data
 	DeleteSite bool `json:"deleteSite"`
 }
 
-// GetDeleteSite returns DeleteSiteResponse.DeleteSite, and is useful for accessing the field via an interface.
 func (v *DeleteSiteResponse) GetDeleteSite() bool { return v.DeleteSite }
 
 type EventDefinitionFieldInput struct {
@@ -318,16 +255,12 @@ type EventDefinitionFieldInput struct {
 	MaxLength int            `json:"maxLength"`
 }
 
-// GetKey returns EventDefinitionFieldInput.Key, and is useful for accessing the field via an interface.
 func (v *EventDefinitionFieldInput) GetKey() string { return v.Key }
 
-// GetType returns EventDefinitionFieldInput.Type, and is useful for accessing the field via an interface.
 func (v *EventDefinitionFieldInput) GetType() EventFieldType { return v.Type }
 
-// GetRequired returns EventDefinitionFieldInput.Required, and is useful for accessing the field via an interface.
 func (v *EventDefinitionFieldInput) GetRequired() bool { return v.Required }
 
-// GetMaxLength returns EventDefinitionFieldInput.MaxLength, and is useful for accessing the field via an interface.
 func (v *EventDefinitionFieldInput) GetMaxLength() int { return v.MaxLength }
 
 type EventDefinitionInput struct {
@@ -335,10 +268,8 @@ type EventDefinitionInput struct {
 	Fields []EventDefinitionFieldInput `json:"fields"`
 }
 
-// GetName returns EventDefinitionInput.Name, and is useful for accessing the field via an interface.
 func (v *EventDefinitionInput) GetName() string { return v.Name }
 
-// GetFields returns EventDefinitionInput.Fields, and is useful for accessing the field via an interface.
 func (v *EventDefinitionInput) GetFields() []EventDefinitionFieldInput { return v.Fields }
 
 type EventFieldType string
@@ -355,99 +286,77 @@ var AllEventFieldType = []EventFieldType{
 	EventFieldTypeBoolean,
 }
 
-// EventsEventsEventsResult includes the requested fields of the GraphQL type EventsResult.
 type EventsEventsEventsResult struct {
 	Events []EventsEventsEventsResultEventsEvent `json:"events"`
 	Total  int                                   `json:"total"`
 }
 
-// GetEvents returns EventsEventsEventsResult.Events, and is useful for accessing the field via an interface.
 func (v *EventsEventsEventsResult) GetEvents() []EventsEventsEventsResultEventsEvent { return v.Events }
 
-// GetTotal returns EventsEventsEventsResult.Total, and is useful for accessing the field via an interface.
 func (v *EventsEventsEventsResult) GetTotal() int { return v.Total }
 
-// EventsEventsEventsResultEventsEvent includes the requested fields of the GraphQL type Event.
 type EventsEventsEventsResultEventsEvent struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
 	Path string `json:"path"`
-	// Key-value properties associated with the event
+
 	Properties []EventsEventsEventsResultEventsEventPropertiesEventProperty `json:"properties"`
 	CreatedAt  time.Time                                                    `json:"createdAt"`
 }
 
-// GetId returns EventsEventsEventsResultEventsEvent.Id, and is useful for accessing the field via an interface.
 func (v *EventsEventsEventsResultEventsEvent) GetId() string { return v.Id }
 
-// GetName returns EventsEventsEventsResultEventsEvent.Name, and is useful for accessing the field via an interface.
 func (v *EventsEventsEventsResultEventsEvent) GetName() string { return v.Name }
 
-// GetPath returns EventsEventsEventsResultEventsEvent.Path, and is useful for accessing the field via an interface.
 func (v *EventsEventsEventsResultEventsEvent) GetPath() string { return v.Path }
 
-// GetProperties returns EventsEventsEventsResultEventsEvent.Properties, and is useful for accessing the field via an interface.
 func (v *EventsEventsEventsResultEventsEvent) GetProperties() []EventsEventsEventsResultEventsEventPropertiesEventProperty {
 	return v.Properties
 }
 
-// GetCreatedAt returns EventsEventsEventsResultEventsEvent.CreatedAt, and is useful for accessing the field via an interface.
 func (v *EventsEventsEventsResultEventsEvent) GetCreatedAt() time.Time { return v.CreatedAt }
 
-// EventsEventsEventsResultEventsEventPropertiesEventProperty includes the requested fields of the GraphQL type EventProperty.
 type EventsEventsEventsResultEventsEventPropertiesEventProperty struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
 
-// GetKey returns EventsEventsEventsResultEventsEventPropertiesEventProperty.Key, and is useful for accessing the field via an interface.
 func (v *EventsEventsEventsResultEventsEventPropertiesEventProperty) GetKey() string { return v.Key }
 
-// GetValue returns EventsEventsEventsResultEventsEventPropertiesEventProperty.Value, and is useful for accessing the field via an interface.
 func (v *EventsEventsEventsResultEventsEventPropertiesEventProperty) GetValue() string {
 	return v.Value
 }
 
-// EventsResponse is returned by Events on success.
 type EventsResponse struct {
-	// Get events for a site with pagination
 	Events EventsEventsEventsResult `json:"events"`
 }
 
-// GetEvents returns EventsResponse.Events, and is useful for accessing the field via an interface.
 func (v *EventsResponse) GetEvents() EventsEventsEventsResult { return v.Events }
 
 type FilterInput struct {
-	// Filter by specific referrer
 	Referrer []string `json:"referrer"`
-	// Filter by device type (desktop, mobile, tablet)
+
 	Device []string `json:"device"`
-	// Filter by page path
+
 	Page []string `json:"page"`
-	// Filter by country (stored country name)
+
 	Country []string `json:"country"`
-	// Filter by event name
+
 	EventName []string `json:"eventName"`
-	// Filter by event path
+
 	EventPath []string `json:"eventPath"`
 }
 
-// GetReferrer returns FilterInput.Referrer, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetReferrer() []string { return v.Referrer }
 
-// GetDevice returns FilterInput.Device, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetDevice() []string { return v.Device }
 
-// GetPage returns FilterInput.Page, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetPage() []string { return v.Page }
 
-// GetCountry returns FilterInput.Country, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetCountry() []string { return v.Country }
 
-// GetEventName returns FilterInput.EventName, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetEventName() []string { return v.EventName }
 
-// GetEventPath returns FilterInput.EventPath, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetEventPath() []string { return v.EventPath }
 
 type LoginInput struct {
@@ -455,7 +364,6 @@ type LoginInput struct {
 	Password string `json:"password"`
 }
 
-// GetUsername returns LoginInput.Username, and is useful for accessing the field via an interface.
 func (v *LoginInput) GetUsername() string { return v.Username }
 
 // GetPassword returns LoginInput.Password, and is useful for accessing the field via an interface.
@@ -466,64 +374,51 @@ type LoginLoginAuthPayload struct {
 	User LoginLoginAuthPayloadUser `json:"user"`
 }
 
-// GetUser returns LoginLoginAuthPayload.User, and is useful for accessing the field via an interface.
 func (v *LoginLoginAuthPayload) GetUser() LoginLoginAuthPayloadUser { return v.User }
 
-// LoginLoginAuthPayloadUser includes the requested fields of the GraphQL type User.
 type LoginLoginAuthPayloadUser struct {
 	Id       string `json:"id"`
 	Username string `json:"username"`
 	Role     string `json:"role"`
 }
 
-// GetId returns LoginLoginAuthPayloadUser.Id, and is useful for accessing the field via an interface.
 func (v *LoginLoginAuthPayloadUser) GetId() string { return v.Id }
 
-// GetUsername returns LoginLoginAuthPayloadUser.Username, and is useful for accessing the field via an interface.
 func (v *LoginLoginAuthPayloadUser) GetUsername() string { return v.Username }
 
 // GetRole returns LoginLoginAuthPayloadUser.Role, and is useful for accessing the field via an interface.
 func (v *LoginLoginAuthPayloadUser) GetRole() string { return v.Role }
 
-// LoginResponse is returned by Login on success.
 type LoginResponse struct {
 	Login LoginLoginAuthPayload `json:"login"`
 }
 
-// GetLogin returns LoginResponse.Login, and is useful for accessing the field via an interface.
 func (v *LoginResponse) GetLogin() LoginLoginAuthPayload { return v.Login }
 
-// LogoutResponse is returned by Logout on success.
 type LogoutResponse struct {
 	// Clears auth cookies
 	Logout bool `json:"logout"`
 }
 
-// GetLogout returns LogoutResponse.Logout, and is useful for accessing the field via an interface.
 func (v *LogoutResponse) GetLogout() bool { return v.Logout }
 
-// MeMeUser includes the requested fields of the GraphQL type User.
 type MeMeUser struct {
 	Id       *string `json:"id"`
 	Username *string `json:"username"`
 	Role     *string `json:"role"`
 }
 
-// GetId returns MeMeUser.Id, and is useful for accessing the field via an interface.
 func (v *MeMeUser) GetId() *string { return v.Id }
 
-// GetUsername returns MeMeUser.Username, and is useful for accessing the field via an interface.
 func (v *MeMeUser) GetUsername() *string { return v.Username }
 
 // GetRole returns MeMeUser.Role, and is useful for accessing the field via an interface.
 func (v *MeMeUser) GetRole() *string { return v.Role }
 
-// MeResponse is returned by Me on success.
 type MeResponse struct {
 	Me *MeMeUser `json:"me"`
 }
 
-// GetMe returns MeResponse.Me, and is useful for accessing the field via an interface.
 func (v *MeResponse) GetMe() *MeMeUser { return v.Me }
 
 type PagingInput struct {
@@ -531,27 +426,20 @@ type PagingInput struct {
 	Offset int `json:"offset"`
 }
 
-// GetLimit returns PagingInput.Limit, and is useful for accessing the field via an interface.
 func (v *PagingInput) GetLimit() int { return v.Limit }
 
-// GetOffset returns PagingInput.Offset, and is useful for accessing the field via an interface.
 func (v *PagingInput) GetOffset() int { return v.Offset }
 
-// RealtimeRealtimeRealtimeStats includes the requested fields of the GraphQL type RealtimeStats.
 type RealtimeRealtimeRealtimeStats struct {
-	// Visitors active in last 5 minutes
 	Visitors int `json:"visitors"`
 }
 
-// GetVisitors returns RealtimeRealtimeRealtimeStats.Visitors, and is useful for accessing the field via an interface.
 func (v *RealtimeRealtimeRealtimeStats) GetVisitors() int { return v.Visitors }
 
-// RealtimeResponse is returned by Realtime on success.
 type RealtimeResponse struct {
 	Realtime RealtimeRealtimeRealtimeStats `json:"realtime"`
 }
 
-// GetRealtime returns RealtimeResponse.Realtime, and is useful for accessing the field via an interface.
 func (v *RealtimeResponse) GetRealtime() RealtimeRealtimeRealtimeStats { return v.Realtime }
 
 type RegisterInput struct {
@@ -559,7 +447,6 @@ type RegisterInput struct {
 	Password string `json:"password"`
 }
 
-// GetUsername returns RegisterInput.Username, and is useful for accessing the field via an interface.
 func (v *RegisterInput) GetUsername() string { return v.Username }
 
 // GetPassword returns RegisterInput.Password, and is useful for accessing the field via an interface.
@@ -570,92 +457,71 @@ type RegisterRegisterAuthPayload struct {
 	User RegisterRegisterAuthPayloadUser `json:"user"`
 }
 
-// GetUser returns RegisterRegisterAuthPayload.User, and is useful for accessing the field via an interface.
 func (v *RegisterRegisterAuthPayload) GetUser() RegisterRegisterAuthPayloadUser { return v.User }
 
-// RegisterRegisterAuthPayloadUser includes the requested fields of the GraphQL type User.
 type RegisterRegisterAuthPayloadUser struct {
 	Id       string `json:"id"`
 	Username string `json:"username"`
 	Role     string `json:"role"`
 }
 
-// GetId returns RegisterRegisterAuthPayloadUser.Id, and is useful for accessing the field via an interface.
 func (v *RegisterRegisterAuthPayloadUser) GetId() string { return v.Id }
 
-// GetUsername returns RegisterRegisterAuthPayloadUser.Username, and is useful for accessing the field via an interface.
 func (v *RegisterRegisterAuthPayloadUser) GetUsername() string { return v.Username }
 
 // GetRole returns RegisterRegisterAuthPayloadUser.Role, and is useful for accessing the field via an interface.
 func (v *RegisterRegisterAuthPayloadUser) GetRole() string { return v.Role }
 
-// RegisterResponse is returned by Register on success.
 type RegisterResponse struct {
-	// First user becomes admin
 	Register RegisterRegisterAuthPayload `json:"register"`
 }
 
-// GetRegister returns RegisterResponse.Register, and is useful for accessing the field via an interface.
 func (v *RegisterResponse) GetRegister() RegisterRegisterAuthPayload { return v.Register }
 
-// SiteResponse is returned by Site on success.
 type SiteResponse struct {
 	Site SiteSite `json:"site"`
 }
 
-// GetSite returns SiteResponse.Site, and is useful for accessing the field via an interface.
 func (v *SiteResponse) GetSite() SiteSite { return v.Site }
 
-// SiteSite includes the requested fields of the GraphQL type Site.
 type SiteSite struct {
 	Id string `json:"id"`
-	// All tracked domains (includes primary)
+
 	Domains []string `json:"domains"`
 	Name    string   `json:"name"`
-	// Used in tracking script
+
 	PublicKey string `json:"publicKey"`
 }
 
-// GetId returns SiteSite.Id, and is useful for accessing the field via an interface.
 func (v *SiteSite) GetId() string { return v.Id }
 
-// GetDomains returns SiteSite.Domains, and is useful for accessing the field via an interface.
 func (v *SiteSite) GetDomains() []string { return v.Domains }
 
-// GetName returns SiteSite.Name, and is useful for accessing the field via an interface.
 func (v *SiteSite) GetName() string { return v.Name }
 
-// GetPublicKey returns SiteSite.PublicKey, and is useful for accessing the field via an interface.
 func (v *SiteSite) GetPublicKey() string { return v.PublicKey }
 
-// SitesResponse is returned by Sites on success.
 type SitesResponse struct {
 	Sites []SitesSitesSite `json:"sites"`
 }
 
-// GetSites returns SitesResponse.Sites, and is useful for accessing the field via an interface.
 func (v *SitesResponse) GetSites() []SitesSitesSite { return v.Sites }
 
-// SitesSitesSite includes the requested fields of the GraphQL type Site.
 type SitesSitesSite struct {
 	Id string `json:"id"`
-	// All tracked domains (includes primary)
+
 	Domains []string `json:"domains"`
 	Name    string   `json:"name"`
-	// Used in tracking script
+
 	PublicKey string `json:"publicKey"`
 }
 
-// GetId returns SitesSitesSite.Id, and is useful for accessing the field via an interface.
 func (v *SitesSitesSite) GetId() string { return v.Id }
 
-// GetDomains returns SitesSitesSite.Domains, and is useful for accessing the field via an interface.
 func (v *SitesSitesSite) GetDomains() []string { return v.Domains }
 
-// GetName returns SitesSitesSite.Name, and is useful for accessing the field via an interface.
 func (v *SitesSitesSite) GetName() string { return v.Name }
 
-// GetPublicKey returns SitesSitesSite.PublicKey, and is useful for accessing the field via an interface.
 func (v *SitesSitesSite) GetPublicKey() string { return v.PublicKey }
 
 type TimeBucket string
@@ -670,35 +536,28 @@ var AllTimeBucket = []TimeBucket{
 	TimeBucketHourly,
 }
 
-// UpsertEventDefinitionResponse is returned by UpsertEventDefinition on success.
 type UpsertEventDefinitionResponse struct {
 	UpsertEventDefinition UpsertEventDefinitionUpsertEventDefinition `json:"upsertEventDefinition"`
 }
 
-// GetUpsertEventDefinition returns UpsertEventDefinitionResponse.UpsertEventDefinition, and is useful for accessing the field via an interface.
 func (v *UpsertEventDefinitionResponse) GetUpsertEventDefinition() UpsertEventDefinitionUpsertEventDefinition {
 	return v.UpsertEventDefinition
 }
 
-// UpsertEventDefinitionUpsertEventDefinition includes the requested fields of the GraphQL type EventDefinition.
 type UpsertEventDefinitionUpsertEventDefinition struct {
 	Id     string                                                                 `json:"id"`
 	Name   string                                                                 `json:"name"`
 	Fields []UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField `json:"fields"`
 }
 
-// GetId returns UpsertEventDefinitionUpsertEventDefinition.Id, and is useful for accessing the field via an interface.
 func (v *UpsertEventDefinitionUpsertEventDefinition) GetId() string { return v.Id }
 
-// GetName returns UpsertEventDefinitionUpsertEventDefinition.Name, and is useful for accessing the field via an interface.
 func (v *UpsertEventDefinitionUpsertEventDefinition) GetName() string { return v.Name }
 
-// GetFields returns UpsertEventDefinitionUpsertEventDefinition.Fields, and is useful for accessing the field via an interface.
 func (v *UpsertEventDefinitionUpsertEventDefinition) GetFields() []UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField {
 	return v.Fields
 }
 
-// UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField includes the requested fields of the GraphQL type EventDefinitionField.
 type UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField struct {
 	Id        string         `json:"id"`
 	Key       string         `json:"key"`
@@ -707,40 +566,32 @@ type UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField struct
 	MaxLength int            `json:"maxLength"`
 }
 
-// GetId returns UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField.Id, and is useful for accessing the field via an interface.
 func (v *UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField) GetId() string {
 	return v.Id
 }
 
-// GetKey returns UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField.Key, and is useful for accessing the field via an interface.
 func (v *UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField) GetKey() string {
 	return v.Key
 }
 
-// GetType returns UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField.Type, and is useful for accessing the field via an interface.
 func (v *UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField) GetType() EventFieldType {
 	return v.Type
 }
 
-// GetRequired returns UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField.Required, and is useful for accessing the field via an interface.
 func (v *UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField) GetRequired() bool {
 	return v.Required
 }
 
-// GetMaxLength returns UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField.MaxLength, and is useful for accessing the field via an interface.
 func (v *UpsertEventDefinitionUpsertEventDefinitionFieldsEventDefinitionField) GetMaxLength() int {
 	return v.MaxLength
 }
 
-// __CreateSiteInput is used internally by genqlient
 type __CreateSiteInput struct {
 	Input CreateSiteInput `json:"input"`
 }
 
-// GetInput returns __CreateSiteInput.Input, and is useful for accessing the field via an interface.
 func (v *__CreateSiteInput) GetInput() CreateSiteInput { return v.Input }
 
-// __DashboardInput is used internally by genqlient
 type __DashboardInput struct {
 	SiteId           string          `json:"siteId"`
 	DateRange        *DateRangeInput `json:"dateRange"`
@@ -754,45 +605,32 @@ type __DashboardInput struct {
 	DailyStatsLimit  *int            `json:"dailyStatsLimit"`
 }
 
-// GetSiteId returns __DashboardInput.SiteId, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetSiteId() string { return v.SiteId }
 
-// GetDateRange returns __DashboardInput.DateRange, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetDateRange() *DateRangeInput { return v.DateRange }
 
-// GetFilter returns __DashboardInput.Filter, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetFilter() *FilterInput { return v.Filter }
 
-// GetTopPagesPaging returns __DashboardInput.TopPagesPaging, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetTopPagesPaging() PagingInput { return v.TopPagesPaging }
 
-// GetReferrersPaging returns __DashboardInput.ReferrersPaging, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetReferrersPaging() PagingInput { return v.ReferrersPaging }
 
-// GetBrowsersPaging returns __DashboardInput.BrowsersPaging, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetBrowsersPaging() PagingInput { return v.BrowsersPaging }
 
-// GetDevicesPaging returns __DashboardInput.DevicesPaging, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetDevicesPaging() PagingInput { return v.DevicesPaging }
 
-// GetCountriesPaging returns __DashboardInput.CountriesPaging, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetCountriesPaging() PagingInput { return v.CountriesPaging }
 
-// GetDailyStatsBucket returns __DashboardInput.DailyStatsBucket, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetDailyStatsBucket() *TimeBucket { return v.DailyStatsBucket }
 
-// GetDailyStatsLimit returns __DashboardInput.DailyStatsLimit, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetDailyStatsLimit() *int { return v.DailyStatsLimit }
 
-// __DeleteSiteInput is used internally by genqlient
 type __DeleteSiteInput struct {
 	Id string `json:"id"`
 }
 
-// GetId returns __DeleteSiteInput.Id, and is useful for accessing the field via an interface.
 func (v *__DeleteSiteInput) GetId() string { return v.Id }
 
-// __EventsInput is used internally by genqlient
 type __EventsInput struct {
 	SiteId    string          `json:"siteId"`
 	DateRange *DateRangeInput `json:"dateRange"`
@@ -800,71 +638,53 @@ type __EventsInput struct {
 	Offset    *int            `json:"offset"`
 }
 
-// GetSiteId returns __EventsInput.SiteId, and is useful for accessing the field via an interface.
 func (v *__EventsInput) GetSiteId() string { return v.SiteId }
 
-// GetDateRange returns __EventsInput.DateRange, and is useful for accessing the field via an interface.
 func (v *__EventsInput) GetDateRange() *DateRangeInput { return v.DateRange }
 
-// GetLimit returns __EventsInput.Limit, and is useful for accessing the field via an interface.
 func (v *__EventsInput) GetLimit() *int { return v.Limit }
 
-// GetOffset returns __EventsInput.Offset, and is useful for accessing the field via an interface.
 func (v *__EventsInput) GetOffset() *int { return v.Offset }
 
-// __LoginInput is used internally by genqlient
 type __LoginInput struct {
 	Input LoginInput `json:"input"`
 }
 
-// GetInput returns __LoginInput.Input, and is useful for accessing the field via an interface.
 func (v *__LoginInput) GetInput() LoginInput { return v.Input }
 
-// __RealtimeInput is used internally by genqlient
 type __RealtimeInput struct {
 	SiteId string `json:"siteId"`
 }
 
-// GetSiteId returns __RealtimeInput.SiteId, and is useful for accessing the field via an interface.
 func (v *__RealtimeInput) GetSiteId() string { return v.SiteId }
 
-// __RegisterInput is used internally by genqlient
 type __RegisterInput struct {
 	Input RegisterInput `json:"input"`
 }
 
-// GetInput returns __RegisterInput.Input, and is useful for accessing the field via an interface.
 func (v *__RegisterInput) GetInput() RegisterInput { return v.Input }
 
-// __SiteInput is used internally by genqlient
 type __SiteInput struct {
 	Id string `json:"id"`
 }
 
-// GetId returns __SiteInput.Id, and is useful for accessing the field via an interface.
 func (v *__SiteInput) GetId() string { return v.Id }
 
-// __SitesInput is used internally by genqlient
 type __SitesInput struct {
 	Paging PagingInput `json:"paging"`
 }
 
-// GetPaging returns __SitesInput.Paging, and is useful for accessing the field via an interface.
 func (v *__SitesInput) GetPaging() PagingInput { return v.Paging }
 
-// __UpsertEventDefinitionInput is used internally by genqlient
 type __UpsertEventDefinitionInput struct {
 	SiteId string               `json:"siteId"`
 	Input  EventDefinitionInput `json:"input"`
 }
 
-// GetSiteId returns __UpsertEventDefinitionInput.SiteId, and is useful for accessing the field via an interface.
 func (v *__UpsertEventDefinitionInput) GetSiteId() string { return v.SiteId }
 
-// GetInput returns __UpsertEventDefinitionInput.Input, and is useful for accessing the field via an interface.
 func (v *__UpsertEventDefinitionInput) GetInput() EventDefinitionInput { return v.Input }
 
-// The mutation executed by CreateSite.
 const CreateSite_Operation = `
 mutation CreateSite ($input: CreateSiteInput!) {
 	createSite(input: $input) {
@@ -901,7 +721,6 @@ func CreateSite(
 	return data_, err_
 }
 
-// The query executed by Dashboard.
 const Dashboard_Operation = `
 query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $topPagesPaging: PagingInput!, $referrersPaging: PagingInput!, $browsersPaging: PagingInput!, $devicesPaging: PagingInput!, $countriesPaging: PagingInput!, $dailyStatsBucket: TimeBucket, $dailyStatsLimit: Int) {
 	dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
@@ -998,7 +817,6 @@ func Dashboard(
 	return data_, err_
 }
 
-// The mutation executed by DeleteSite.
 const DeleteSite_Operation = `
 mutation DeleteSite ($id: ID!) {
 	deleteSite(id: $id)
@@ -1030,7 +848,6 @@ func DeleteSite(
 	return data_, err_
 }
 
-// The query executed by Events.
 const Events_Operation = `
 query Events ($siteId: ID!, $dateRange: DateRangeInput, $limit: Int, $offset: Int) {
 	events(siteId: $siteId, dateRange: $dateRange, limit: $limit, offset: $offset) {
@@ -1080,7 +897,6 @@ func Events(
 	return data_, err_
 }
 
-// The mutation executed by Login.
 const Login_Operation = `
 mutation Login ($input: LoginInput!) {
 	login(input: $input) {
@@ -1118,7 +934,6 @@ func Login(
 	return data_, err_
 }
 
-// The mutation executed by Logout.
 const Logout_Operation = `
 mutation Logout {
 	logout
@@ -1146,7 +961,6 @@ func Logout(
 	return data_, err_
 }
 
-// The query executed by Me.
 const Me_Operation = `
 query Me {
 	me {
@@ -1178,7 +992,6 @@ func Me(
 	return data_, err_
 }
 
-// The query executed by Realtime.
 const Realtime_Operation = `
 query Realtime ($siteId: ID!) {
 	realtime(siteId: $siteId) {
@@ -1212,7 +1025,6 @@ func Realtime(
 	return data_, err_
 }
 
-// The mutation executed by Register.
 const Register_Operation = `
 mutation Register ($input: RegisterInput!) {
 	register(input: $input) {
@@ -1250,7 +1062,6 @@ func Register(
 	return data_, err_
 }
 
-// The query executed by Site.
 const Site_Operation = `
 query Site ($id: ID!) {
 	site(id: $id) {
@@ -1287,7 +1098,6 @@ func Site(
 	return data_, err_
 }
 
-// The query executed by Sites.
 const Sites_Operation = `
 query Sites ($paging: PagingInput!) {
 	sites(paging: $paging) {
@@ -1324,7 +1134,6 @@ func Sites(
 	return data_, err_
 }
 
-// The mutation executed by UpsertEventDefinition.
 const UpsertEventDefinition_Operation = `
 mutation UpsertEventDefinition ($siteId: ID!, $input: EventDefinitionInput!) {
 	upsertEventDefinition(siteId: $siteId, input: $input) {

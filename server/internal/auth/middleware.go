@@ -33,7 +33,6 @@ func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var accessToken string
 
-		// Try cookie first
 		access, refresh := m.service.getTokensFromRequest(r)
 		accessToken = access
 
@@ -69,7 +68,6 @@ func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 	})
 }
 
-// GetUserFromContext extracts user claims from request context.
 func GetUserFromContext(ctx context.Context) *Claims {
 	claims, ok := ctx.Value(UserContextKey).(*Claims)
 	if !ok {

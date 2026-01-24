@@ -21,10 +21,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer func ()  {
+	defer func() {
 		err := database.Close(db)
 		if nil != err {
-			slog.Error("DB close error","err",err)
+			slog.Error("DB close error", "err", err)
 		}
 	}()
 

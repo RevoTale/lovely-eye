@@ -19,9 +19,6 @@ import (
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
-// region    ************************** generated!.gotpl **************************
-
-// NewExecutableSchema creates an ExecutableSchema from the ResolverRoot interface.
 func NewExecutableSchema(cfg Config) graphql.ExecutableSchema {
 	return &executableSchema{
 		schema:     cfg.Schema,
@@ -1183,7 +1180,7 @@ func (ec *executionContext) processDeferredGroup(dg graphql.DeferredGroup) {
 			Result: dg.FieldSet,
 			Errors: graphql.GetErrors(ctx),
 		}
-		// null fields should bubble up
+
 		if dg.FieldSet.Invalids > 0 {
 			ds.Result = graphql.Null
 		}
@@ -1495,10 +1492,6 @@ type Mutation {
 `, BuiltIn: false},
 }
 var parsedSchema = gqlparser.MustLoadSchema(sources...)
-
-// endregion ************************** generated!.gotpl **************************
-
-// region    ***************************** args.gotpl *****************************
 
 func (ec *executionContext) field_DashboardStats_browsers_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
@@ -1909,14 +1902,6 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 	args["includeDeprecated"] = arg0
 	return args, nil
 }
-
-// endregion ***************************** args.gotpl *****************************
-
-// region    ************************** directives.gotpl **************************
-
-// endregion ************************** directives.gotpl **************************
-
-// region    **************************** field.gotpl *****************************
 
 func (ec *executionContext) _ActivePageStats_path(ctx context.Context, field graphql.CollectedField, obj *model.ActivePageStats) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
@@ -7230,10 +7215,6 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 	return fc, nil
 }
 
-// endregion **************************** field.gotpl *****************************
-
-// region    **************************** input.gotpl *****************************
-
 func (ec *executionContext) unmarshalInputCreateSiteInput(ctx context.Context, obj any) (model.CreateSiteInput, error) {
 	var it model.CreateSiteInput
 	asMap := map[string]any{}
@@ -7603,14 +7584,6 @@ func (ec *executionContext) unmarshalInputUpdateSiteInput(ctx context.Context, o
 	return it, nil
 }
 
-// endregion **************************** input.gotpl *****************************
-
-// region    ************************** interface.gotpl ***************************
-
-// endregion ************************** interface.gotpl ***************************
-
-// region    **************************** object.gotpl ****************************
-
 var activePageStatsImplementors = []string{"ActivePageStats"}
 
 func (ec *executionContext) _ActivePageStats(ctx context.Context, sel ast.SelectionSet, obj *model.ActivePageStats) graphql.Marshaler {
@@ -7902,7 +7875,6 @@ func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.Selecti
 					return innerFunc(ctx, dfs)
 				})
 
-				// don't run the out.Concurrently() call below
 				out.Values[i] = graphql.Null
 				continue
 			}
@@ -7938,7 +7910,6 @@ func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.Selecti
 					return innerFunc(ctx, dfs)
 				})
 
-				// don't run the out.Concurrently() call below
 				out.Values[i] = graphql.Null
 				continue
 			}
@@ -7974,7 +7945,6 @@ func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.Selecti
 					return innerFunc(ctx, dfs)
 				})
 
-				// don't run the out.Concurrently() call below
 				out.Values[i] = graphql.Null
 				continue
 			}
@@ -8010,7 +7980,6 @@ func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.Selecti
 					return innerFunc(ctx, dfs)
 				})
 
-				// don't run the out.Concurrently() call below
 				out.Values[i] = graphql.Null
 				continue
 			}
@@ -8046,7 +8015,6 @@ func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.Selecti
 					return innerFunc(ctx, dfs)
 				})
 
-				// don't run the out.Concurrently() call below
 				out.Values[i] = graphql.Null
 				continue
 			}
@@ -8082,7 +8050,6 @@ func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.Selecti
 					return innerFunc(ctx, dfs)
 				})
 
-				// don't run the out.Concurrently() call below
 				out.Values[i] = graphql.Null
 				continue
 			}
@@ -9222,7 +9189,6 @@ func (ec *executionContext) _RealtimeStats(ctx context.Context, sel ast.Selectio
 					return innerFunc(ctx, dfs)
 				})
 
-				// don't run the out.Concurrently() call below
 				out.Values[i] = graphql.Null
 				continue
 			}
@@ -9843,10 +9809,6 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 	return out
 }
-
-// endregion **************************** object.gotpl ****************************
-
-// region    ***************************** type.gotpl *****************************
 
 func (ec *executionContext) marshalNActivePageStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐActivePageStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ActivePageStats) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
@@ -11622,5 +11584,3 @@ func (ec *executionContext) marshalO__Type2ᚖgithubᚗcomᚋ99designsᚋgqlgen�
 	}
 	return ec.___Type(ctx, sel, v)
 }
-
-// endregion ***************************** type.gotpl *****************************

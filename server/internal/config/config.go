@@ -16,21 +16,21 @@ type Config struct {
 	Database               DatabaseConfig
 	Auth                   AuthConfig
 	LogLevel               slog.Level // Log level: DEBUG(-4), INFO(0), WARN(4), ERROR(8) - default: WARN
-	GeoIPDBPath            string     // Optional: path to GeoLite2-Country.mmdb for IP geolocation
-	GeoIPDownloadURL       string     // Optional: custom GeoIP download URL (mmdb or tar.gz)
-	GeoIPMaxMindLicenseKey string     // Optional: MaxMind license key for GeoLite2 download
-	TrackerJS              []byte     // Optional: for testing, to avoid loading from file
+	GeoIPDBPath            string
+	GeoIPDownloadURL       string
+	GeoIPMaxMindLicenseKey string
+	TrackerJS              []byte // Optional: for testing, to avoid loading from file
 }
 
 type ServerConfig struct {
 	Host          string
 	Port          string
-	BasePath      string // Base path for all routes (e.g., "/app" or "/")
-	DashboardPath string // Path to dashboard files (defaults to "dashboard")
+	BasePath      string
+	DashboardPath string
 }
 
 type DatabaseConfig struct {
-	Driver         string // "sqlite" or "postgres"
+	Driver         string
 	DSN            string
 	MaxConns       int
 	MinConns       int
@@ -42,9 +42,9 @@ type AuthConfig struct {
 	AccessTokenExpiry    time.Duration
 	RefreshExpiry        time.Duration
 	AllowRegistration    bool
-	SecureCookies        bool   // true for HTTPS (production)
-	CookieDomain         string // cookie domain (optional)
-	InitialAdminUsername string // username for initial admin (optional)
+	SecureCookies        bool
+	CookieDomain         string
+	InitialAdminUsername string
 	InitialAdminPassword string // password for initial admin (optional)
 }
 
@@ -55,7 +55,7 @@ func Load() *Config {
 	if downloadURL == "" && maxMindKey == "" {
 		downloadURL = "https://download.db-ip.com/free/dbip-country-lite.mmdb.gz"
 	}
-	// Normalize base path
+
 	if basePath != "/" {
 		basePath = "/" + strings.Trim(basePath, "/")
 	}

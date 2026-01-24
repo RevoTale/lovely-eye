@@ -18,7 +18,6 @@ var (
 	ErrRegistrationDisabled = errors.New("registration is disabled")
 )
 
-// Cookie names
 const (
 	accessTokenCookie  = "le_access"
 	refreshTokenCookie = "le_refresh"

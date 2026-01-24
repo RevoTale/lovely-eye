@@ -34,9 +34,6 @@ func Logging(next http.Handler) http.Handler {
 
 		duration := time.Since(start)
 
-		// Log at INFO level for successful requests (2xx, 3xx)
-		// Log at WARN level for client errors (4xx)
-		// Log at ERROR level for server errors (5xx)
 		level := slog.LevelInfo
 		if wrapped.status >= 500 {
 			level = slog.LevelError
