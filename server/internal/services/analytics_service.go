@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/url"
 	"strings"
@@ -104,14 +105,17 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 	}
 	screenSize := categorizeScreenSize(input.ScreenWidth)
 
-	// Get country from IP (only if enabled for the site)
-	country := ""
+	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
-		country = s.geoIPService.GetCountryName(input.IP)
+		country,err = s.geoIPService.ResolveCountry(input.IP)
+		if err != nil {
+			err = fmt.Errorf("get country for ip %s: %w", input.IP, err)
+       		slog.Error("country resolve failed", "err", err)
+		}
 	}
 
 	// Find or create Client record (stores stable attributes)
-	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country)
+	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.Name)
 	if err != nil {
 		return fmt.Errorf("find or create client: %w", err)
 	}
@@ -268,13 +272,17 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 	screenSize := "" // Not available for custom events
 
 	// Get country from IP (only if enabled for the site)
-	country := ""
+	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
-		country = s.geoIPService.GetCountryName(input.IP)
+		country, err = s.geoIPService.ResolveCountry(input.IP)
+		if err != nil {
+			err = fmt.Errorf("get country for ip %s: %w", input.IP, err)
+       		slog.Error("country resolve failed", "err", err)
+		}
 	}
 
 	// Find or create Client record
-	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country)
+	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.Name)
 	if err != nil {
 		return fmt.Errorf("find or create client: %w", err)
 	}
@@ -867,12 +875,17 @@ func (s *AnalyticsService) isCountryBlocked(blocked []*models.SiteBlockedCountry
 	if len(blocked) == 0 || s.geoIPService == nil {
 		return false
 	}
-	code := s.geoIPService.GetCountry(ip)
-	if code == "" || code == "Unknown" || code == "Local" {
+	c,err := s.geoIPService.ResolveCountry(ip)
+	if nil != err {
+		err = fmt.Errorf("get country for ip %s: %w", ip, err)
+    	slog.Error("country resolve failed", "err", err)
+	}
+
+	if c == (Country{}) || c == LocalNetworkCountry {
 		return false
 	}
 	for _, entry := range blocked {
-		if entry != nil && strings.EqualFold(entry.CountryCode, code) {
+		if entry != nil && strings.EqualFold(entry.CountryCode, c.ISOCode) {
 			return true
 		}
 	}
