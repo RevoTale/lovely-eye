@@ -34,14 +34,13 @@ Same build works across environments.
 ```
 src/
 ├── components/     # React components
-│   └── ui/         # shadcn/ui components
+│   └── ui/         # shadcn/ui components (auto installed via command. Do not edit manually)
 ├── config/         # runtime configuration
 ├── gql/            # generated GraphQL types
-├── graphql/        # GraphQL operations
 ├── hooks/          # custom React hooks
 ├── layouts/        # layout components
-├── lib/            # utilities and Apollo client
-└── pages/          # page components
+├── lib/            # utilities that are app logic agnositc
+└── pages/          # page components for TanStack router
 ```
 
 ## Adding Components
