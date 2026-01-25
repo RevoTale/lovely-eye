@@ -39,6 +39,7 @@ export function DashboardPage(): ReactElement {
       device: filter['device'] ?? null,
       page: filter['page'] ?? null,
       country: filter['country'] ?? null,
+      eventType: null,
       eventDefinitionId: filter['eventDefinitionId'] ?? null,
       eventName: filter['eventName'] ?? null,
       eventPath: filter['eventPath'] ?? null,

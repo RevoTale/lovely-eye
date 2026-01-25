@@ -18,10 +18,18 @@ type AnalyticsFilter struct {
 	Device             []string
 	Page               []string
 	Country            []string
+	EventTypes         []EventType
 	EventName          []string
 	EventPath          []string
 	EventDefinitionIDs []int64
 }
+
+type EventType string
+
+const (
+	EventTypePageView   EventType = "PAGE_VIEW"
+	EventTypePredefined EventType = "PREDEFINED"
+)
 
 type AnalyticsQuery struct {
 	SiteID int64
@@ -598,6 +606,20 @@ func (r *AnalyticsRepository) GetActivePages(ctx context.Context, siteID int64, 
 	return stats, nil
 }
 
+func eventTypeFlags(eventTypes []EventType) (bool, bool) {
+	hasPageView := false
+	hasPredefined := false
+	for _, eventType := range eventTypes {
+		switch eventType {
+		case EventTypePageView:
+			hasPageView = true
+		case EventTypePredefined:
+			hasPredefined = true
+		}
+	}
+	return hasPageView, hasPredefined
+}
+
 func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQuery {
 	if len(filter.Referrer) > 0 {
 
@@ -614,6 +636,14 @@ func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.Select
 
 		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE country IN (?))", bun.In(normalizeCountryValues(filter.Country)))
 	}
+	if len(filter.EventTypes) > 0 {
+		hasPageView, hasPredefined := eventTypeFlags(filter.EventTypes)
+		if hasPageView && !hasPredefined {
+			q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NULL)")
+		} else if hasPredefined && !hasPageView {
+			q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NOT NULL)")
+		}
+	}
 	if len(filter.EventName) > 0 {
 		q = q.Where("s.id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.In(filter.EventName))
 	}
@@ -627,10 +657,18 @@ func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.Select
 }
 
 func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQuery {
+	if len(filter.EventTypes) > 0 {
+		hasPageView, hasPredefined := eventTypeFlags(filter.EventTypes)
+		if hasPageView && !hasPredefined {
+			q = q.Where("e.definition_id IS NULL")
+		} else if hasPredefined && !hasPageView {
+			q = q.Where("e.definition_id IS NOT NULL")
+		}
+	}
 	if len(filter.Page) > 0 {
 		q = q.Where("e.path IN (?)", bun.In(filter.Page))
 	}
-	if len(filter.Referrer) > 0 || len(filter.Device) > 0 || len(filter.Country) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
+	if len(filter.Referrer) > 0 || len(filter.Device) > 0 || len(filter.Country) > 0 || len(filter.EventTypes) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
 
 		if len(filter.Referrer) > 0 {
 			q = q.Where("e.session_id IN (SELECT id FROM sessions WHERE referrer IN (?))", bun.In(filter.Referrer))

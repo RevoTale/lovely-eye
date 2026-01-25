@@ -6,6 +6,7 @@ import (
 
 	"github.com/lovely-eye/server/internal/graph/model"
 	"github.com/lovely-eye/server/internal/models"
+	"github.com/lovely-eye/server/internal/repository"
 	"github.com/lovely-eye/server/internal/services"
 )
 
@@ -40,6 +41,7 @@ func parseFilterInput(input *model.FilterInput) services.DashboardFilter {
 		Device:             input.Device,
 		Page:               input.Page,
 		Country:            input.Country,
+		EventTypes:         parseEventTypes(input.EventType),
 		EventName:          input.EventName,
 		EventPath:          input.EventPath,
 		EventDefinitionIDs: parseEventDefinitionIDs(input.EventDefinitionID),
@@ -51,6 +53,7 @@ func isFilterEmpty(filter services.DashboardFilter) bool {
 		len(filter.Device) == 0 &&
 		len(filter.Page) == 0 &&
 		len(filter.Country) == 0 &&
+		len(filter.EventTypes) == 0 &&
 		len(filter.EventName) == 0 &&
 		len(filter.EventPath) == 0 &&
 		len(filter.EventDefinitionIDs) == 0
@@ -198,4 +201,20 @@ func parseEventDefinitionIDs(values []string) []int64 {
 		ids = append(ids, id)
 	}
 	return ids
+}
+
+func parseEventTypes(values []model.EventType) []repository.EventType {
+	if len(values) == 0 {
+		return nil
+	}
+	types := make([]repository.EventType, 0, len(values))
+	for _, value := range values {
+		switch value {
+		case model.EventTypePageView:
+			types = append(types, repository.EventTypePageView)
+		case model.EventTypePredefined:
+			types = append(types, repository.EventTypePredefined)
+		}
+	}
+	return types
 }

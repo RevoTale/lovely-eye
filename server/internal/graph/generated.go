@@ -1382,6 +1382,11 @@ enum EventFieldType {
   BOOLEAN
 }
 
+enum EventType {
+  PAGE_VIEW
+  PREDEFINED
+}
+
 type EventDefinitionField {
   id: ID!
   key: String!
@@ -1438,6 +1443,8 @@ input FilterInput {
   page: [String!]
   """Filter by country (stored country name)"""
   country: [String!]
+  """Filter by event type (page view or predefined)"""
+  eventType: [EventType!]
   """Filter by event name"""
   eventName: [String!]
   """Filter by event path"""
@@ -7408,7 +7415,7 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"referrer", "device", "page", "country", "eventName", "eventPath", "eventDefinitionId"}
+	fieldsInOrder := [...]string{"referrer", "device", "page", "country", "eventType", "eventName", "eventPath", "eventDefinitionId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -7443,6 +7450,13 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 				return it, err
 			}
 			it.Country = data
+		case "eventType":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eventType"))
+			data, err := ec.unmarshalOEventType2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventTypeᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.EventType = data
 		case "eventName":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eventName"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
@@ -10450,6 +10464,23 @@ func (ec *executionContext) marshalNEventFieldType2githubᚗcomᚋlovelyᚑeye�
 	return res
 }
 
+func (ec *executionContext) unmarshalNEventType2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventType(ctx context.Context, v any) (model.EventType, error) {
+	tmp, err := graphql.UnmarshalString(v)
+	res := model.EventType(tmp)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNEventType2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventType(ctx context.Context, sel ast.SelectionSet, v model.EventType) graphql.Marshaler {
+	_ = sel
+	res := graphql.MarshalString(string(v))
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
 func (ec *executionContext) marshalNEventProperty2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventPropertyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.EventProperty) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -11388,6 +11419,24 @@ func (ec *executionContext) marshalOSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserver
 		return graphql.Null
 	}
 	return ec._Site(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOEventType2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventTypeᚄ(ctx context.Context, v any) ([]model.EventType, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]model.EventType, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNEventType2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventType(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
 }
 
 func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {

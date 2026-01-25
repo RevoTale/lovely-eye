@@ -61,6 +61,7 @@ export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseCha
       device: filter.device ?? null,
       page: filter.page ?? null,
       country: filter.country ?? null,
+      eventType: filter.eventType ?? null,
       eventDefinitionId: filter.eventDefinitionId ?? null,
       eventName: filter.eventName ?? null,
       eventPath: filter.eventPath ?? null,

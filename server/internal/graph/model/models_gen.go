@@ -30,6 +30,8 @@ type FilterInput struct {
 	Page []string `json:"page,omitempty"`
 	// Filter by country (stored country name)
 	Country []string `json:"country,omitempty"`
+	// Filter by event type (page view or predefined)
+	EventType []EventType `json:"eventType,omitempty"`
 	// Filter by event name
 	EventName []string `json:"eventName,omitempty"`
 	// Filter by event path

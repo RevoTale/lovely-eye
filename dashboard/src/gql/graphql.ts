@@ -173,6 +173,12 @@ export type EventProperty = {
   value: Scalars['String']['output'];
 };
 
+export const EventType = {
+  PageView: 'PAGE_VIEW',
+  Predefined: 'PREDEFINED'
+} as const;
+
+export type EventType = typeof EventType[keyof typeof EventType];
 export type EventsResult = {
   __typename: 'EventsResult';
   events: Array<Event>;
@@ -190,6 +196,8 @@ export type FilterInput = {
   eventName: InputMaybe<Array<Scalars['String']['input']>>;
   /** Filter by event path */
   eventPath: InputMaybe<Array<Scalars['String']['input']>>;
+  /** Filter by event type (page view or predefined) */
+  eventType: InputMaybe<Array<EventType>>;
   /** Filter by page path */
   page: InputMaybe<Array<Scalars['String']['input']>>;
   /** Filter by specific referrer */

@@ -125,6 +125,13 @@ const (
 	EventFieldTypeBoolean EventFieldType = "BOOLEAN"
 )
 
+type EventType string
+
+const (
+	EventTypePageView   EventType = "PAGE_VIEW"
+	EventTypePredefined EventType = "PREDEFINED"
+)
+
 type EventDefinitionField struct {
 	ID        string         `json:"id"`
 	Key       string         `json:"key"`
