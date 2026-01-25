@@ -46,9 +46,6 @@ export function ActivePagesCard({ activePages }: ActivePagesCardProps): React.JS
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{page.path}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Currently viewing
-                    </p>
                   </div>
                 </div>
                 <Badge variant="secondary" className="flex items-center gap-1 ml-2">
