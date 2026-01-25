@@ -1,6 +1,6 @@
 # Analytics Implementation
 
-Privacy-focused web analytics for Lovely Eye.
+Implementation notes for Lovely Eye analytics.
 
 ## Visitor Identification
 

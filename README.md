@@ -1,6 +1,6 @@
 # Lovely Eye
 
-Privacy-focused web analytics. Self-hosted alternative to Google Analytics, Umami and Plausible. Designed for low resource systems. Written in Go.
+Self-hosted web analytics with a Go backend and React dashboard. Runs on low-resource hosts and supports SQLite or PostgreSQL.
 
 ![Lovely Eye Logo Banner](./preview.png "Lovely Eye")
 
@@ -12,8 +12,8 @@ Privacy-focused web analytics. Self-hosted alternative to Google Analytics, Umam
 - **Privacy-first**: no analytics cookies, daily visitor ID rotation
 - **Bot filtering**: excludes crawlers, scrapers, monitoring bots
 - **Lightweight**: low-RAM Docker builds, SQLite or PostgreSQL
-- **Real-time dashboard**: GraphQL API with React UI
-- **Custom events**: track clicks and user interactions
+- **Dashboard**: GraphQL API with React UI
+- **Custom events**: allowlisted event names and fields
 
 ## Quick Start
 

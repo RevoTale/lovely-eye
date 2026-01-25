@@ -5,7 +5,6 @@ Lovely Eye is self-hosted analytics. The site owner is the data controller. This
 ## Data We Collect
 
 - Page path (query parameters excluded by default)
-- Page title
 - Referrer URL
 - UTM source, medium, and campaign
 - Device, browser, OS, screen size

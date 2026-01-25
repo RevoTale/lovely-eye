@@ -6,7 +6,7 @@ import (
 )
 
 func isAnalyticsPath(path string) bool {
-	return strings.HasSuffix(path, "/api/collect") || strings.HasSuffix(path, "/api/event")
+	return strings.HasSuffix(path, "/api/collect")
 }
 
 func isTrackerPath(path string) bool {
