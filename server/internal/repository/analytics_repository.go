@@ -14,12 +14,13 @@ type AnalyticsRepository struct {
 }
 
 type AnalyticsFilter struct {
-	Referrer  []string
-	Device    []string
-	Page      []string
-	Country   []string
-	EventName []string
-	EventPath []string
+	Referrer           []string
+	Device             []string
+	Page               []string
+	Country            []string
+	EventName          []string
+	EventPath          []string
+	EventDefinitionIDs []int64
 }
 
 type AnalyticsQuery struct {
@@ -91,7 +92,7 @@ func (r *AnalyticsRepository) GetRecentPageViewEvent(ctx context.Context, sessio
 		Model(event).
 		Where("session_id = ?", sessionID).
 		Where("path = ?", path).
-		Where("type = ?", models.EventTypePageview).
+		Where("definition_id IS NULL").
 		Where("time > ?", since).
 		Order("time DESC").
 		Limit(1).
@@ -142,8 +143,10 @@ func (r *AnalyticsRepository) GetEvents(ctx context.Context, siteID int64, from,
 	err := r.db.NewSelect().
 		Model(&events).
 		Relation("Data.Field").
+		Relation("Definition.Fields").
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		Where("s.site_id = ?", siteID).
+		Where("e.definition_id IS NOT NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix).
 		Order("e.time DESC").
@@ -163,8 +166,10 @@ func (r *AnalyticsRepository) GetEventsWithFilter(ctx context.Context, query Ana
 	q := r.db.NewSelect().
 		Model(&events).
 		Relation("Data.Field").
+		Relation("Definition.Fields").
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		Where("s.site_id = ?", query.SiteID).
+		Where("e.definition_id IS NOT NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix)
 	q = applyEventFilters(q, query.Filter)
@@ -205,6 +210,7 @@ func (r *AnalyticsRepository) GetEventCount(ctx context.Context, siteID int64, f
 		Model((*models.Event)(nil)).
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		Where("s.site_id = ?", siteID).
+		Where("e.definition_id IS NOT NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix).
 		Count(ctx)
@@ -221,6 +227,7 @@ func (r *AnalyticsRepository) GetEventCountWithFilter(ctx context.Context, query
 		TableExpr("events e").
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		Where("s.site_id = ?", query.SiteID).
+		Where("e.definition_id IS NOT NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix)
 	q = applyEventFilters(q, query.Filter)
@@ -233,13 +240,12 @@ func (r *AnalyticsRepository) GetEventCountWithFilter(ctx context.Context, query
 }
 
 type EventCountResult struct {
-	Name  string
 	Count int
 
 	EventID int64
 }
 
-// GetEventCountsGrouped returns event counts grouped by name with the most recent event for each
+// GetEventCountsGrouped returns event counts grouped by definition with the most recent event for each
 // This is used for the eventCounts GraphQL query to avoid fetching 200 full events just for counting
 func (r *AnalyticsRepository) GetEventCountsGrouped(ctx context.Context, query AnalyticsQuery) ([]EventCountResult, error) {
 	fromUnix := query.From.Unix()
@@ -249,13 +255,13 @@ func (r *AnalyticsRepository) GetEventCountsGrouped(ctx context.Context, query A
 	q := r.db.NewSelect().
 		TableExpr("events e").
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
-		Column("e.name").
 		ColumnExpr("COUNT(*) as count").
 		ColumnExpr("MAX(e.id) as event_id").
 		Where("s.site_id = ?", query.SiteID).
+		Where("e.definition_id IS NOT NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix).
-		Group("e.name").
+		Group("e.definition_id").
 		Order("count DESC")
 
 	q = applyEventFilters(q, query.Filter)
@@ -285,6 +291,7 @@ func (r *AnalyticsRepository) GetEventsByIDs(ctx context.Context, eventIDs []int
 	err := r.db.NewSelect().
 		Model(&events).
 		Relation("Data.Field").
+		Relation("Definition.Fields").
 		Where("e.id IN (?)", bun.In(eventIDs)).
 		Scan(ctx)
 	if err != nil {
@@ -317,7 +324,7 @@ func (r *AnalyticsRepository) GetPageViewCount(ctx context.Context, siteID int64
 		Model((*models.Event)(nil)).
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		Where("s.site_id = ?", siteID).
-		Where("e.type = ?", models.EventTypePageview).
+		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix).
 		Count(ctx)
@@ -412,7 +419,7 @@ func (r *AnalyticsRepository) GetTopPages(ctx context.Context, siteID int64, fro
 		ColumnExpr("COUNT(*) as views").
 		ColumnExpr("COUNT(DISTINCT e.session_id) as visitors").
 		Where("s.site_id = ?", siteID).
-		Where("e.type = ?", models.EventTypePageview).
+		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix).
 		Group("e.path").
@@ -578,7 +585,7 @@ func (r *AnalyticsRepository) GetActivePages(ctx context.Context, siteID int64, 
 		ColumnExpr("e.path").
 		ColumnExpr("COUNT(DISTINCT e.session_id) as visitors").
 		Where("s.site_id = ?", siteID).
-		Where("e.type = ?", models.EventTypePageview).
+		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", sinceUnix).
 		Group("e.path").
 		Order("visitors DESC", "e.path ASC")
@@ -605,18 +612,20 @@ func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.Select
 		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE device IN (?))", bun.In(filter.Device))
 	}
 	if len(filter.Page) > 0 {
-
-		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE type = ? AND path IN (?))", models.EventTypePageview, bun.In(filter.Page))
+		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NULL AND path IN (?))", bun.In(filter.Page))
 	}
 	if len(filter.Country) > 0 {
 
 		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE country IN (?))", bun.In(normalizeCountryValues(filter.Country)))
 	}
 	if len(filter.EventName) > 0 {
-		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE name IN (?))", bun.In(filter.EventName))
+		q = q.Where("s.id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.In(filter.EventName))
 	}
 	if len(filter.EventPath) > 0 {
 		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE path IN (?))", bun.In(filter.EventPath))
+	}
+	if len(filter.EventDefinitionIDs) > 0 {
+		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IN (?))", bun.In(filter.EventDefinitionIDs))
 	}
 	return q
 }
@@ -625,7 +634,7 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 	if len(filter.Page) > 0 {
 		q = q.Where("e.path IN (?)", bun.In(filter.Page))
 	}
-	if len(filter.Referrer) > 0 || len(filter.Device) > 0 || len(filter.Country) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 {
+	if len(filter.Referrer) > 0 || len(filter.Device) > 0 || len(filter.Country) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
 
 		if len(filter.Referrer) > 0 {
 			q = q.Where("e.session_id IN (SELECT id FROM sessions WHERE referrer IN (?))", bun.In(filter.Referrer))
@@ -637,10 +646,13 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.country IN (?))", bun.In(normalizeCountryValues(filter.Country)))
 		}
 		if len(filter.EventName) > 0 {
-			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE name IN (?))", bun.In(filter.EventName))
+			q = q.Where("e.session_id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.In(filter.EventName))
 		}
 		if len(filter.EventPath) > 0 {
 			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE path IN (?))", bun.In(filter.EventPath))
+		}
+		if len(filter.EventDefinitionIDs) > 0 {
+			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IN (?))", bun.In(filter.EventDefinitionIDs))
 		}
 	}
 	return q
@@ -648,10 +660,14 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 
 func applyEventNamePathFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQuery {
 	if len(filter.EventName) > 0 {
-		q = q.Where("e.name IN (?)", bun.In(filter.EventName))
+		q = q.Join("INNER JOIN event_definitions ed ON e.definition_id = ed.id")
+		q = q.Where("ed.name IN (?)", bun.In(filter.EventName))
 	}
 	if len(filter.EventPath) > 0 {
 		q = q.Where("e.path IN (?)", bun.In(filter.EventPath))
+	}
+	if len(filter.EventDefinitionIDs) > 0 {
+		q = q.Where("e.definition_id IN (?)", bun.In(filter.EventDefinitionIDs))
 	}
 	return q
 }
@@ -713,7 +729,7 @@ func (r *AnalyticsRepository) GetPageViewCountWithFilter(ctx context.Context, qu
 		TableExpr("events e").
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		Where("s.site_id = ?", query.SiteID).
-		Where("e.type = ?", models.EventTypePageview).
+		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix)
 	q = applyEventFilters(q, query.Filter)
@@ -806,7 +822,7 @@ func (r *AnalyticsRepository) GetTopPagesWithFilter(ctx context.Context, query A
 		ColumnExpr("COUNT(*) as views").
 		ColumnExpr("COUNT(DISTINCT e.session_id) as visitors").
 		Where("s.site_id = ?", query.SiteID).
-		Where("e.type = ?", models.EventTypePageview).
+		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix)
 	q = applyEventFilters(q, query.Filter)
@@ -935,7 +951,7 @@ func (r *AnalyticsRepository) GetTopPagesWithFilterPaged(ctx context.Context, qu
 		ColumnExpr("COUNT(*) as views").
 		ColumnExpr("COUNT(DISTINCT e.session_id) as visitors").
 		Where("s.site_id = ?", query.SiteID).
-		Where("e.type = ?", models.EventTypePageview).
+		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix)
 	q = applyEventFilters(q, query.Filter)
@@ -953,7 +969,7 @@ func (r *AnalyticsRepository) GetTopPagesWithFilterPaged(ctx context.Context, qu
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		ColumnExpr("COUNT(DISTINCT e.path)").
 		Where("s.site_id = ?", query.SiteID).
-		Where("e.type = ?", models.EventTypePageview).
+		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix)
 	countQuery = applyEventFilters(countQuery, query.Filter)

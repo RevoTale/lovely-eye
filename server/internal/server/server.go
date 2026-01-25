@@ -112,8 +112,8 @@ func New(cfg *config.Config) (*Server, error) {
 	// REST API: Only tracking endpoints (public, no auth required)
 	mux.HandleFunc("POST "+basePath+"/api/collect", analyticsHandler.Collect)
 	mux.HandleFunc("OPTIONS "+basePath+"/api/collect", analyticsHandler.Collect)
-	mux.HandleFunc("POST "+basePath+"/api/event", analyticsHandler.Event)
-	mux.HandleFunc("OPTIONS "+basePath+"/api/event", analyticsHandler.Event)
+	mux.HandleFunc("POST "+basePath+"/api/event", analyticsHandler.Collect)
+	mux.HandleFunc("OPTIONS "+basePath+"/api/event", analyticsHandler.Collect)
 
 	// GraphQL endpoint
 	// Auth uses JWT in HttpOnly + Secure cookies with SameSite=Strict/Lax

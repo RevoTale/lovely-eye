@@ -24,19 +24,13 @@ func NewAnalyticsHandler(analyticsService *services.AnalyticsService, siteServic
 type collectRequest struct {
 	SiteKey     string `json:"site_key"`
 	Path        string `json:"path"`
-	Title       string `json:"title"`
+	Name        string `json:"name"`
+	Properties  string `json:"properties"`
 	Referrer    string `json:"referrer"`
 	ScreenWidth int    `json:"screen_width"`
 	UTMSource   string `json:"utm_source"`
 	UTMMedium   string `json:"utm_medium"`
 	UTMCampaign string `json:"utm_campaign"`
-}
-
-type eventRequest struct {
-	SiteKey    string `json:"site_key"`
-	Name       string `json:"name"`
-	Path       string `json:"path"`
-	Properties string `json:"properties"`
 }
 
 func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
@@ -51,54 +45,8 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.SiteKey == "" || req.Path == "" {
-		respondError(w, http.StatusBadRequest, "site_key and path are required")
-		return
-	}
-
-	if !h.applyAnalyticsCORS(w, r, req.SiteKey) {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	err := h.analyticsService.CollectPageView(r.Context(), services.CollectInput{
-		SiteKey:     req.SiteKey,
-		Path:        req.Path,
-		Title:       req.Title,
-		Referrer:    req.Referrer,
-		ScreenWidth: req.ScreenWidth,
-		UserAgent:   r.UserAgent(),
-		IP:          getClientIP(r),
-		Origin:      r.Header.Get("Origin"),
-		Referer:     r.Header.Get("Referer"),
-		UTMSource:   req.UTMSource,
-		UTMMedium:   req.UTMMedium,
-		UTMCampaign: req.UTMCampaign,
-	})
-
-	if err != nil {
-
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		h.handleAnalyticsPreflight(w, r)
-		return
-	}
-
-	var req eventRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	if req.SiteKey == "" || req.Name == "" {
-		respondError(w, http.StatusBadRequest, "site_key and name are required")
+	if req.SiteKey == "" {
+		respondError(w, http.StatusBadRequest, "site_key is required")
 		return
 	}
 
@@ -115,16 +63,37 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := h.analyticsService.CollectEvent(r.Context(), services.EventInput{
-		SiteKey:    req.SiteKey,
-		Name:       req.Name,
-		Path:       req.Path,
-		Properties: req.Properties,
-		UserAgent:  r.UserAgent(),
-		IP:         getClientIP(r),
-		Origin:     r.Header.Get("Origin"),
-		Referer:    r.Header.Get("Referer"),
-	})
+	var err error
+	if req.Name != "" {
+		err = h.analyticsService.CollectEvent(r.Context(), services.EventInput{
+			SiteKey:    req.SiteKey,
+			Name:       req.Name,
+			Path:       req.Path,
+			Properties: req.Properties,
+			UserAgent:  r.UserAgent(),
+			IP:         getClientIP(r),
+			Origin:     r.Header.Get("Origin"),
+			Referer:    r.Header.Get("Referer"),
+		})
+	} else {
+		if req.Path == "" {
+			respondError(w, http.StatusBadRequest, "path is required")
+			return
+		}
+		err = h.analyticsService.CollectPageView(r.Context(), services.CollectInput{
+			SiteKey:     req.SiteKey,
+			Path:        req.Path,
+			Referrer:    req.Referrer,
+			ScreenWidth: req.ScreenWidth,
+			UserAgent:   r.UserAgent(),
+			IP:          getClientIP(r),
+			Origin:      r.Header.Get("Origin"),
+			Referer:     r.Header.Get("Referer"),
+			UTMSource:   req.UTMSource,
+			UTMMedium:   req.UTMMedium,
+			UTMCampaign: req.UTMCampaign,
+		})
+	}
 
 	if err != nil {
 		w.WriteHeader(http.StatusNoContent)
@@ -132,6 +101,10 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
+	h.Collect(w, r)
 }
 
 func (h *AnalyticsHandler) handleAnalyticsPreflight(w http.ResponseWriter, r *http.Request) {

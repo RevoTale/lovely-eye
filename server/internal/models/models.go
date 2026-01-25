@@ -127,13 +127,6 @@ type Session struct {
 	Events []*Event `bun:"rel:has-many,join:id=session_id" json:"events,omitempty"`
 }
 
-type EventType int8
-
-const (
-	EventTypePageview EventType = 0
-	EventTypeCustom   EventType = 1
-)
-
 type Event struct {
 	bun.BaseModel `bun:"table:events,alias:e"`
 
@@ -144,9 +137,7 @@ type Event struct {
 	Hour int64 `bun:"hour,notnull" json:"hour"`
 	Day  int64 `bun:"day,notnull" json:"day"`
 
-	Path string    `bun:"path,notnull,type:varchar(2048)" json:"path"`
-	Name string    `bun:"name,notnull,type:varchar(256)" json:"name"`
-	Type EventType `bun:"type,notnull" json:"type"`
+	Path string `bun:"path,notnull,type:varchar(2048)" json:"path"`
 
 	DefinitionID *int64 `bun:"definition_id" json:"definition_id"`
 

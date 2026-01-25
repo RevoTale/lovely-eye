@@ -18,7 +18,7 @@
 
 - **REST API** - Limited to tracking functionality only:
   - `POST /api/collect` - Track page views
-  - `POST /api/event` - Track custom events
+  - `POST /api/collect` - Track page views and custom events (legacy: `/api/event`)
   - `GET /tracker.js` - Serve the tracking script
 
 ## Database

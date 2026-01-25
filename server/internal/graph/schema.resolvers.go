@@ -19,6 +19,7 @@ import (
 	"github.com/lovely-eye/server/internal/services"
 )
 
+// TopPages is the resolver for the topPages field.
 func (r *dashboardStatsResolver) TopPages(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedPageStats, error) {
 	limit, offset := normalizePaging(paging)
 	query := services.AnalyticsQuery{
@@ -49,6 +50,7 @@ func (r *dashboardStatsResolver) TopPages(ctx context.Context, obj *model.Dashbo
 	}, nil
 }
 
+// TopReferrers is the resolver for the topReferrers field.
 func (r *dashboardStatsResolver) TopReferrers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedReferrerStats, error) {
 	limit, offset := normalizePaging(paging)
 	query := services.AnalyticsQuery{
@@ -78,6 +80,7 @@ func (r *dashboardStatsResolver) TopReferrers(ctx context.Context, obj *model.Da
 	}, nil
 }
 
+// Browsers is the resolver for the browsers field.
 func (r *dashboardStatsResolver) Browsers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) ([]*model.BrowserStats, error) {
 	limit, offset := normalizePaging(paging)
 	query := services.AnalyticsQuery{
@@ -103,6 +106,7 @@ func (r *dashboardStatsResolver) Browsers(ctx context.Context, obj *model.Dashbo
 	return items, nil
 }
 
+// Devices is the resolver for the devices field.
 func (r *dashboardStatsResolver) Devices(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedDeviceStats, error) {
 	limit, offset := normalizePaging(paging)
 	query := services.AnalyticsQuery{
@@ -133,6 +137,7 @@ func (r *dashboardStatsResolver) Devices(ctx context.Context, obj *model.Dashboa
 	}, nil
 }
 
+// Countries is the resolver for the countries field.
 func (r *dashboardStatsResolver) Countries(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedCountryStats, error) {
 	limit, offset := normalizePaging(paging)
 	query := services.AnalyticsQuery{
@@ -163,6 +168,7 @@ func (r *dashboardStatsResolver) Countries(ctx context.Context, obj *model.Dashb
 	}, nil
 }
 
+// DailyStats is the resolver for the dailyStats field.
 func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int, offset *int) ([]*model.DailyStats, error) {
 	var selectedBucket services.TimeBucket
 	switch bucketValue := bucketValueOrDefault(bucket); bucketValue {
@@ -221,6 +227,7 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 	return items, nil
 }
 
+// Register is the resolver for the register field.
 func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInput) (*model.AuthPayload, error) {
 	user, tokens, err := r.AuthService.Register(ctx, auth.RegisterInput{
 		Username: input.Username,
@@ -246,6 +253,7 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 	}, nil
 }
 
+// Login is the resolver for the login field.
 func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error) {
 	user, tokens, err := r.AuthService.Login(ctx, auth.LoginInput{
 		Username: input.Username,
@@ -271,6 +279,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 	}, nil
 }
 
+// Logout is the resolver for the logout field.
 func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
 	if w := GetResponseWriter(ctx); w != nil {
 		r.AuthService.ClearAuthCookies(w)
@@ -296,6 +305,7 @@ func (r *mutationResolver) RefreshToken(ctx context.Context, refreshToken string
 	}, nil
 }
 
+// CreateSite is the resolver for the createSite field.
 func (r *mutationResolver) CreateSite(ctx context.Context, input model.CreateSiteInput) (*model.Site, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -314,6 +324,7 @@ func (r *mutationResolver) CreateSite(ctx context.Context, input model.CreateSit
 	return buildGraphQLSite(site), nil
 }
 
+// UpdateSite is the resolver for the updateSite field.
 func (r *mutationResolver) UpdateSite(ctx context.Context, id string, input model.UpdateSiteInput) (*model.Site, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -340,6 +351,7 @@ func (r *mutationResolver) UpdateSite(ctx context.Context, id string, input mode
 	return buildGraphQLSite(site), nil
 }
 
+// DeleteSite is the resolver for the deleteSite field.
 func (r *mutationResolver) DeleteSite(ctx context.Context, id string) (bool, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -358,6 +370,7 @@ func (r *mutationResolver) DeleteSite(ctx context.Context, id string) (bool, err
 	return true, nil
 }
 
+// RegenerateSiteKey is the resolver for the regenerateSiteKey field.
 func (r *mutationResolver) RegenerateSiteKey(ctx context.Context, id string) (*model.Site, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -377,6 +390,7 @@ func (r *mutationResolver) RegenerateSiteKey(ctx context.Context, id string) (*m
 	return buildGraphQLSite(site), nil
 }
 
+// RefreshGeoIPDatabase is the resolver for the refreshGeoIPDatabase field.
 func (r *mutationResolver) RefreshGeoIPDatabase(ctx context.Context) (*model.GeoIPStatus, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -387,6 +401,7 @@ func (r *mutationResolver) RefreshGeoIPDatabase(ctx context.Context) (*model.Geo
 	return convertToGraphQLGeoIPStatus(status), nil
 }
 
+// UpsertEventDefinition is the resolver for the upsertEventDefinition field.
 func (r *mutationResolver) UpsertEventDefinition(ctx context.Context, siteID string, input model.EventDefinitionInput) (*model.EventDefinition, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -425,6 +440,7 @@ func (r *mutationResolver) UpsertEventDefinition(ctx context.Context, siteID str
 	return results[0], nil
 }
 
+// DeleteEventDefinition is the resolver for the deleteEventDefinition field.
 func (r *mutationResolver) DeleteEventDefinition(ctx context.Context, siteID string, name string) (bool, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -448,6 +464,7 @@ func (r *mutationResolver) DeleteEventDefinition(ctx context.Context, siteID str
 	return true, nil
 }
 
+// Me is the resolver for the me field.
 func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -467,6 +484,7 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	}, nil
 }
 
+// Sites is the resolver for the sites field.
 func (r *queryResolver) Sites(ctx context.Context, paging model.PagingInput) ([]*model.Site, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -487,6 +505,7 @@ func (r *queryResolver) Sites(ctx context.Context, paging model.PagingInput) ([]
 	return result, nil
 }
 
+// Site is the resolver for the site field.
 func (r *queryResolver) Site(ctx context.Context, id string) (*model.Site, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -506,6 +525,7 @@ func (r *queryResolver) Site(ctx context.Context, id string) (*model.Site, error
 	return buildGraphQLSite(site), nil
 }
 
+// Dashboard is the resolver for the dashboard field.
 func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) (*model.DashboardStats, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -576,6 +596,7 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 	}, nil
 }
 
+// Realtime is the resolver for the realtime field.
 func (r *queryResolver) Realtime(ctx context.Context, siteID string) (*model.RealtimeStats, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -603,6 +624,7 @@ func (r *queryResolver) Realtime(ctx context.Context, siteID string) (*model.Rea
 	}, nil
 }
 
+// GeoIPStatus is the resolver for the geoIPStatus field.
 func (r *queryResolver) GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -613,6 +635,7 @@ func (r *queryResolver) GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, er
 	return convertToGraphQLGeoIPStatus(status), nil
 }
 
+// GeoIPCountries is the resolver for the geoIPCountries field.
 func (r *queryResolver) GeoIPCountries(ctx context.Context, search *string, paging model.PagingInput) ([]*model.GeoIPCountry, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -649,6 +672,7 @@ func (r *queryResolver) GeoIPCountries(ctx context.Context, search *string, pagi
 	return result, nil
 }
 
+// Events is the resolver for the events field.
 func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) (*model.EventsResult, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -703,6 +727,7 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 	return convertToGraphQLEvents(events, total), nil
 }
 
+// EventCounts is the resolver for the eventCounts field.
 func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) ([]*model.EventCount, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -748,6 +773,7 @@ func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRang
 	return result, nil
 }
 
+// EventDefinitions is the resolver for the eventDefinitions field.
 func (r *queryResolver) EventDefinitions(ctx context.Context, siteID string, paging model.PagingInput) ([]*model.EventDefinition, error) {
 	claims := auth.GetUserFromContext(ctx)
 	if claims == nil {
@@ -773,6 +799,7 @@ func (r *queryResolver) EventDefinitions(ctx context.Context, siteID string, pag
 	return convertToGraphQLEventDefinitions(definitions), nil
 }
 
+// ActivePages is the resolver for the activePages field.
 func (r *realtimeStatsResolver) ActivePages(ctx context.Context, obj *model.RealtimeStats, paging model.PagingInput) ([]*model.ActivePageStats, error) {
 	limit, offset := normalizePaging(paging)
 	activePages, err := r.AnalyticsService.GetActivePages(ctx, obj.SiteID, limit, offset)
@@ -791,54 +818,19 @@ func (r *realtimeStatsResolver) ActivePages(ctx context.Context, obj *model.Real
 	return pages, nil
 }
 
+// DashboardStats returns DashboardStatsResolver implementation.
 func (r *Resolver) DashboardStats() DashboardStatsResolver { return &dashboardStatsResolver{r} }
 
+// Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
+// Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
+// RealtimeStats returns RealtimeStatsResolver implementation.
 func (r *Resolver) RealtimeStats() RealtimeStatsResolver { return &realtimeStatsResolver{r} }
 
 type dashboardStatsResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type realtimeStatsResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-/*
-	func (r *userResolver) Sites(ctx context.Context, obj *model.User, paging model.PagingInput) ([]*model.Site, error) {
-	claims := auth.GetUserFromContext(ctx)
-	if claims == nil {
-		return nil, errors.New("unauthorized")
-	}
-
-	userID, err := strconv.ParseInt(obj.ID, 10, 64)
-	if err != nil {
-		return nil, errors.New("invalid user ID")
-	}
-
-	if claims.UserID != userID {
-		return nil, errors.New("unauthorized")
-	}
-
-	limit, offset := normalizePagingWithMax(paging, maxSitesPageSize)
-	sites, err := r.SiteService.GetUserSites(ctx, userID, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user sites: %w", err)
-	}
-
-	result := make([]*model.Site, 0, len(sites))
-	for _, site := range sites {
-		result = append(result, buildGraphQLSite(site))
-	}
-
-	return result, nil
-}
-func (r *Resolver) User() UserResolver { return &userResolver{r} }
-type userResolver struct{ *Resolver }
-*/

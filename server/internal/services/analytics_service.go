@@ -46,7 +46,6 @@ func NewAnalyticsService(
 type CollectInput struct {
 	SiteKey     string `json:"site_key"`
 	Path        string `json:"path"`
-	Title       string `json:"title"`
 	Referrer    string `json:"referrer"`
 	ScreenWidth int    `json:"screen_width"`
 	UserAgent   string `json:"-"`
@@ -171,8 +170,6 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		Hour:         nowUnix / 3600,
 		Day:          nowUnix / 86400,
 		Path:         input.Path,
-		Name:         input.Title,
-		Type:         models.EventTypePageview,
 		DefinitionID: nil,
 	}
 
@@ -326,8 +323,6 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		Hour:         nowUnix / 3600,
 		Day:          nowUnix / 86400,
 		Path:         input.Path,
-		Name:         input.Name,
-		Type:         models.EventTypeCustom,
 		DefinitionID: &definition.ID,
 	}
 

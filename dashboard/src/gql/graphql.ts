@@ -412,8 +412,6 @@ export type RegisterInput = {
 
 export type Session = {
   __typename: 'Session';
-  /** True when created from an event without a page view; flipped to false after a page view arrives. */
-  eventOnly: Scalars['Boolean']['output'];
   id: Scalars['ID']['output'];
 };
 

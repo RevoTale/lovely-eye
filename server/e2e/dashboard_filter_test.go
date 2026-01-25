@@ -68,7 +68,6 @@ func TestDashboardFiltering(t *testing.T) {
 		payload := map[string]interface{}{
 			"site_key":     siteKey,
 			"path":         data.path,
-			"title":        "Test Page",
 			"referrer":     data.referrer,
 			"screen_width": data.screenWidth,
 		}

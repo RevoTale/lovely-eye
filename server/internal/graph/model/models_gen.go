@@ -12,7 +12,7 @@ import (
 
 type ActivePageStats struct {
 	Path string `json:"path"`
-
+	// Number of visitors currently viewing this page
 	Visitors int `json:"visitors"`
 }
 
@@ -22,17 +22,20 @@ type EventCount struct {
 }
 
 type FilterInput struct {
+	// Filter by specific referrer
 	Referrer []string `json:"referrer,omitempty"`
-
+	// Filter by device type (desktop, mobile, tablet)
 	Device []string `json:"device,omitempty"`
-
+	// Filter by page path
 	Page []string `json:"page,omitempty"`
-
+	// Filter by country (stored country name)
 	Country []string `json:"country,omitempty"`
-
+	// Filter by event name
 	EventName []string `json:"eventName,omitempty"`
-
+	// Filter by event path
 	EventPath []string `json:"eventPath,omitempty"`
+	// Filter by event definition ID
+	EventDefinitionID []string `json:"eventDefinitionId,omitempty"`
 }
 
 type GeoIPCountry struct {
@@ -83,8 +86,6 @@ type Query struct {
 
 type Session struct {
 	ID string `json:"id"`
-
-	EventOnly bool `json:"eventOnly"`
 }
 
 type TimeBucket string

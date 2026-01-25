@@ -210,7 +210,6 @@ func TestStatsCollection(t *testing.T) {
 		payload := map[string]any{
 			"site_key":     siteKey,
 			"path":         "/home",
-			"title":        "Home Page",
 			"referrer":     "https://google.com",
 			"screen_width": 1920,
 		}
@@ -243,7 +242,7 @@ func TestStatsCollection(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://example.com",
 		)
@@ -427,7 +426,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
@@ -452,7 +451,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
@@ -477,7 +476,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
@@ -502,7 +501,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
@@ -527,7 +526,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
@@ -552,7 +551,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
@@ -577,7 +576,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
@@ -602,7 +601,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
@@ -627,7 +626,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
@@ -714,7 +713,7 @@ func TestEventPropertiesStored(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-storage-test.com",
 		)
@@ -774,7 +773,7 @@ func TestEventPropertiesStored(t *testing.T) {
 
 			resp, err := postJSONWithOrigin(
 				ts.httpServer.Client(),
-				ts.httpServer.URL+"/api/event",
+				ts.httpServer.URL+"/api/collect",
 				body,
 				"https://events-storage-test.com",
 			)

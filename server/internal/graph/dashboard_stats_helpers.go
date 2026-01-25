@@ -2,7 +2,6 @@ package graph
 
 import (
 	"github.com/lovely-eye/server/internal/graph/model"
-	"github.com/lovely-eye/server/internal/repository"
 )
 
 const (
@@ -29,11 +28,6 @@ func clampLimit(value, max int) int {
 	return value
 }
 
-func reverseDailyStats(stats []repository.DailyVisitorStats) {
-	for i, j := 0, len(stats)-1; i < j; i, j = i+1, j-1 {
-		stats[i], stats[j] = stats[j], stats[i]
-	}
-}
 
 func bucketValueOrDefault(value *model.TimeBucket) model.TimeBucket {
 	if value == nil {

@@ -115,8 +115,6 @@ enum TimeBucket {
 
 type Session {
   id: ID!
-  """True when created from an event without a page view; flipped to false after a page view arrives."""
-  eventOnly: Boolean!
 }
 
 type RealtimeStats {
@@ -149,6 +147,7 @@ type Event {
   id: ID!
   name: String!
   path: String!
+  definition: EventDefinition
   """Key-value properties associated with the event"""
   properties: [EventProperty!]!
   createdAt: Time!
@@ -235,6 +234,8 @@ input FilterInput {
   eventName: [String!]
   """Filter by event path"""
   eventPath: [String!]
+  """Filter by event definition ID"""
+  eventDefinitionId: [ID!]
 }
 
 input EventDefinitionFieldInput {

@@ -74,7 +74,6 @@
     send('/api/collect', {
       site_key: siteKey,
       path: path,
-      title: document.title,
       referrer: getReferrer(),
       screen_width: window.innerWidth,
       utm_source: utm.utm_source,
@@ -88,7 +87,7 @@
   function trackEvent(name, properties) {
     if (!name) return;
 
-    send('/api/event', {
+    send('/api/collect', {
       site_key: siteKey,
       name: name,
       path: getPath(),

@@ -102,6 +102,7 @@ type Event struct {
 	ID         string           `json:"id"`
 	Name       string           `json:"name"`
 	Path       string           `json:"path"`
+	Definition *EventDefinition `json:"definition,omitempty"`
 	Properties []*EventProperty `json:"properties"`
 	CreatedAt  time.Time        `json:"createdAt"`
 }
