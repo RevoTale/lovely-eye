@@ -142,21 +142,23 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 		pointLimit = clampLimit(*limit, maxTimeSeriesPoints)
 	}
 
-	stats, err := r.AnalyticsService.GetTimeSeriesStatsWithFilter(ctx, obj.SiteID, obj.From, obj.To, selectedBucket, pointLimit, obj.Filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get time series stats: %w", err)
+	offsetValue := 0
+	if offset != nil {
+		offsetValue = *offset
 	}
 
-	if pointLimit > 0 {
-		reverseDailyStats(stats)
+	stats, err := r.AnalyticsService.GetTimeSeriesStatsWithFilter(ctx, obj.SiteID, obj.From, obj.To, selectedBucket, pointLimit, offsetValue, obj.Filter)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get time series stats: %w", err)
 	}
 
 	items := make([]*model.DailyStats, 0, len(stats))
 	for _, stat := range stats {
 		bucketSeconds := stat.DateBucket
-		if selectedBucket == services.TimeBucketDaily {
+		switch selectedBucket {
+		case services.TimeBucketDaily:
 			bucketSeconds = stat.DateBucket * 86400
-		} else if selectedBucket == services.TimeBucketHourly {
+		case services.TimeBucketHourly:
 			bucketSeconds = stat.DateBucket * 3600
 		}
 		items = append(items, &model.DailyStats{
@@ -165,19 +167,6 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 			PageViews: stat.PageViews,
 			Sessions:  stat.Sessions,
 		})
-	}
-
-	offsetValue := 0
-	if offset != nil {
-		offsetValue = *offset
-	}
-
-	if offsetValue >= len(items) {
-		return []*model.DailyStats{}, nil
-	}
-
-	if offsetValue > 0 {
-		items = items[offsetValue:]
 	}
 
 	return items, nil

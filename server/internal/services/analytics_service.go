@@ -497,8 +497,8 @@ func (s *AnalyticsService) GetBrowserStatsWithFilter(ctx context.Context, siteID
 	return stats, nil
 }
 
-func (s *AnalyticsService) GetTimeSeriesStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, bucket TimeBucket, limit int, filter DashboardFilter) ([]repository.DailyVisitorStats, error) {
-	stats, err := s.analyticsRepo.GetTimeSeriesStatsWithFilter(ctx, siteID, from, to, bucket, limit, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
+func (s *AnalyticsService) GetTimeSeriesStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, bucket TimeBucket, limit, offset int, filter DashboardFilter) ([]repository.DailyVisitorStats, error) {
+	stats, err := s.analyticsRepo.GetTimeSeriesStatsWithFilter(ctx, siteID, from, to, bucket, limit, offset, filter.Referrer, filter.Device, filter.Page, filter.Country, filter.EventName, filter.EventPath)
 	if err != nil {
 		return nil, fmt.Errorf("get time series stats with filter: %w", err)
 	}

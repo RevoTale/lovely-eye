@@ -900,7 +900,7 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilter(ctx context.Context, sit
 }
 
 func (r *AnalyticsRepository) GetDailyStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, referrer, device, page, country, eventName, eventPath []string) ([]DailyVisitorStats, error) {
-	return r.GetTimeSeriesStatsWithFilter(ctx, siteID, from, to, TimeBucketDaily, 0, referrer, device, page, country, eventName, eventPath)
+	return r.GetTimeSeriesStatsWithFilter(ctx, siteID, from, to, TimeBucketDaily, 0, 0, referrer, device, page, country, eventName, eventPath)
 }
 
 func (r *AnalyticsRepository) GetTopPagesWithFilterPaged(ctx context.Context, siteID int64, from, to time.Time, limit, offset int, referrer, device, page, country, eventName, eventPath []string) ([]PageStats, int, error) {
@@ -1104,12 +1104,12 @@ const (
 	TimeBucketHourly TimeBucket = "hourly"
 )
 
-func (r *AnalyticsRepository) GetTimeSeriesStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, bucket TimeBucket, limit int, referrer, device, page, country, eventName, eventPath []string) ([]DailyVisitorStats, error) {
+func (r *AnalyticsRepository) GetTimeSeriesStatsWithFilter(ctx context.Context, siteID int64, from, to time.Time, bucket TimeBucket, limit, offset int, referrer, device, page, country, eventName, eventPath []string) ([]DailyVisitorStats, error) {
 	var stats []DailyVisitorStats
 	fromUnix := from.Unix()
 	toUnix := to.Unix()
 	bucketExpr := r.timeBucketExpression(bucket)
-	q := r.db.NewSelect().
+	base := r.db.NewSelect().
 		TableExpr("sessions s").
 		ColumnExpr(bucketExpr+" as date_bucket").
 		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
@@ -1118,12 +1118,23 @@ func (r *AnalyticsRepository) GetTimeSeriesStatsWithFilter(ctx context.Context, 
 		Where("s.site_id = ?", siteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix)
-	q = applySessionFilters(q, referrer, device, page, country, eventName, eventPath)
-	q = q.GroupExpr(bucketExpr)
+	base = applySessionFilters(base, referrer, device, page, country, eventName, eventPath)
+	base = base.GroupExpr(bucketExpr)
 	if limit > 0 {
-		q = q.Order("date_bucket DESC").Limit(limit)
-	} else {
-		q = q.Order("date_bucket ASC")
+		inner := base.Order("date_bucket DESC").Offset(offset).Limit(limit)
+		outer := r.db.NewSelect().
+			TableExpr("(?) as time_series", inner).
+			ColumnExpr("date_bucket, visitors, page_views, sessions").
+			Order("date_bucket ASC")
+		err := outer.Scan(ctx, &stats)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get time series stats with filter: %w", err)
+		}
+		return stats, nil
+	}
+	q := base.Order("date_bucket ASC")
+	if offset > 0 {
+		q = q.Offset(offset)
 	}
 	err := q.Scan(ctx, &stats)
 	if err != nil {
