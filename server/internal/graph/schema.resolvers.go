@@ -153,8 +153,14 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 
 	items := make([]*model.DailyStats, 0, len(stats))
 	for _, stat := range stats {
+		bucketSeconds := stat.DateBucket
+		if selectedBucket == services.TimeBucketDaily {
+			bucketSeconds = stat.DateBucket * 86400
+		} else if selectedBucket == services.TimeBucketHourly {
+			bucketSeconds = stat.DateBucket * 3600
+		}
 		items = append(items, &model.DailyStats{
-			Date:      time.Unix(stat.DateBucket, 0),
+			Date:      time.Unix(bucketSeconds, 0),
 			Visitors:  stat.Visitors,
 			PageViews: stat.PageViews,
 			Sessions:  stat.Sessions,
