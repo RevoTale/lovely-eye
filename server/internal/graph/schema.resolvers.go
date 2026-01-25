@@ -21,7 +21,15 @@ import (
 
 func (r *dashboardStatsResolver) TopPages(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedPageStats, error) {
 	limit, offset := normalizePaging(paging)
-	stats, total, err := r.AnalyticsService.GetTopPagesWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  limit,
+		Offset: offset,
+		Filter: obj.Filter,
+	}
+	stats, total, err := r.AnalyticsService.GetTopPagesWithFilterPaged(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get top pages: %w", err)
 	}
@@ -43,7 +51,15 @@ func (r *dashboardStatsResolver) TopPages(ctx context.Context, obj *model.Dashbo
 
 func (r *dashboardStatsResolver) TopReferrers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedReferrerStats, error) {
 	limit, offset := normalizePaging(paging)
-	stats, total, err := r.AnalyticsService.GetTopReferrersWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  limit,
+		Offset: offset,
+		Filter: obj.Filter,
+	}
+	stats, total, err := r.AnalyticsService.GetTopReferrersWithFilterPaged(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get top referrers: %w", err)
 	}
@@ -64,7 +80,15 @@ func (r *dashboardStatsResolver) TopReferrers(ctx context.Context, obj *model.Da
 
 func (r *dashboardStatsResolver) Browsers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) ([]*model.BrowserStats, error) {
 	limit, offset := normalizePaging(paging)
-	stats, err := r.AnalyticsService.GetBrowserStatsWithFilter(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  limit,
+		Offset: offset,
+		Filter: obj.Filter,
+	}
+	stats, err := r.AnalyticsService.GetBrowserStatsWithFilter(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get browser stats: %w", err)
 	}
@@ -81,7 +105,15 @@ func (r *dashboardStatsResolver) Browsers(ctx context.Context, obj *model.Dashbo
 
 func (r *dashboardStatsResolver) Devices(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedDeviceStats, error) {
 	limit, offset := normalizePaging(paging)
-	stats, total, totalVisitors, err := r.AnalyticsService.GetDeviceStatsWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  limit,
+		Offset: offset,
+		Filter: obj.Filter,
+	}
+	stats, total, totalVisitors, err := r.AnalyticsService.GetDeviceStatsWithFilterPaged(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get device stats: %w", err)
 	}
@@ -103,7 +135,15 @@ func (r *dashboardStatsResolver) Devices(ctx context.Context, obj *model.Dashboa
 
 func (r *dashboardStatsResolver) Countries(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedCountryStats, error) {
 	limit, offset := normalizePaging(paging)
-	stats, total, totalVisitors, err := r.AnalyticsService.GetCountryStatsWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  limit,
+		Offset: offset,
+		Filter: obj.Filter,
+	}
+	stats, total, totalVisitors, err := r.AnalyticsService.GetCountryStatsWithFilterPaged(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get country stats: %w", err)
 	}
@@ -147,7 +187,16 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 		offsetValue = *offset
 	}
 
-	stats, err := r.AnalyticsService.GetTimeSeriesStatsWithFilter(ctx, obj.SiteID, obj.From, obj.To, selectedBucket, pointLimit, offsetValue, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  pointLimit,
+		Offset: offsetValue,
+		Bucket: selectedBucket,
+		Filter: obj.Filter,
+	}
+	stats, err := r.AnalyticsService.GetTimeSeriesStatsWithFilter(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get time series stats: %w", err)
 	}
@@ -504,7 +553,12 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 		}
 	}
 
-	stats, err := r.AnalyticsService.GetDashboardOverviewWithFilter(ctx, id, from, to, filterOpts)
+	stats, err := r.AnalyticsService.GetDashboardOverviewWithFilter(ctx, services.AnalyticsQuery{
+		SiteID: id,
+		From:   from,
+		To:     to,
+		Filter: filterOpts,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dashboard overview: %w", err)
 	}
@@ -626,14 +680,21 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 		off = 0
 	}
 
-	referrer, device, page, country, eventName, eventPath := parseFilterInput(filter)
+	filterOpts := parseFilterInput(filter)
 
 	var events []*models.Event
 	var total int
-	if filter == nil || (len(referrer) == 0 && len(device) == 0 && len(page) == 0 && len(country) == 0 && len(eventName) == 0 && len(eventPath) == 0) {
+	if filter == nil || isFilterEmpty(filterOpts) {
 		events, total, err = r.AnalyticsService.GetEventsWithTotal(ctx, id, from, to, lim, off)
 	} else {
-		events, total, err = r.AnalyticsService.GetEventsWithTotalAndFilter(ctx, id, from, to, referrer, device, page, country, eventName, eventPath, lim, off)
+		events, total, err = r.AnalyticsService.GetEventsWithTotalAndFilter(ctx, services.AnalyticsQuery{
+			SiteID: id,
+			From:   from,
+			To:     to,
+			Limit:  lim,
+			Offset: off,
+			Filter: filterOpts,
+		})
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events: %w", err)
@@ -662,9 +723,16 @@ func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRang
 
 	limit, offset := normalizePaging(paging)
 
-	referrer, device, page, country, eventName, eventPath := parseFilterInput(filter)
+	filterOpts := parseFilterInput(filter)
 
-	eventCounts, err := r.AnalyticsService.GetEventCounts(ctx, id, from, to, referrer, device, page, country, eventName, eventPath, limit, offset)
+	eventCounts, err := r.AnalyticsService.GetEventCounts(ctx, services.AnalyticsQuery{
+		SiteID: id,
+		From:   from,
+		To:     to,
+		Limit:  limit,
+		Offset: offset,
+		Filter: filterOpts,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get event counts: %w", err)
 	}

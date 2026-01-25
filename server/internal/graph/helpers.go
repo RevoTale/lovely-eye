@@ -31,11 +31,27 @@ func parseDateRangeInput(input *model.DateRangeInput) (time.Time, time.Time) {
 	return from, to
 }
 
-func parseFilterInput(input *model.FilterInput) (referrer []string, device []string, page []string, country []string, eventName []string, eventPath []string) {
+func parseFilterInput(input *model.FilterInput) services.DashboardFilter {
 	if input == nil {
-		return nil, nil, nil, nil, nil, nil
+		return services.DashboardFilter{}
 	}
-	return input.Referrer, input.Device, input.Page, input.Country, input.EventName, input.EventPath
+	return services.DashboardFilter{
+		Referrer:  input.Referrer,
+		Device:    input.Device,
+		Page:      input.Page,
+		Country:   input.Country,
+		EventName: input.EventName,
+		EventPath: input.EventPath,
+	}
+}
+
+func isFilterEmpty(filter services.DashboardFilter) bool {
+	return len(filter.Referrer) == 0 &&
+		len(filter.Device) == 0 &&
+		len(filter.Page) == 0 &&
+		len(filter.Country) == 0 &&
+		len(filter.EventName) == 0 &&
+		len(filter.EventPath) == 0
 }
 
 func convertToGraphQLEvent(e *models.Event) *model.Event {
