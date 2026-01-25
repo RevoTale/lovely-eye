@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.4.0](https://github.com/RevoTale/lovely-eye/compare/v1.3.0...v1.4.0) (2026-01-25)
+
+
+### Features
+
+* add paging to the events count ([e6f77bc](https://github.com/RevoTale/lovely-eye/commit/e6f77bcc001d28f709917f166f69d5b5388061fa))
+* show only predefined events in the dahsboard events count card ([af046e6](https://github.com/RevoTale/lovely-eye/commit/af046e6d1872e8ed61823c957dc1ac7199581ea8))
+* upgrade and refactor code to use `github.com/oschwald/maxminddb-golang` v2 ([d282207](https://github.com/RevoTale/lovely-eye/commit/d282207875a15c5290973aa3747e6219a38ce79b))
+
+
+### Bug Fixes
+
+* a bug caused daily chart showing alway jan 1 1970 ([fc5f9d5](https://github.com/RevoTale/lovely-eye/commit/fc5f9d59967c7a310155621045bda1c6a7f67ce1))
+* better design priciple ([079c46f](https://github.com/RevoTale/lovely-eye/commit/079c46fe4ab9f7d5c515bbee3536b8362113211a))
+* **deps:** update module modernc.org/sqlite to v1.44.3 ([2ac493e](https://github.com/RevoTale/lovely-eye/commit/2ac493ecda397d5e1b882fbbdcd0c39a5e7afdcf))
+* **deps:** update module modernc.org/sqlite to v1.44.3 ([9425a78](https://github.com/RevoTale/lovely-eye/commit/9425a78368a6b5420de4de3573d101d5f01b6230))
+* performance problem for large chart loading dataset ([41b35ba](https://github.com/RevoTale/lovely-eye/commit/41b35ba6d37cb62151f53016724047fa871ef8a7))
+* recent event was not showing the event. Add indicater whther it is event or a pageview ([e4b7d09](https://github.com/RevoTale/lovely-eye/commit/e4b7d09611403af88bf54a1642d9c0c5abc049a6))
+* remove useless badge ([dcd9175](https://github.com/RevoTale/lovely-eye/commit/dcd91753791983313540d078f2bd018f4d2318df))
+* restore pageview event dedupe ([7abb88f](https://github.com/RevoTale/lovely-eye/commit/7abb88f353fbecf3088ab88de816620f950e3b81))
+* unify events/pageviews tracking and schema ([7c70c9c](https://github.com/RevoTale/lovely-eye/commit/7c70c9c0afd0d2a480d9ba19f512a1d9aabb3e63))
+
 ## [1.3.0](https://github.com/RevoTale/lovely-eye/compare/v1.2.1...v1.3.0) (2026-01-22)
 
 
