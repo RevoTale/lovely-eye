@@ -9,9 +9,33 @@ services:
       - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-false}
       - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
       - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - lovely-eye-data:/app/data
     networks:
       - lovely-eye-net
     restart: unless-stopped
+
+  seed-example-data:
+    build: ../
+    command: ["./load-example-data"]
+    environment:
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - SECURE_COOKIES=${SECURE_COOKIES:-true}
+      - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-false}
+      - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
+    depends_on:
+      lovely-eye:
+        condition: service_healthy
+    volumes:
+      - lovely-eye-data:/app/data
+    networks:
+      - lovely-eye-net
 
 volumes:
   lovely-eye-data:

@@ -37,6 +37,11 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -ldflags='-s -w' \
     -o test-migrations ./cmd/test-migrations
 
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags='-s -w' \
+    -o load-example-data ./cmd/load-example-data
+
 # Stage 3: Final minimal image
 FROM alpine
 
@@ -44,6 +49,7 @@ WORKDIR /app
 COPY --from=builder /app/server .
 COPY --from=builder /app/static ./static
 COPY --from=builder /app/migrations ./migrations
+COPY --from=builder /app/load-example-data .
 COPY --from=dashboard-builder /app/dist ./dashboard
 # Create data directory for SQLite and set ownership/permissions for non-root user
 RUN mkdir -p /app/data /data && \

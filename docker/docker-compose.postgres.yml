@@ -9,12 +9,32 @@ services:
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
       - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
       - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     depends_on:
       lovely-eye-db:
         condition: service_healthy
     networks:
       - lovely-eye-net
     restart: unless-stopped
+
+  seed-example-data:
+    build: ../
+    command: ["./load-example-data"]
+    environment:
+      - DB_DRIVER=postgres
+      - DB_DSN=postgres://${POSTGRES_USER:-lovely}:${POSTGRES_PASSWORD:-lovely}@lovely-eye-db:5432/${POSTGRES_DB:-lovely_eye}?sslmode=disable
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
+      - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
+    depends_on:
+      lovely-eye:
+        condition: service_healthy
+    networks:
+      - lovely-eye-net
 
   lovely-eye-db:
     image: postgres:18.1-alpine
