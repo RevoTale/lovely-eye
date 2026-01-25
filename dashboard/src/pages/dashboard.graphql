@@ -96,6 +96,10 @@ fragment EventFields on Event {
   id
   name
   path
+  definition {
+    id
+    name
+  }
   createdAt
   properties {
     ...EventPropertyFields

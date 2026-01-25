@@ -146,7 +146,6 @@ func (r *AnalyticsRepository) GetEvents(ctx context.Context, siteID int64, from,
 		Relation("Definition.Fields").
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		Where("s.site_id = ?", siteID).
-		Where("e.definition_id IS NOT NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix).
 		Order("e.time DESC").
@@ -169,7 +168,6 @@ func (r *AnalyticsRepository) GetEventsWithFilter(ctx context.Context, query Ana
 		Relation("Definition.Fields").
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		Where("s.site_id = ?", query.SiteID).
-		Where("e.definition_id IS NOT NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix)
 	q = applyEventFilters(q, query.Filter)
@@ -210,7 +208,6 @@ func (r *AnalyticsRepository) GetEventCount(ctx context.Context, siteID int64, f
 		Model((*models.Event)(nil)).
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		Where("s.site_id = ?", siteID).
-		Where("e.definition_id IS NOT NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix).
 		Count(ctx)
@@ -227,7 +224,6 @@ func (r *AnalyticsRepository) GetEventCountWithFilter(ctx context.Context, query
 		TableExpr("events e").
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		Where("s.site_id = ?", query.SiteID).
-		Where("e.definition_id IS NOT NULL").
 		Where("e.time >= ?", fromUnix).
 		Where("e.time <= ?", toUnix)
 	q = applyEventFilters(q, query.Filter)

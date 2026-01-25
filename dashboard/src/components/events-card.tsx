@@ -45,14 +45,18 @@ export function EventsCard({
               <div key={event.id} className="border rounded-md p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <FilterLink
-                      siteId={siteId}
-                      filterKey="eventName"
-                      value={event.name}
-                      className="text-sm font-medium truncate hover:underline underline-offset-2 block"
-                    >
-                      {event.name}
-                    </FilterLink>
+                    {event.definition?.name ? (
+                      <FilterLink
+                        siteId={siteId}
+                        filterKey="eventName"
+                        value={event.definition.name}
+                        className="text-sm font-medium truncate hover:underline underline-offset-2 block"
+                      >
+                        {event.definition.name}
+                      </FilterLink>
+                    ) : (
+                      <span className="text-sm font-medium truncate block">{event.path}</span>
+                    )}
                     <FilterLink
                       siteId={siteId}
                       filterKey="eventPath"
@@ -62,9 +66,14 @@ export function EventsCard({
                       {event.path === EMPTY_STRING ? FALLBACK_PATH : event.path}
                     </FilterLink>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {new Date(event.createdAt).toLocaleString()}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="outline">
+                      {event.definition?.name ? 'Event' : 'Pageview'}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(event.createdAt).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
                 {event.properties.length > EMPTY_COUNT ? (
                   <div className="flex flex-wrap gap-2 mt-2">
