@@ -11,13 +11,13 @@ interface TrafficBlockingSectionProps {
   geoIPReady: boolean;
 }
 
-export function TrafficBlockingSection({
+export const TrafficBlockingSection = ({
   siteId,
   siteName,
   initialBlockedIPs,
   initialBlockedCountries,
   geoIPReady,
-}: TrafficBlockingSectionProps): React.JSX.Element {
+}: TrafficBlockingSectionProps): React.ReactNode => {
   const [updateBlockedIPs, { loading: savingBlockedIPs }] = useMutation(UpdateSiteDocument);
   const [updateBlockedCountries, { loading: savingBlockedCountries }] = useMutation(UpdateSiteDocument);
 

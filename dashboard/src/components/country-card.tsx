@@ -21,7 +21,7 @@ const EMPTY_COUNT = 0;
 const PERCENT_MULTIPLIER = 100;
 const PERCENT_PRECISION = 1;
 
-export function CountryCard({ countries, total, totalVisitors, page, pageSize, siteId, onPageChange, loading = false }: CountryCardProps): React.JSX.Element {
+export const CountryCard = ({ countries, total, totalVisitors, page, pageSize, siteId, onPageChange, loading = false }: CountryCardProps): React.ReactNode => {
   if (loading) {
     return <BoardCardSkeleton title="Countries" icon={Globe} />;
   }

@@ -4,7 +4,7 @@ import { Link, useNavigate } from '@/router';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Logo } from '@/components/logo';
 
-export function LoginPage(): ReactElement {
+export const LoginPage = (): ReactElement => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);

@@ -18,14 +18,14 @@ const EMPTY_COUNT = 0;
 const FALLBACK_PATH = '/';
 const EMPTY_STRING = '';
 
-export function EventsCard({
+export const EventsCard = ({
   siteId,
   events,
   total,
   page,
   pageSize,
   onPageChange,
-}: EventsCardProps): React.JSX.Element {
+}: EventsCardProps): React.ReactNode => {
   const eventItems = getFragmentData(EventFieldsFragmentDoc, events);
 
   return (

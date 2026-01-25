@@ -67,7 +67,7 @@ interface AnalyticsContentProps {
   onDevicesPageChange: (page: number) => void;
 }
 
-export function AnalyticsContent(props: AnalyticsContentProps): React.JSX.Element {
+export const AnalyticsContent = (props: AnalyticsContentProps): React.ReactNode => {
   const {
     siteId, stats, dateRange, filter, chartBucket, onChartBucketChange, realtime,
     eventsLoading, eventsResult, eventsCounts, eventsPage, eventsPageSize, onEventsPageChange,

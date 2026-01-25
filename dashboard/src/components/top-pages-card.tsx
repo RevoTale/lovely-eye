@@ -20,7 +20,7 @@ const EMPTY_COUNT = 0;
 const FIRST_INDEX = 0;
 const PERCENT_MULTIPLIER = 100;
 
-export function TopPagesCard({
+export const TopPagesCard = ({
   pages,
   total,
   page,
@@ -28,7 +28,7 @@ export function TopPagesCard({
   siteId,
   onPageChange,
   loading = false,
-}: TopPagesCardProps): React.JSX.Element {
+}: TopPagesCardProps): React.ReactNode => {
   const maxViews = pages.length > EMPTY_COUNT ? pages[FIRST_INDEX]?.views ?? EMPTY_COUNT : EMPTY_COUNT;
 
   if (loading) {

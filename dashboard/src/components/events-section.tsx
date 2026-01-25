@@ -19,7 +19,7 @@ interface EventsSectionProps {
   onCountsPageChange: (page: number) => void;
 }
 
-export function EventsSection({
+export const EventsSection = ({
   siteId,
   loading,
   eventsResult,
@@ -30,7 +30,7 @@ export function EventsSection({
   countsPage,
   countsPageSize,
   onCountsPageChange,
-}: EventsSectionProps): React.JSX.Element | null {
+}: EventsSectionProps): React.ReactNode => {
   const eventCountsData = getFragmentData(EventCountFieldsFragmentDoc, eventsCounts);
   if (eventsResult === undefined || loading) {
     return (

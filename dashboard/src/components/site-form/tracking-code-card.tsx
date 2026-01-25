@@ -17,7 +17,7 @@ interface TrackingCodeCardProps {
 
 const COPY_RESET_DELAY_MS = 2000;
 
-export function TrackingCodeCard({
+export const TrackingCodeCard = ({
   publicKey,
   trackingScript,
   trackingSnippet,
@@ -27,7 +27,7 @@ export function TrackingCodeCard({
   onConfirmRegenerate,
   onCancelRegenerate,
   onViewAnalytics,
-}: TrackingCodeCardProps): ReactElement {
+}: TrackingCodeCardProps): ReactElement => {
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
 
   const handleCopy = async (value: string): Promise<void> => {

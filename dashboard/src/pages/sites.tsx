@@ -15,7 +15,7 @@ const SKELETON_CARD_COUNT = 3;
 const SITES_PAGE_SIZE = 100;
 const SITES_PAGE_OFFSET = 0;
 
-export function SitesPage(): React.JSX.Element {
+export const SitesPage = (): React.ReactNode => {
   const { data, loading, error } = useQuery(SitesDocument, {
     variables: {
       paging: {

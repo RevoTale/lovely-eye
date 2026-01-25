@@ -19,13 +19,13 @@ const PAGE_INCREMENT = 1;
 const ESTIMATED_TOTAL_INCREMENT = 1;
 const ESTIMATED_TOTAL_EXTRA = 0;
 
-export function EventCountsCard({
+export const EventCountsCard = ({
   siteId,
   eventCounts,
   page,
   pageSize,
   onPageChange,
-}: EventCountsCardProps): React.JSX.Element {
+}: EventCountsCardProps): React.ReactNode => {
   const hasNextPage = eventCounts.length === pageSize;
   const totalEstimate = (page - PAGE_INCREMENT) * pageSize +
     eventCounts.length +

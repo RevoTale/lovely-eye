@@ -23,7 +23,7 @@ interface AnalyticsSkeletonProps {
   onPageChange: (key: string, page: number) => void;
 }
 
-export function AnalyticsSkeleton({
+export const AnalyticsSkeleton = ({
   siteId,
   dateRangeForChart,
   filter,
@@ -31,7 +31,7 @@ export function AnalyticsSkeleton({
   realtime,
   onStatsBucketChange,
   onPageChange,
-}: AnalyticsSkeletonProps): React.JSX.Element {
+}: AnalyticsSkeletonProps): React.ReactNode => {
   const emptyStats = makeFragmentData(createEmptyDashboardStats(), DashboardStatsFieldsFragmentDoc);
 
   return (

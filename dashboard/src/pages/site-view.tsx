@@ -4,7 +4,7 @@ import { SiteFormPage } from './site-form';
 import { DashboardPage } from './dashboard';
 import { siteDetailRoute } from '@/router';
 
-export function SiteViewPage(): React.JSX.Element {
+export const SiteViewPage = (): React.ReactNode => {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const search = useSearch({ from: siteDetailRoute.id });
 

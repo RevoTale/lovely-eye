@@ -10,11 +10,11 @@ interface TrackingCodeSectionProps {
   onViewAnalytics: () => void;
 }
 
-export function TrackingCodeSection({
+export const TrackingCodeSection = ({
   siteId,
   publicKey,
   onViewAnalytics,
-}: TrackingCodeSectionProps): ReactElement {
+}: TrackingCodeSectionProps): ReactElement => {
   const [actionError, setActionError] = useState('');
   const [confirmingRegenerate, setConfirmingRegenerate] = useState(false);
   const [regenerateKey, { loading: regenerating }] = useMutation(RegenerateSiteKeyDocument);

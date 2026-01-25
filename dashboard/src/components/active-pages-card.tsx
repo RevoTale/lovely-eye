@@ -10,7 +10,7 @@ interface ActivePagesCardProps {
 
 const EMPTY_COUNT = 0;
 
-export function ActivePagesCard({ activePages }: ActivePagesCardProps): React.JSX.Element {
+export const ActivePagesCard = ({ activePages }: ActivePagesCardProps): React.ReactNode => {
   const pageItems = getFragmentData(ActivePageStatsFieldsFragmentDoc, activePages);
 
   return (

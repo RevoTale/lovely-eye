@@ -144,7 +144,7 @@ const parseChartDate = (value: string): number | null => {
   return Number.isNaN(parsed) ? null : parsed;
 };
 
-export function OverviewChartSection({ siteId, dateRange, filter, bucket, onBucketChange }: OverviewChartSectionProps): React.JSX.Element | null {
+export const OverviewChartSection = ({ siteId, dateRange, filter, bucket, onBucketChange }: OverviewChartSectionProps): React.ReactNode => {
   const { loadedData, loading, loadingMore, progress, expectedCount } = useChartDataLoader({ siteId, dateRange, filter, bucket });
 
   const formatters = useMemo(() => ({

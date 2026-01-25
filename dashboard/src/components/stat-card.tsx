@@ -11,14 +11,14 @@ interface StatCardProps {
   trendValue?: string;
 }
 
-export function StatCard({
+export const StatCard = ({
   title,
   value,
   icon: Icon,
   suffix,
   trend,
   trendValue,
-}: StatCardProps): React.JSX.Element {
+}: StatCardProps): React.ReactNode => {
   const hasSuffix = suffix !== undefined && suffix !== '';
   const hasTrend = trend !== undefined && trendValue !== undefined && trendValue !== '';
 
@@ -55,18 +55,16 @@ export function StatCard({
   );
 }
 
-export function StatCardSkeleton({ title, icon: Icon }: { title: string; icon: React.ElementType }): React.JSX.Element {
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Icon className="h-4 w-4 text-primary" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Skeleton className="h-8 w-32" />
-      </CardContent>
-    </Card>
-  );
-}
+export const StatCardSkeleton = ({ title, icon: Icon }: { title: string; icon: React.ElementType }): React.ReactNode => (
+  <Card className="hover:shadow-md transition-shadow">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+        <Icon className="h-4 w-4 text-primary" />
+      </div>
+    </CardHeader>
+    <CardContent>
+      <Skeleton className="h-8 w-32" />
+    </CardContent>
+  </Card>
+)

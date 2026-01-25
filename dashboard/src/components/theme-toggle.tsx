@@ -3,7 +3,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui';
 
-export function ThemeToggle(): ReactElement {
+export const ThemeToggle = (): ReactElement => {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('theme');

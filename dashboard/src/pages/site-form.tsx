@@ -28,7 +28,7 @@ import { TrafficBlockingSection } from '@/components/site-form/traffic-blocking-
 
 type SiteDetails = SiteDetailsFieldsFragment;
 
-export function SiteFormPage(): React.JSX.Element {
+export const SiteFormPage = (): React.ReactNode => {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const navigate = useNavigate();
   const isNew = siteId === 'new';

@@ -16,7 +16,7 @@ import type { FilterInput } from '@/gql/graphql';
 const EMPTY_COUNT = 0;
 const DEFAULT_STATS_BUCKET = 'daily';
 
-export function DashboardPage(): ReactElement {
+export const DashboardPage = (): ReactElement => {
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const search = useSearch({ from: siteDetailRoute.id });
   const navigate = useNavigate();

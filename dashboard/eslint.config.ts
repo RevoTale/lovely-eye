@@ -76,10 +76,46 @@ export default [
   {
     files: ['**/*.tsx'],
     plugins: {
+      react: reactPlugin,
       'react-hooks': reactHooks,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
+      'react/function-component-definition': [
+        'error',
+        {
+          namedComponents: 'arrow-function',
+          unnamedComponents: 'arrow-function',
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "TaggedTemplateExpression[tag.name='gql']",
+          message: 'Use .graphql files instead of gql templates.',
+        },
+        {
+          selector:
+            "VariableDeclarator[id.typeAnnotation=null][init.type='ArrowFunctionExpression'][id.name=/^[A-Z]/]",
+          message:
+            'Component declarations must use an explicit React.FunctionComponent type annotation.',
+        },
+        {
+          selector:
+            "VariableDeclarator[id.name=/^[A-Z]/][init.type='ArrowFunctionExpression'][init.returnType.typeAnnotation.type='TSTypeReference'][init.returnType.typeAnnotation.typeName.type='TSQualifiedName'][init.returnType.typeAnnotation.typeName.right.name='Element'][init.returnType.typeAnnotation.typeName.left.type='TSQualifiedName'][init.returnType.typeAnnotation.typeName.left.right.name='JSX'][init.returnType.typeAnnotation.typeName.left.left.name='React']",
+          message: 'Use React.ReactNode for component return types instead of React.JSX.Element.',
+        },
+      ],
+      'react/jsx-no-bind': [
+        'error',
+        {
+          ignoreRefs: true,
+          allowArrowFunctions: true,
+          allowBind: false,
+        },
+      ],
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
     },
   },
   {

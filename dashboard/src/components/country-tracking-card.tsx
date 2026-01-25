@@ -17,14 +17,14 @@ interface CountryTrackingCardProps {
   onRetry: () => void;
 }
 
-export function CountryTrackingCard({
+export const CountryTrackingCard = ({
   trackCountry,
   updating,
   refreshing,
   geoIPStatus,
   onToggle,
   onRetry,
-}: CountryTrackingCardProps): React.JSX.Element {
+}: CountryTrackingCardProps): React.ReactNode => {
   const geoIPState = geoIPStatus?.state ?? 'disabled';
   const geoIPSource = geoIPStatus?.source;
   const geoIPDbPath = geoIPStatus?.dbPath;

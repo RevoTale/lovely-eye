@@ -22,7 +22,7 @@ const LOGO_SIZE = 32;
 const USERNAME_INITIALS_START = 0;
 const USERNAME_INITIALS_END = 2;
 
-export function DashboardLayout(): ReactElement {
+export const DashboardLayout = (): ReactElement => {
   const { user, logout, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 

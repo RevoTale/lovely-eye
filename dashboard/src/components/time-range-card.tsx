@@ -23,7 +23,7 @@ const parseDraft = (dateValue: string, timeValue: string): Date | undefined => {
   return Number.isNaN(candidate.getTime()) ? undefined : candidate;
 };
 
-export function TimeRangeCard({
+export const TimeRangeCard = ({
   preset,
   fromDate,
   toDate,
@@ -31,7 +31,7 @@ export function TimeRangeCard({
   toTime,
   onPresetChange,
   onApplyRange,
-}: TimeRangeCardProps): ReactElement {
+}: TimeRangeCardProps): ReactElement => {
   const isCustom = preset === 'custom';
   const displayFromTime = normalizeTimeInput(fromTime, '00:00');
   const displayToTime = normalizeTimeInput(toTime, '23:59');
