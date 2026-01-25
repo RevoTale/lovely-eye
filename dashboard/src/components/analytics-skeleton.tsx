@@ -7,6 +7,7 @@ import { createEmptyDashboardStats } from '@/lib/dashboard-utils';
 const EMPTY_COUNT = 0;
 const FIRST_PAGE = 1;
 const EVENTS_PAGE_SIZE = 5;
+const EVENTS_COUNTS_PAGE_SIZE = 20;
 const TOP_PAGES_PAGE_SIZE = 5;
 const REFERRERS_PAGE_SIZE = 5;
 const DEVICES_PAGE_SIZE = 6;
@@ -49,6 +50,11 @@ export function AnalyticsSkeleton({
       eventsPageSize={EVENTS_PAGE_SIZE}
       onEventsPageChange={(page) => {
         onPageChange('eventsPage', page);
+      }}
+      eventsCountsPage={FIRST_PAGE}
+      eventsCountsPageSize={EVENTS_COUNTS_PAGE_SIZE}
+      onEventsCountsPageChange={(page) => {
+        onPageChange('eventsCountsPage', page);
       }}
       topPages={[]}
       topPagesTotal={EMPTY_COUNT}

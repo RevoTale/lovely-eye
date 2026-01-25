@@ -16,7 +16,7 @@ import type {
 } from '@/gql/graphql';
 
 const EVENTS_PAGE_SIZE = 5;
-const EVENTS_COUNT_LIMIT = 200;
+const EVENTS_COUNT_PAGE_SIZE = 20;
 const TOP_PAGES_PAGE_SIZE = 5;
 const REFERRERS_PAGE_SIZE = 5;
 const BROWSERS_PAGE_SIZE = 10;
@@ -34,6 +34,7 @@ interface UseDashboardDataParams {
   dateRange: { from: string; to: string } | null | undefined;
   filter: FilterInput | null;
   eventsPage: number;
+  eventsCountsPage: number;
   topPagesPage: number;
   referrersPage: number;
   devicesPage: number;
@@ -52,7 +53,17 @@ interface DashboardData {
 }
 
 export function useDashboardData(params: UseDashboardDataParams): DashboardData {
-  const { siteId, dateRange, filter, eventsPage, topPagesPage, referrersPage, devicesPage, countriesPage } = params;
+  const {
+    siteId,
+    dateRange,
+    filter,
+    eventsPage,
+    eventsCountsPage,
+    topPagesPage,
+    referrersPage,
+    devicesPage,
+    countriesPage,
+  } = params;
   const hasSiteId = siteId !== '';
 
   const { data: siteData, loading: siteLoading } = useQuery(SiteDocument, {
@@ -121,8 +132,8 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
       dateRange: dateRange ?? null,
       filter: filter === null || Object.keys(filter).length === EMPTY_COUNT ? null : filter,
       paging: {
-        limit: EVENTS_COUNT_LIMIT,
-        offset: ZERO_OFFSET,
+        limit: EVENTS_COUNT_PAGE_SIZE,
+        offset: (eventsCountsPage - PAGE_INDEX_OFFSET) * EVENTS_COUNT_PAGE_SIZE,
       },
     },
     skip: !hasSiteId,
@@ -143,6 +154,7 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
 
 export const PAGE_SIZES = {
   EVENTS: EVENTS_PAGE_SIZE,
+  EVENT_COUNTS: EVENTS_COUNT_PAGE_SIZE,
   TOP_PAGES: TOP_PAGES_PAGE_SIZE,
   REFERRERS: REFERRERS_PAGE_SIZE,
   BROWSERS: BROWSERS_PAGE_SIZE,

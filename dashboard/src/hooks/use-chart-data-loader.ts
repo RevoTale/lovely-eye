@@ -9,7 +9,7 @@ import {
   type FilterInput,
   type TimeBucket,
 } from '@/gql/graphql';
-import { useFragment as getFragmentData } from '@/gql/fragment-masking';
+import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
 
 const BATCH_SIZE = 10;
 const INITIAL_OFFSET = 0;
@@ -61,6 +61,7 @@ export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseCha
       device: filter.device ?? null,
       page: filter.page ?? null,
       country: filter.country ?? null,
+      eventDefinitionId: filter.eventDefinitionId ?? null,
       eventName: filter.eventName ?? null,
       eventPath: filter.eventPath ?? null,
     },
@@ -82,17 +83,17 @@ export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseCha
 
   useEffect(() => {
     if (data === undefined) return;
-    const { dashboard } = data;
-    const { dailyStats } = dashboard;
-    const initialData = getFragmentData(DailyStatsFieldsFragmentDoc, dailyStats);
+    const { dashboard: { dailyStats } } = data;
+    const fragmentStats: Array<FragmentType<typeof DailyStatsFieldsFragmentDoc>> = dailyStats;
+    const initialData = getFragmentData(DailyStatsFieldsFragmentDoc, fragmentStats);
     setLoadedData(initialData);
     setHasMore(initialData.length === BATCH_SIZE);
   }, [data]);
 
   const loadNextBatch = useCallback(async () => {
-    const dashboard = data?.dashboard;
-    const dailyStats = dashboard?.dailyStats;
-    if (isLoadingMore || loading || dashboard === undefined || dailyStats === undefined || !hasMore) return;
+    if (data === undefined) return;
+    const { dashboard: { dailyStats } } = data;
+    if (isLoadingMore || loading || !hasMore) return;
     if (dailyStats.length < BATCH_SIZE) return;
 
     setIsLoadingMore(true);
@@ -104,10 +105,10 @@ export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseCha
       });
 
       const { data: resultData } = result;
-      if (resultData?.dashboard === undefined) return;
-      const { dashboard: resultDashboard } = resultData;
-      const { dailyStats: newData } = resultDashboard;
-      const nextBatch = getFragmentData(DailyStatsFieldsFragmentDoc, newData);
+      if (resultData === undefined) return;
+      const { dashboard: { dailyStats: newData } } = resultData;
+      const fragmentBatch: Array<FragmentType<typeof DailyStatsFieldsFragmentDoc>> = newData;
+      const nextBatch = getFragmentData(DailyStatsFieldsFragmentDoc, fragmentBatch);
       if (nextBatch.length > EMPTY_COUNT) {
         setLoadedData(prev => [...prev, ...nextBatch]);
       }

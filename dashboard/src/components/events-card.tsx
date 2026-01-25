@@ -41,22 +41,25 @@ export function EventsCard({
           <p className="text-sm text-muted-foreground text-center py-6">No events recorded yet.</p>
         ) : (
           <div className="space-y-4">
-            {eventItems.map((event) => (
-              <div key={event.id} className="border rounded-md p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    {event.definition?.name ? (
-                      <FilterLink
-                        siteId={siteId}
-                        filterKey="eventName"
-                        value={event.definition.name}
-                        className="text-sm font-medium truncate hover:underline underline-offset-2 block"
-                      >
-                        {event.definition.name}
-                      </FilterLink>
-                    ) : (
-                      <span className="text-sm font-medium truncate block">{event.path}</span>
-                    )}
+            {eventItems.map((event) => {
+              const definitionName = event.definition?.name ?? EMPTY_STRING;
+              const hasDefinitionName = definitionName !== EMPTY_STRING;
+              return (
+                <div key={event.id} className="border rounded-md p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      {hasDefinitionName ? (
+                        <FilterLink
+                          siteId={siteId}
+                          filterKey="eventName"
+                          value={definitionName}
+                          className="text-sm font-medium truncate hover:underline underline-offset-2 block"
+                        >
+                          {definitionName}
+                        </FilterLink>
+                      ) : (
+                        <span className="text-sm font-medium truncate block">{event.path}</span>
+                      )}
                     <FilterLink
                       siteId={siteId}
                       filterKey="eventPath"
@@ -68,7 +71,7 @@ export function EventsCard({
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge variant="outline">
-                      {event.definition?.name ? 'Event' : 'Pageview'}
+                      {hasDefinitionName ? 'Event' : 'Pageview'}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {new Date(event.createdAt).toLocaleString()}
@@ -88,7 +91,8 @@ export function EventsCard({
                   </div>
                 ) : null}
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
         {total > pageSize ? (

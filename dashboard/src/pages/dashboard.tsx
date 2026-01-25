@@ -22,6 +22,7 @@ export function DashboardPage(): ReactElement {
   const navigate = useNavigate();
   const { preset, fromDate, toDate, fromTime, toTime, dateRange, setPreset, applyCustomRange } = useDateRange();
   const eventsPage = useMemo(() => parsePage(search.eventsPage), [search.eventsPage]);
+  const eventsCountsPage = useMemo(() => parsePage(search.eventsCountsPage), [search.eventsCountsPage]);
   const topPagesPage = useMemo(() => parsePage(search.topPagesPage), [search.topPagesPage]);
   const referrersPage = useMemo(() => parsePage(search.referrersPage), [search.referrersPage]);
   const devicesPage = useMemo(() => parsePage(search.devicesPage), [search.devicesPage]);
@@ -38,6 +39,7 @@ export function DashboardPage(): ReactElement {
       device: filter['device'] ?? null,
       page: filter['page'] ?? null,
       country: filter['country'] ?? null,
+      eventDefinitionId: filter['eventDefinitionId'] ?? null,
       eventName: filter['eventName'] ?? null,
       eventPath: filter['eventPath'] ?? null,
     };
@@ -59,6 +61,7 @@ export function DashboardPage(): ReactElement {
       dateRange,
       filter: filterInput,
       eventsPage,
+      eventsCountsPage,
       topPagesPage,
       referrersPage,
       devicesPage,
@@ -150,6 +153,11 @@ export function DashboardPage(): ReactElement {
           eventsPageSize={PAGE_SIZES.EVENTS}
           onEventsPageChange={(page) => {
             setPage('eventsPage', page);
+          }}
+          eventsCountsPage={eventsCountsPage}
+          eventsCountsPageSize={PAGE_SIZES.EVENT_COUNTS}
+          onEventsCountsPageChange={(page) => {
+            setPage('eventsCountsPage', page);
           }}
           topPages={topPages}
           topPagesTotal={topPagesTotal}

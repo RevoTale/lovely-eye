@@ -11,6 +11,7 @@ const searchSchema = z.object({
   toTime: z.string().optional(),
   statsBucket: z.enum(['daily', 'hourly']).optional(),
   eventsPage: z.string().optional(),
+  eventsCountsPage: z.string().optional(),
   topPagesPage: z.string().optional(),
   referrersPage: z.string().optional(),
   devicesPage: z.string().optional(),
