@@ -48,6 +48,7 @@ type CollectInput struct {
 	Path        string `json:"path"`
 	Referrer    string `json:"referrer"`
 	ScreenWidth int    `json:"screen_width"`
+	Duration    int    `json:"duration"`
 	UserAgent   string `json:"-"`
 	IP          string `json:"-"`
 	Origin      string `json:"-"`
@@ -119,8 +120,17 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 
 	sessionTimeout := now.Add(-30 * time.Minute)
 	session, err := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
+	isDurationOnly := input.Duration > 0 &&
+		input.ScreenWidth == 0 &&
+		input.Referrer == "" &&
+		input.UTMSource == "" &&
+		input.UTMMedium == "" &&
+		input.UTMCampaign == ""
 
 	if err != nil || session == nil {
+		if isDurationOnly {
+			return nil
+		}
 
 		session = &models.Session{
 			SiteID:        site.ID,
@@ -149,11 +159,17 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		session.ExitHour = nowUnix / 3600
 		session.ExitDay = nowUnix / 86400
 		session.ExitPath = input.Path
-		session.PageViewCount++
 		session.Duration = int(nowUnix - session.EnterTime)
+		if !isDurationOnly {
+			session.PageViewCount++
+		}
 		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
 			return fmt.Errorf("update session: %w", err)
 		}
+	}
+
+	if isDurationOnly {
+		return nil
 	}
 
 	// Deduplicate page views: check if same session viewed same page in last 10 seconds

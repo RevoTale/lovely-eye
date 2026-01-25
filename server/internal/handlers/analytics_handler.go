@@ -28,6 +28,7 @@ type collectRequest struct {
 	Properties  string `json:"properties"`
 	Referrer    string `json:"referrer"`
 	ScreenWidth int    `json:"screen_width"`
+	Duration    int    `json:"duration"`
 	UTMSource   string `json:"utm_source"`
 	UTMMedium   string `json:"utm_medium"`
 	UTMCampaign string `json:"utm_campaign"`
@@ -85,6 +86,7 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 			Path:        req.Path,
 			Referrer:    req.Referrer,
 			ScreenWidth: req.ScreenWidth,
+			Duration:    req.Duration,
 			UserAgent:   r.UserAgent(),
 			IP:          getClientIP(r),
 			Origin:      r.Header.Get("Origin"),
