@@ -1,5 +1,3 @@
-// This file is used by Atlas to inspect the schema from Bun models
-
 //go:build tools
 // +build tools
 

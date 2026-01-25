@@ -18,12 +18,12 @@ interface CountryTrackingSectionProps {
   geoIPStatus?: GeoIPStatus | null | undefined;
 }
 
-export function CountryTrackingSection({
+export const CountryTrackingSection = ({
   siteId,
   siteName,
   initialTrackCountry,
   geoIPStatus,
-}: CountryTrackingSectionProps): ReactElement {
+}: CountryTrackingSectionProps): ReactElement => {
   const [trackCountry, setTrackCountry] = useState(initialTrackCountry);
   const [actionError, setActionError] = useState('');
   const [updateSite, { loading: updating }] = useMutation(UpdateSiteDocument);

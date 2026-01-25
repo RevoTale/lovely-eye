@@ -30,10 +30,14 @@ type FilterInput struct {
 	Page []string `json:"page,omitempty"`
 	// Filter by country (stored country name)
 	Country []string `json:"country,omitempty"`
+	// Filter by event type (page view or predefined)
+	EventType []EventType `json:"eventType,omitempty"`
 	// Filter by event name
 	EventName []string `json:"eventName,omitempty"`
 	// Filter by event path
 	EventPath []string `json:"eventPath,omitempty"`
+	// Filter by event definition ID
+	EventDefinitionID []string `json:"eventDefinitionId,omitempty"`
 }
 
 type GeoIPCountry struct {
@@ -84,8 +88,6 @@ type Query struct {
 
 type Session struct {
 	ID string `json:"id"`
-	// True when created from an event without a page view; flipped to false after a page view arrives.
-	EventOnly bool `json:"eventOnly"`
 }
 
 type TimeBucket string

@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"sort"
@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/oschwald/geoip2-golang"
+	"github.com/oschwald/geoip2-golang/v2"
 	"github.com/oschwald/maxminddb-golang"
 )
 
@@ -48,7 +48,6 @@ type GeoIPCountry struct {
 	Name string
 }
 
-// GeoIPService provides IP geolocation capabilities.
 type GeoIPService struct {
 	reader *geoip2.Reader
 	mu     sync.RWMutex
@@ -69,8 +68,6 @@ type GeoIPService struct {
 	countriesUpdatedAt *time.Time
 }
 
-// NewGeoIPService creates a new GeoIP service.
-// The database is downloaded on demand when country tracking is enabled.
 func NewGeoIPService(cfg GeoIPConfig) (*GeoIPService, error) {
 	service := &GeoIPService{
 		dbPath:            cfg.DBPath,
@@ -582,68 +579,49 @@ func (g *GeoIPService) setStatusError(state, message string) error {
 	return errors.New(message)
 }
 
-// GetCountry returns the ISO country code for an IP address.
-func (g *GeoIPService) GetCountry(ipStr string) string {
+var ErrNoDBReader = errors.New("no IP reader")
+var UnknownCountry = Country{
+	Name:    "Unknown",
+	ISOCode: "-",
+}
+var LocalNetworkCountry = Country{
+	Name:    "Local Network",
+	ISOCode: "-",
+}
+
+type Country struct {
+	Name    string
+	ISOCode string
+}
+
+func (g *GeoIPService) ResolveCountry(ipStr string) (Country, error) {
 	g.mu.RLock()
 	defer g.mu.RUnlock()
 
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
-		return "Unknown"
+	ip, err := netip.ParseAddr(ipStr)
+	if err != nil {
+		return UnknownCountry, fmt.Errorf("failed parse country IP: %s", err.Error())
 	}
 
-	// Skip private/local IPs
-	if isPrivateIP(ip) {
-		return "Local"
+	if ip.IsPrivate() {
+		return LocalNetworkCountry, nil
 	}
 
 	if g.reader == nil {
-		return "Unknown"
+		return UnknownCountry, ErrNoDBReader
 	}
 
 	record, err := g.reader.Country(ip)
 	if err != nil {
-		return "Unknown"
+		return UnknownCountry, fmt.Errorf("failed to get country: %s", err.Error())
 	}
 
-	if record.Country.IsoCode == "" {
-		return "Unknown"
-	}
-
-	return record.Country.IsoCode
+	return Country{
+		Name:    record.Country.Names.English,
+		ISOCode: record.Country.ISOCode,
+	}, nil
 }
 
-// GetCountryName returns the country name for an IP address.
-func (g *GeoIPService) GetCountryName(ipStr string) string {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	ip := net.ParseIP(ipStr)
-	if ip == nil {
-		return "Unknown"
-	}
-
-	if isPrivateIP(ip) {
-		return "Local Network"
-	}
-
-	if g.reader == nil {
-		return "Unknown"
-	}
-
-	record, err := g.reader.Country(ip)
-	if err != nil {
-		return "Unknown"
-	}
-
-	if record.Country.Names["en"] == "" {
-		return "Unknown"
-	}
-
-	return record.Country.Names["en"]
-}
-
-// Close closes the GeoIP database reader.
 func (g *GeoIPService) Close() error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -654,12 +632,4 @@ func (g *GeoIPService) Close() error {
 		}
 	}
 	return nil
-}
-
-// isPrivateIP checks if an IP is private/local.
-func isPrivateIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsPrivate() {
-		return true
-	}
-	return false
 }

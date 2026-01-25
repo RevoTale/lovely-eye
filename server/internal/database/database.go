@@ -30,7 +30,7 @@ func New(cfg *config.DatabaseConfig) (*bun.DB, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to open sqlite: %w", err)
 		}
-		sqldb.SetMaxOpenConns(1) // SQLite doesn't support concurrent writes
+		sqldb.SetMaxOpenConns(1)
 		db = bun.NewDB(sqldb, sqlitedialect.New())
 
 	default:
@@ -42,7 +42,6 @@ func New(cfg *config.DatabaseConfig) (*bun.DB, error) {
 		bundebug.WithVerbose(false),
 	))
 
-	// Test connection
 	pingCtx := context.Background()
 	if cfg.ConnectTimeout > 0 {
 		var cancel context.CancelFunc

@@ -9,10 +9,10 @@ interface DangerZoneSectionProps {
   onDeleted: () => void;
 }
 
-export function DangerZoneSection({
+export const DangerZoneSection = ({
   siteId,
   onDeleted,
-}: DangerZoneSectionProps): ReactElement {
+}: DangerZoneSectionProps): ReactElement => {
   const SITES_PAGE_SIZE = 100;
   const SITES_PAGE_OFFSET = 0;
   const sitesPaging = { limit: SITES_PAGE_SIZE, offset: SITES_PAGE_OFFSET };

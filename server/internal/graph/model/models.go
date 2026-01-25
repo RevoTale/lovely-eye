@@ -67,7 +67,7 @@ type DailyStats struct {
 
 type RealtimeStats struct {
 	Visitors int   `json:"visitors"`
-	SiteID   int64 `json:"-"` // Internal field, not exposed in GraphQL
+	SiteID   int64 `json:"-"`
 }
 
 type RegisterInput struct {
@@ -102,6 +102,7 @@ type Event struct {
 	ID         string           `json:"id"`
 	Name       string           `json:"name"`
 	Path       string           `json:"path"`
+	Definition *EventDefinition `json:"definition,omitempty"`
 	Properties []*EventProperty `json:"properties"`
 	CreatedAt  time.Time        `json:"createdAt"`
 }
@@ -122,6 +123,13 @@ const (
 	EventFieldTypeString  EventFieldType = "STRING"
 	EventFieldTypeInt     EventFieldType = "INT"
 	EventFieldTypeBoolean EventFieldType = "BOOLEAN"
+)
+
+type EventType string
+
+const (
+	EventTypePageView   EventType = "PAGE_VIEW"
+	EventTypePredefined EventType = "PREDEFINED"
 )
 
 type EventDefinitionField struct {

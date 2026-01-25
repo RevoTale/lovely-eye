@@ -4,15 +4,33 @@ import { FilterLink } from '@/components/filter-link';
 import { EventFieldsFragmentDoc } from '@/gql/graphql';
 import type { EventCountFieldsFragment } from '@/gql/graphql';
 import { useFragment as getFragmentData } from '@/gql/fragment-masking';
+import { PaginationControls } from '@/components/pagination-controls';
 
 interface EventCountsCardProps {
   siteId: string;
   eventCounts: EventCountFieldsFragment[];
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
 const EMPTY_COUNT = 0;
+const PAGE_INCREMENT = 1;
+const ESTIMATED_TOTAL_INCREMENT = 1;
+const ESTIMATED_TOTAL_EXTRA = 0;
 
-export function EventCountsCard({ siteId, eventCounts }: EventCountsCardProps): React.JSX.Element {
+export const EventCountsCard = ({
+  siteId,
+  eventCounts,
+  page,
+  pageSize,
+  onPageChange,
+}: EventCountsCardProps): React.ReactNode => {
+  const hasNextPage = eventCounts.length === pageSize;
+  const totalEstimate = (page - PAGE_INCREMENT) * pageSize +
+    eventCounts.length +
+    (hasNextPage ? ESTIMATED_TOTAL_INCREMENT : ESTIMATED_TOTAL_EXTRA);
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader>
@@ -44,6 +62,16 @@ export function EventCountsCard({ siteId, eventCounts }: EventCountsCardProps): 
             })}
           </div>
         )}
+        {eventCounts.length > EMPTY_COUNT ? (
+          <div className="mt-4">
+            <PaginationControls
+              page={page}
+              pageSize={pageSize}
+              total={totalEstimate}
+              onPageChange={onPageChange}
+            />
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

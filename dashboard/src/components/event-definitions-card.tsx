@@ -37,13 +37,13 @@ interface EventDefinitionsCardProps {
   onDelete: (name: string) => Promise<void>;
 }
 
-export function EventDefinitionsCard({
+export const EventDefinitionsCard = ({
   definitions,
   saving,
   deleting,
   onSave,
   onDelete,
-}: EventDefinitionsCardProps): ReactElement {
+}: EventDefinitionsCardProps): ReactElement => {
   const definitionItems = useMemo(
     () => getFragmentData(EventDefinitionFieldsFragmentDoc, definitions),
     [definitions]

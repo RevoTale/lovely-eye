@@ -1,3 +1,4 @@
-h1:bnnRYJqZEuVEglJNP/KHGhlWFNO9mJsLntO0xJWT9E8=
+h1:MipcDPcPxP48sHw6PFKycHw0XmKUFT1MRFKxKpPXFZU=
 20260121204035_initial_db.up.sql h1:dZppik9Z4HgnZlPRlsvFkVX1APB5VC3bMOMJEij4m2s=
 20260122093101_add_site_domain_ordering_and_event_definition_uniques.up.sql h1:lTaJue5sAVxhSZk/sph7nzQTzBNSYBVYngtCVeKvvXk=
+20260123090000_remove_event_type.up.sql h1:B6GnF2n/Xs/ovnKHPzaFjc45+dPhC0s8lMHhbO6yEuE=

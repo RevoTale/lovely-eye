@@ -8,12 +8,12 @@ interface ListEmptyStateProps {
   className?: string;
 }
 
-export function ListEmptyState({
+export const ListEmptyState = ({
   title,
   description,
   icon: Icon,
   className,
-}: ListEmptyStateProps): React.JSX.Element {
+}: ListEmptyStateProps): React.ReactNode => {
   const hasDescription = description !== undefined && description !== '';
   const hasIcon = Icon !== undefined;
 

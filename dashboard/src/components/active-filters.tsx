@@ -19,7 +19,7 @@ interface ActiveFiltersProps {
 
 const EMPTY_COUNT = 0;
 
-export function ActiveFilters({ siteId, search }: ActiveFiltersProps): React.JSX.Element | null {
+export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.ReactNode => {
   const referrers = normalizeFilterValue(search.referrer);
   const devices = normalizeFilterValue(search.device);
   const pages = normalizeFilterValue(search.page);

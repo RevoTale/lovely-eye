@@ -13,9 +13,9 @@ interface EventDefinitionsSectionProps {
   siteId: string;
 }
 
-export function EventDefinitionsSection({
+export const EventDefinitionsSection = ({
   siteId,
-}: EventDefinitionsSectionProps): ReactElement {
+}: EventDefinitionsSectionProps): ReactElement => {
   const EVENT_DEFS_PAGE_SIZE = 100;
   const EVENT_DEFS_PAGE_OFFSET = 0;
   const paging = { limit: EVENT_DEFS_PAGE_SIZE, offset: EVENT_DEFS_PAGE_OFFSET };

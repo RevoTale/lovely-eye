@@ -33,7 +33,7 @@ interface AuthProviderProps {
   authErrorHandlerRef?: RefObject<(() => void) | null>;
 }
 
-export function AuthProvider({ children, authErrorHandlerRef }: AuthProviderProps): React.JSX.Element {
+export const AuthProvider = ({ children, authErrorHandlerRef }: AuthProviderProps): React.ReactNode => {
   const authErrorHandledRef = useRef(false);
   const client = useApolloClient();
 

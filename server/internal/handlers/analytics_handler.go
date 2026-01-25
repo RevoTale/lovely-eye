@@ -24,22 +24,16 @@ func NewAnalyticsHandler(analyticsService *services.AnalyticsService, siteServic
 type collectRequest struct {
 	SiteKey     string `json:"site_key"`
 	Path        string `json:"path"`
-	Title       string `json:"title"`
+	Name        string `json:"name"`
+	Properties  string `json:"properties"`
 	Referrer    string `json:"referrer"`
 	ScreenWidth int    `json:"screen_width"`
+	Duration    int    `json:"duration"`
 	UTMSource   string `json:"utm_source"`
 	UTMMedium   string `json:"utm_medium"`
 	UTMCampaign string `json:"utm_campaign"`
 }
 
-type eventRequest struct {
-	SiteKey    string `json:"site_key"`
-	Name       string `json:"name"`
-	Path       string `json:"path"`
-	Properties string `json:"properties"`
-}
-
-// Collect handles page view tracking (public endpoint)
 func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodOptions {
 		h.handleAnalyticsPreflight(w, r)
@@ -52,8 +46,8 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.SiteKey == "" || req.Path == "" {
-		respondError(w, http.StatusBadRequest, "site_key and path are required")
+	if req.SiteKey == "" {
+		respondError(w, http.StatusBadRequest, "site_key is required")
 		return
 	}
 
@@ -62,54 +56,6 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.analyticsService.CollectPageView(r.Context(), services.CollectInput{
-		SiteKey:     req.SiteKey,
-		Path:        req.Path,
-		Title:       req.Title,
-		Referrer:    req.Referrer,
-		ScreenWidth: req.ScreenWidth,
-		UserAgent:   r.UserAgent(),
-		IP:          getClientIP(r),
-		Origin:      r.Header.Get("Origin"),
-		Referer:     r.Header.Get("Referer"),
-		UTMSource:   req.UTMSource,
-		UTMMedium:   req.UTMMedium,
-		UTMCampaign: req.UTMCampaign,
-	})
-
-	if err != nil {
-		// Don't expose errors to tracking clients
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// Event handles custom event tracking (public endpoint)
-func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodOptions {
-		h.handleAnalyticsPreflight(w, r)
-		return
-	}
-
-	var req eventRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		respondError(w, http.StatusBadRequest, "Invalid request body")
-		return
-	}
-
-	if req.SiteKey == "" || req.Name == "" {
-		respondError(w, http.StatusBadRequest, "site_key and name are required")
-		return
-	}
-
-	if !h.applyAnalyticsCORS(w, r, req.SiteKey) {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
-
-	// Validate properties is a valid JSON object if provided
 	if req.Properties != "" {
 		var props map[string]interface{}
 		if err := json.Unmarshal([]byte(req.Properties), &props); err != nil {
@@ -118,16 +64,38 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := h.analyticsService.CollectEvent(r.Context(), services.EventInput{
-		SiteKey:    req.SiteKey,
-		Name:       req.Name,
-		Path:       req.Path,
-		Properties: req.Properties,
-		UserAgent:  r.UserAgent(),
-		IP:         getClientIP(r),
-		Origin:     r.Header.Get("Origin"),
-		Referer:    r.Header.Get("Referer"),
-	})
+	var err error
+	if req.Name != "" {
+		err = h.analyticsService.CollectEvent(r.Context(), services.EventInput{
+			SiteKey:    req.SiteKey,
+			Name:       req.Name,
+			Path:       req.Path,
+			Properties: req.Properties,
+			UserAgent:  r.UserAgent(),
+			IP:         getClientIP(r),
+			Origin:     r.Header.Get("Origin"),
+			Referer:    r.Header.Get("Referer"),
+		})
+	} else {
+		if req.Path == "" {
+			respondError(w, http.StatusBadRequest, "path is required")
+			return
+		}
+		err = h.analyticsService.CollectPageView(r.Context(), services.CollectInput{
+			SiteKey:     req.SiteKey,
+			Path:        req.Path,
+			Referrer:    req.Referrer,
+			ScreenWidth: req.ScreenWidth,
+			Duration:    req.Duration,
+			UserAgent:   r.UserAgent(),
+			IP:          getClientIP(r),
+			Origin:      r.Header.Get("Origin"),
+			Referer:     r.Header.Get("Referer"),
+			UTMSource:   req.UTMSource,
+			UTMMedium:   req.UTMMedium,
+			UTMCampaign: req.UTMCampaign,
+		})
+	}
 
 	if err != nil {
 		w.WriteHeader(http.StatusNoContent)
@@ -135,6 +103,10 @@ func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AnalyticsHandler) Event(w http.ResponseWriter, r *http.Request) {
+	h.Collect(w, r)
 }
 
 func (h *AnalyticsHandler) handleAnalyticsPreflight(w http.ResponseWriter, r *http.Request) {
@@ -181,13 +153,10 @@ func respondError(w http.ResponseWriter, status int, message string) {
 	http.Error(w, message, status)
 }
 
-// getClientIP extracts the real client IP address from the request
-// Handles X-Forwarded-For header (takes first IP) and strips port from RemoteAddr
 func getClientIP(r *http.Request) string {
-	// X-Forwarded-For can contain multiple IPs: "client-ip, proxy1-ip, proxy2-ip"
-	// We want the first one (the original client IP)
+
 	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-		// Take the first IP in the list
+
 		ips := strings.Split(forwarded, ",")
 		if len(ips) > 0 {
 			ip := strings.TrimSpace(ips[0])
@@ -197,17 +166,13 @@ func getClientIP(r *http.Request) string {
 		}
 	}
 
-	// Try X-Real-IP header
 	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
 		return realIP
 	}
 
-	// Fall back to RemoteAddr, but strip the port
-	// RemoteAddr format is "IP:port" or "[IPv6]:port"
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		// If SplitHostPort fails, return RemoteAddr as-is
-		// This handles cases where RemoteAddr is just an IP without port
+
 		return r.RemoteAddr
 	}
 	return ip

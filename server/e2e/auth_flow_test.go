@@ -22,12 +22,10 @@ import (
 func TestAuthFlowWithCookies(t *testing.T) {
 	ts := newTestServer(t)
 
-	// Create HTTP client with cookie jar (simulates browser)
 	jar, err := cookiejar.New(nil)
 	require.NoError(t, err)
 	client := &http.Client{Jar: jar}
 
-	// STEP 1: Register a user
 	t.Log("STEP 1: Register user")
 	registerMutation := `{
 		"query": "mutation Register($input: RegisterInput!) { register(input: $input) { user { id username role } } }",
@@ -37,7 +35,6 @@ func TestAuthFlowWithCookies(t *testing.T) {
 	registerResp := mustGraphQL(t, client, ts.httpServer.URL+"/graphql", registerMutation)
 	t.Logf("Register response: %s", registerResp)
 
-	// STEP 2: Login
 	t.Log("\nSTEP 2: User logs in via mutation")
 	loginMutation := `{
 		"query": "mutation Login($input: LoginInput!) { login(input: $input) { user { id username role } } }",
@@ -47,7 +44,6 @@ func TestAuthFlowWithCookies(t *testing.T) {
 	loginResp := mustGraphQL(t, client, ts.httpServer.URL+"/graphql", loginMutation)
 	t.Logf("Login response: %s", loginResp)
 
-	// Check cookies were set
 	testURL := ts.httpServer.URL
 	parsedURL, _ := http.NewRequest("GET", testURL, nil)
 	cookies := jar.Cookies(parsedURL.URL)
@@ -65,23 +61,20 @@ func TestAuthFlowWithCookies(t *testing.T) {
 	// NOTE: No CSRF tokens needed! Modern auth uses HttpOnly + Secure cookies with SameSite
 	// See https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
 
-	// STEP 3: Simulate page reload - ME query with cookies
 	t.Log("\nSTEP 3: Page reloads, ME query runs (cookies auto-included)")
 	meQuery := `{"query": "query { me { id username role } }"}`
 
-	// Create request with cookies (client will auto-add them)
 	req, err := http.NewRequest(http.MethodPost, ts.httpServer.URL+"/graphql", bytes.NewBufferString(meQuery))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Origin", ts.httpServer.URL)
 
-	// Make request (cookies will be auto-attached by jar)
 	meResp, err := client.Do(req)
 	require.NoError(t, err)
-	defer func ()  {
+	defer func() {
 		err := meResp.Body.Close()
 		if nil != err {
-			slog.Error("body close err","error",err)
+			slog.Error("body close err", "error", err)
 		}
 	}()
 
@@ -89,7 +82,6 @@ func TestAuthFlowWithCookies(t *testing.T) {
 	t.Logf("ME query status: %d", meResp.StatusCode)
 	t.Logf("ME query response: %s", string(meBody))
 
-	// Parse response
 	var meResponse struct {
 		Data struct {
 			Me *struct {
@@ -124,7 +116,7 @@ func TestAuthFlowWithCookies(t *testing.T) {
 	require.NoError(t, err)
 	body2, _ := io.ReadAll(resp2.Body)
 	err = resp2.Body.Close()
-	require.NoError(t,err)
+	require.NoError(t, err)
 
 	t.Logf("Mutation status: %d, body: %s", resp2.StatusCode, string(body2))
 	assert.Equal(t, http.StatusOK, resp2.StatusCode, "Authenticated mutation should succeed")
@@ -141,11 +133,11 @@ func mustGraphQL(t *testing.T, client *http.Client, url, query string) string {
 
 	resp, err := client.Do(req)
 	require.NoError(t, err)
-	defer func ()  {
-	err:=	resp.Body.Close()
-	if nil != err {
-		slog.Error("gql resp close failed","error",err)
-	}
+	defer func() {
+		err := resp.Body.Close()
+		if nil != err {
+			slog.Error("gql resp close failed", "error", err)
+		}
 	}()
 
 	body, _ := io.ReadAll(resp.Body)

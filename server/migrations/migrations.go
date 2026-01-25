@@ -13,7 +13,7 @@ import (
 var sqlMigrations embed.FS
 
 func NewMigrations() (*migrate.Migrations, error) {
-	// Determine database driver from environment
+
 	driver := os.Getenv("DB_DRIVER")
 	if driver == "" {
 		driver = "sqlite"
@@ -24,7 +24,6 @@ func NewMigrations() (*migrate.Migrations, error) {
 	var migrationFS fs.FS
 	var err error
 
-	// Load migrations for the appropriate database
 	switch driver {
 	case "postgres":
 		migrationFS, err = fs.Sub(sqlMigrations, "postgres")

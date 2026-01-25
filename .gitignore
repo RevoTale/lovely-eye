@@ -28,9 +28,9 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
-
+.idea/
+.vscode/
+.DS_Store
 # Development symlinks for dashboard files
 server/dashboard
 server/e2e/dashboard

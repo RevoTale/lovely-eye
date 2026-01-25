@@ -36,6 +36,9 @@ interface AnalyticsContentProps {
   eventsPage: number;
   eventsPageSize: number;
   onEventsPageChange: (page: number) => void;
+  eventsCountsPage: number;
+  eventsCountsPageSize: number;
+  onEventsCountsPageChange: (page: number) => void;
   topPages: PageStatsFieldsFragment[];
   topPagesTotal: number;
   topPagesPage: number;
@@ -64,10 +67,11 @@ interface AnalyticsContentProps {
   onDevicesPageChange: (page: number) => void;
 }
 
-export function AnalyticsContent(props: AnalyticsContentProps): React.JSX.Element {
+export const AnalyticsContent = (props: AnalyticsContentProps): React.ReactNode => {
   const {
     siteId, stats, dateRange, filter, chartBucket, onChartBucketChange, realtime,
     eventsLoading, eventsResult, eventsCounts, eventsPage, eventsPageSize, onEventsPageChange,
+    eventsCountsPage, eventsCountsPageSize, onEventsCountsPageChange,
     topPages, topPagesTotal, topPagesPage, topPagesPageSize, topPagesLoading = false, onTopPagesPageChange,
     referrers, referrersTotal, referrersPage, referrersPageSize, referrersLoading = false, onReferrersPageChange,
     countries, countriesTotal, countriesTotalVisitors, countriesPage, countriesPageSize, countriesLoading = false, onCountriesPageChange,
@@ -124,6 +128,9 @@ export function AnalyticsContent(props: AnalyticsContentProps): React.JSX.Elemen
         page={eventsPage}
         pageSize={eventsPageSize}
         onPageChange={onEventsPageChange}
+        countsPage={eventsCountsPage}
+        countsPageSize={eventsCountsPageSize}
+        onCountsPageChange={onEventsCountsPageChange}
       />
 
       <div className="grid gap-6 md:grid-cols-2">

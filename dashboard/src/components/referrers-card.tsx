@@ -26,7 +26,7 @@ const DIRECT_LABEL = '(direct)';
 const DIRECT_REFERRER_LABEL = 'Direct / None';
 const FIRST_INDEX = 0;
 
-export function ReferrersCard({
+export const ReferrersCard = ({
   referrers,
   totalCount,
   totalVisitors,
@@ -35,7 +35,7 @@ export function ReferrersCard({
   pageSize,
   onPageChange,
   loading = false,
-}: ReferrersCardProps): React.JSX.Element {
+}: ReferrersCardProps): React.ReactNode => {
   if (loading) {
     return <BoardCardSkeleton title="Top Referrers" icon={Globe} />;
   }

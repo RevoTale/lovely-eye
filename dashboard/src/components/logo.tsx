@@ -8,14 +8,12 @@ interface LogoProps {
 const DEFAULT_LOGO_SIZE = 24;
 const LOGO_SRC = '/favicon.svg';
 
-export function Logo({ className, size = DEFAULT_LOGO_SIZE }: LogoProps): React.JSX.Element {
-  return (
-    <img
-      src={LOGO_SRC}
-      alt="Lovely Eye"
-      width={size}
-      height={size}
-      className={className}
-    />
-  );
-}
+export const Logo = ({ className, size = DEFAULT_LOGO_SIZE }: LogoProps): React.ReactNode => (
+  <img
+    src={LOGO_SRC}
+    alt="Lovely Eye"
+    width={size}
+    height={size}
+    className={className}
+  />
+)

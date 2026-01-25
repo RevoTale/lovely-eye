@@ -30,7 +30,7 @@ const MIN_NAME_LENGTH = 1;
 const MAX_NAME_LENGTH = 100;
 const SECONDARY_DOMAIN_START = 2;
 
-export function SiteInfoCard({
+export const SiteInfoCard = ({
   isNew,
   initialName,
   initialDomains,
@@ -39,7 +39,7 @@ export function SiteInfoCard({
   onCreate,
   onSaveDomains,
   onCancel,
-}: SiteInfoCardProps): ReactElement {
+}: SiteInfoCardProps): ReactElement => {
   const [name, setName] = useState(initialName);
   const [formError, setFormError] = useState('');
   const nextDomainIdRef = useRef(

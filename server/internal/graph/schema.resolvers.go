@@ -22,7 +22,15 @@ import (
 // TopPages is the resolver for the topPages field.
 func (r *dashboardStatsResolver) TopPages(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedPageStats, error) {
 	limit, offset := normalizePaging(paging)
-	stats, total, err := r.AnalyticsService.GetTopPagesWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  limit,
+		Offset: offset,
+		Filter: obj.Filter,
+	}
+	stats, total, err := r.AnalyticsService.GetTopPagesWithFilterPaged(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get top pages: %w", err)
 	}
@@ -45,7 +53,15 @@ func (r *dashboardStatsResolver) TopPages(ctx context.Context, obj *model.Dashbo
 // TopReferrers is the resolver for the topReferrers field.
 func (r *dashboardStatsResolver) TopReferrers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedReferrerStats, error) {
 	limit, offset := normalizePaging(paging)
-	stats, total, err := r.AnalyticsService.GetTopReferrersWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  limit,
+		Offset: offset,
+		Filter: obj.Filter,
+	}
+	stats, total, err := r.AnalyticsService.GetTopReferrersWithFilterPaged(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get top referrers: %w", err)
 	}
@@ -67,7 +83,15 @@ func (r *dashboardStatsResolver) TopReferrers(ctx context.Context, obj *model.Da
 // Browsers is the resolver for the browsers field.
 func (r *dashboardStatsResolver) Browsers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) ([]*model.BrowserStats, error) {
 	limit, offset := normalizePaging(paging)
-	stats, err := r.AnalyticsService.GetBrowserStatsWithFilter(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  limit,
+		Offset: offset,
+		Filter: obj.Filter,
+	}
+	stats, err := r.AnalyticsService.GetBrowserStatsWithFilter(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get browser stats: %w", err)
 	}
@@ -85,7 +109,15 @@ func (r *dashboardStatsResolver) Browsers(ctx context.Context, obj *model.Dashbo
 // Devices is the resolver for the devices field.
 func (r *dashboardStatsResolver) Devices(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedDeviceStats, error) {
 	limit, offset := normalizePaging(paging)
-	stats, total, totalVisitors, err := r.AnalyticsService.GetDeviceStatsWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  limit,
+		Offset: offset,
+		Filter: obj.Filter,
+	}
+	stats, total, totalVisitors, err := r.AnalyticsService.GetDeviceStatsWithFilterPaged(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get device stats: %w", err)
 	}
@@ -108,7 +140,15 @@ func (r *dashboardStatsResolver) Devices(ctx context.Context, obj *model.Dashboa
 // Countries is the resolver for the countries field.
 func (r *dashboardStatsResolver) Countries(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedCountryStats, error) {
 	limit, offset := normalizePaging(paging)
-	stats, total, totalVisitors, err := r.AnalyticsService.GetCountryStatsWithFilterPaged(ctx, obj.SiteID, obj.From, obj.To, limit, offset, obj.Filter)
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  limit,
+		Offset: offset,
+		Filter: obj.Filter,
+	}
+	stats, total, totalVisitors, err := r.AnalyticsService.GetCountryStatsWithFilterPaged(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get country stats: %w", err)
 	}
@@ -148,37 +188,40 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 		pointLimit = clampLimit(*limit, maxTimeSeriesPoints)
 	}
 
-	stats, err := r.AnalyticsService.GetTimeSeriesStatsWithFilter(ctx, obj.SiteID, obj.From, obj.To, selectedBucket, pointLimit, obj.Filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get time series stats: %w", err)
-	}
-
-	if pointLimit > 0 {
-		reverseDailyStats(stats)
-	}
-
-	items := make([]*model.DailyStats, 0, len(stats))
-	for _, stat := range stats {
-		items = append(items, &model.DailyStats{
-			Date:      time.Unix(stat.DateBucket, 0), // Convert integer bucket to timestamp here
-			Visitors:  stat.Visitors,
-			PageViews: stat.PageViews,
-			Sessions:  stat.Sessions,
-		})
-	}
-
-	// Apply offset pagination
 	offsetValue := 0
 	if offset != nil {
 		offsetValue = *offset
 	}
 
-	if offsetValue >= len(items) {
-		return []*model.DailyStats{}, nil
+	query := services.AnalyticsQuery{
+		SiteID: obj.SiteID,
+		From:   obj.From,
+		To:     obj.To,
+		Limit:  pointLimit,
+		Offset: offsetValue,
+		Bucket: selectedBucket,
+		Filter: obj.Filter,
+	}
+	stats, err := r.AnalyticsService.GetTimeSeriesStatsWithFilter(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get time series stats: %w", err)
 	}
 
-	if offsetValue > 0 {
-		items = items[offsetValue:]
+	items := make([]*model.DailyStats, 0, len(stats))
+	for _, stat := range stats {
+		bucketSeconds := stat.DateBucket
+		switch selectedBucket {
+		case services.TimeBucketDaily:
+			bucketSeconds = stat.DateBucket * 86400
+		case services.TimeBucketHourly:
+			bucketSeconds = stat.DateBucket * 3600
+		}
+		items = append(items, &model.DailyStats{
+			Date:      time.Unix(bucketSeconds, 0),
+			Visitors:  stat.Visitors,
+			PageViews: stat.PageViews,
+			Sessions:  stat.Sessions,
+		})
 	}
 
 	return items, nil
@@ -494,16 +537,13 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 		return nil, errors.New("invalid site ID")
 	}
 
-	// Verify ownership
 	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
-	// Parse date range
 	from, to := parseDateRangeInput(dateRange)
 
-	// Parse filters
 	var filterOpts services.DashboardFilter
 	if filter != nil {
 		if filter.Referrer != nil {
@@ -533,7 +573,12 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 		}
 	}
 
-	stats, err := r.AnalyticsService.GetDashboardOverviewWithFilter(ctx, id, from, to, filterOpts)
+	stats, err := r.AnalyticsService.GetDashboardOverviewWithFilter(ctx, services.AnalyticsQuery{
+		SiteID: id,
+		From:   from,
+		To:     to,
+		Filter: filterOpts,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dashboard overview: %w", err)
 	}
@@ -563,7 +608,6 @@ func (r *queryResolver) Realtime(ctx context.Context, siteID string) (*model.Rea
 		return nil, errors.New("invalid site ID")
 	}
 
-	// Verify ownership
 	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get site: %w", err)
@@ -640,16 +684,13 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 		return nil, errors.New("invalid site ID")
 	}
 
-	// Verify ownership
 	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
-	// Parse date range
 	from, to := parseDateRangeInput(dateRange)
 
-	// Default pagination
 	lim := defaultEventsPage
 	off := 0
 	if limit != nil {
@@ -663,15 +704,21 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 		off = 0
 	}
 
-	// Get filters
-	referrer, device, page, country, eventName, eventPath := parseFilterInput(filter)
+	filterOpts := parseFilterInput(filter)
 
 	var events []*models.Event
 	var total int
-	if filter == nil || (len(referrer) == 0 && len(device) == 0 && len(page) == 0 && len(country) == 0 && len(eventName) == 0 && len(eventPath) == 0) {
+	if filter == nil || isFilterEmpty(filterOpts) {
 		events, total, err = r.AnalyticsService.GetEventsWithTotal(ctx, id, from, to, lim, off)
 	} else {
-		events, total, err = r.AnalyticsService.GetEventsWithTotalAndFilter(ctx, id, from, to, referrer, device, page, country, eventName, eventPath, lim, off)
+		events, total, err = r.AnalyticsService.GetEventsWithTotalAndFilter(ctx, services.AnalyticsQuery{
+			SiteID: id,
+			From:   from,
+			To:     to,
+			Limit:  lim,
+			Offset: off,
+			Filter: filterOpts,
+		})
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events: %w", err)
@@ -692,26 +739,29 @@ func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRang
 		return nil, errors.New("invalid site ID")
 	}
 
-	// Verify ownership
 	_, err = r.SiteService.GetByID(ctx, id, claims.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
-	// Parse date range
 	from, to := parseDateRangeInput(dateRange)
 
 	limit, offset := normalizePaging(paging)
 
-	// Get filters
-	referrer, device, page, country, eventName, eventPath := parseFilterInput(filter)
+	filterOpts := parseFilterInput(filter)
 
-	eventCounts, err := r.AnalyticsService.GetEventCounts(ctx, id, from, to, referrer, device, page, country, eventName, eventPath, limit, offset)
+	eventCounts, err := r.AnalyticsService.GetEventCounts(ctx, services.AnalyticsQuery{
+		SiteID: id,
+		From:   from,
+		To:     to,
+		Limit:  limit,
+		Offset: offset,
+		Filter: filterOpts,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get event counts: %w", err)
 	}
 
-	// Convert to GraphQL type
 	result := make([]*model.EventCount, 0, len(eventCounts))
 	for _, ec := range eventCounts {
 		result = append(result, &model.EventCount{
@@ -757,7 +807,6 @@ func (r *realtimeStatsResolver) ActivePages(ctx context.Context, obj *model.Real
 		return nil, fmt.Errorf("failed to get active pages: %w", err)
 	}
 
-	// Convert to GraphQL model
 	pages := make([]*model.ActivePageStats, len(activePages))
 	for i, page := range activePages {
 		pages[i] = &model.ActivePageStats{
@@ -785,42 +834,3 @@ type dashboardStatsResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type realtimeStatsResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-/*
-	func (r *userResolver) Sites(ctx context.Context, obj *model.User, paging model.PagingInput) ([]*model.Site, error) {
-	claims := auth.GetUserFromContext(ctx)
-	if claims == nil {
-		return nil, errors.New("unauthorized")
-	}
-
-	userID, err := strconv.ParseInt(obj.ID, 10, 64)
-	if err != nil {
-		return nil, errors.New("invalid user ID")
-	}
-
-	if claims.UserID != userID {
-		return nil, errors.New("unauthorized")
-	}
-
-	limit, offset := normalizePagingWithMax(paging, maxSitesPageSize)
-	sites, err := r.SiteService.GetUserSites(ctx, userID, limit, offset)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get user sites: %w", err)
-	}
-
-	result := make([]*model.Site, 0, len(sites))
-	for _, site := range sites {
-		result = append(result, buildGraphQLSite(site))
-	}
-
-	return result, nil
-}
-func (r *Resolver) User() UserResolver { return &userResolver{r} }
-type userResolver struct{ *Resolver }
-*/

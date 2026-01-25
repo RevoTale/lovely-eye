@@ -11,7 +11,7 @@ interface DashboardHeaderProps {
   realtime: FragmentType<typeof RealtimeStatsFieldsFragmentDoc> | undefined;
 }
 
-export function DashboardHeader({ site, siteId, realtime }: DashboardHeaderProps): React.JSX.Element {
+export const DashboardHeader = ({ site, siteId, realtime }: DashboardHeaderProps): React.ReactNode => {
   const EMPTY_COUNT = 0;
   const ZERO_VISITORS = 0;
   const siteData = getFragmentData(SiteDetailsFieldsFragmentDoc, site);

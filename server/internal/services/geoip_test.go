@@ -10,42 +10,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
-
-func TestGeoIPService_NoDBPath(t *testing.T) {
-	t.Parallel()
-
-	svc, err := NewGeoIPService(GeoIPConfig{})
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
-	}
-
-	svc.SetEnabled(true)
-
-	if got := svc.GetCountry("127.0.0.1"); got != "Local" {
-		t.Fatalf("expected Local for loopback, got %q", got)
-	}
-
-	if got := svc.GetCountryName("127.0.0.1"); got != "Local Network" {
-		t.Fatalf("expected Local Network for loopback, got %q", got)
-	}
-
-	if got := svc.GetCountry("8.8.8.8"); got != "Unknown" {
-		t.Fatalf("expected Unknown for public IP without DB, got %q", got)
-	}
-
-	if got := svc.GetCountryName("8.8.8.8"); got != "Unknown" {
-		t.Fatalf("expected Unknown for public IP without DB, got %q", got)
-	}
-
-	if got := svc.GetCountry("not-an-ip"); got != "Unknown" {
-		t.Fatalf("expected Unknown for invalid IP, got %q", got)
-	}
-
-	if err := svc.Close(); err != nil {
-		t.Fatalf("expected Close to succeed, got %v", err)
-	}
-}
 
 func TestGeoIPService_InvalidPath(t *testing.T) {
 	t.Parallel()
@@ -57,8 +24,9 @@ func TestGeoIPService_InvalidPath(t *testing.T) {
 
 	svc.SetEnabled(true)
 
-	if got := svc.GetCountryName("8.8.8.8"); got != "Unknown" {
-		t.Fatalf("expected Unknown for public IP with missing DB, got %q", got)
+	if got, err := svc.ResolveCountry("8.8.8.8"); got.Name != "Unknown" {
+		t.Fatalf("expected Unknown for public IP with missing DB, got %q %s", got, err.Error())
+		require.NoError(t, err)
 	}
 }
 

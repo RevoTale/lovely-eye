@@ -1,5 +1,12 @@
 const FIRST_PAGE = 1;
-const PAGINATION_KEYS = new Set(['eventsPage', 'topPagesPage', 'referrersPage', 'devicesPage', 'countriesPage']);
+const PAGINATION_KEYS = new Set([
+  'eventsPage',
+  'eventsCountsPage',
+  'topPagesPage',
+  'referrersPage',
+  'devicesPage',
+  'countriesPage',
+]);
 
 export function clearPaginationParams(prev: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(

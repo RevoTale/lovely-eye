@@ -15,13 +15,12 @@ func isTrackerPath(path string) bool {
 
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Analytics endpoints handle their own CORS in the handler
+
 		if isAnalyticsPath(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// tracker.js sets its own CORS headers
 		if isTrackerPath(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
@@ -29,7 +28,7 @@ func CORS(next http.Handler) http.Handler {
 
 		origin := r.Header.Get("Origin")
 		if origin != "" {
-			// Only allow same-origin requests for GraphQL/dashboard API
+
 			if isSameOrigin(origin, r.Host) {
 				w.Header().Set("Access-Control-Allow-Origin", origin)
 				w.Header().Set("Access-Control-Allow-Credentials", "true")

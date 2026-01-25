@@ -7,6 +7,7 @@ import { createEmptyDashboardStats } from '@/lib/dashboard-utils';
 const EMPTY_COUNT = 0;
 const FIRST_PAGE = 1;
 const EVENTS_PAGE_SIZE = 5;
+const EVENTS_COUNTS_PAGE_SIZE = 20;
 const TOP_PAGES_PAGE_SIZE = 5;
 const REFERRERS_PAGE_SIZE = 5;
 const DEVICES_PAGE_SIZE = 6;
@@ -22,7 +23,7 @@ interface AnalyticsSkeletonProps {
   onPageChange: (key: string, page: number) => void;
 }
 
-export function AnalyticsSkeleton({
+export const AnalyticsSkeleton = ({
   siteId,
   dateRangeForChart,
   filter,
@@ -30,7 +31,7 @@ export function AnalyticsSkeleton({
   realtime,
   onStatsBucketChange,
   onPageChange,
-}: AnalyticsSkeletonProps): React.JSX.Element {
+}: AnalyticsSkeletonProps): React.ReactNode => {
   const emptyStats = makeFragmentData(createEmptyDashboardStats(), DashboardStatsFieldsFragmentDoc);
 
   return (
@@ -49,6 +50,11 @@ export function AnalyticsSkeleton({
       eventsPageSize={EVENTS_PAGE_SIZE}
       onEventsPageChange={(page) => {
         onPageChange('eventsPage', page);
+      }}
+      eventsCountsPage={FIRST_PAGE}
+      eventsCountsPageSize={EVENTS_COUNTS_PAGE_SIZE}
+      onEventsCountsPageChange={(page) => {
+        onPageChange('eventsCountsPage', page);
       }}
       topPages={[]}
       topPagesTotal={EMPTY_COUNT}

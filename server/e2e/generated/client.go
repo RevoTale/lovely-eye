@@ -355,6 +355,18 @@ var AllEventFieldType = []EventFieldType{
 	EventFieldTypeBoolean,
 }
 
+type EventType string
+
+const (
+	EventTypePageView   EventType = "PAGE_VIEW"
+	EventTypePredefined EventType = "PREDEFINED"
+)
+
+var AllEventType = []EventType{
+	EventTypePageView,
+	EventTypePredefined,
+}
+
 // EventsEventsEventsResult includes the requested fields of the GraphQL type EventsResult.
 type EventsEventsEventsResult struct {
 	Events []EventsEventsEventsResultEventsEvent `json:"events"`
@@ -426,10 +438,14 @@ type FilterInput struct {
 	Page []string `json:"page"`
 	// Filter by country (stored country name)
 	Country []string `json:"country"`
+	// Filter by event type (page view or predefined)
+	EventType []EventType `json:"eventType"`
 	// Filter by event name
 	EventName []string `json:"eventName"`
 	// Filter by event path
 	EventPath []string `json:"eventPath"`
+	// Filter by event definition ID
+	EventDefinitionId []string `json:"eventDefinitionId"`
 }
 
 // GetReferrer returns FilterInput.Referrer, and is useful for accessing the field via an interface.
@@ -444,11 +460,17 @@ func (v *FilterInput) GetPage() []string { return v.Page }
 // GetCountry returns FilterInput.Country, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetCountry() []string { return v.Country }
 
+// GetEventType returns FilterInput.EventType, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetEventType() []EventType { return v.EventType }
+
 // GetEventName returns FilterInput.EventName, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetEventName() []string { return v.EventName }
 
 // GetEventPath returns FilterInput.EventPath, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetEventPath() []string { return v.EventPath }
+
+// GetEventDefinitionId returns FilterInput.EventDefinitionId, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetEventDefinitionId() []string { return v.EventDefinitionId }
 
 type LoginInput struct {
 	Username string `json:"username"`

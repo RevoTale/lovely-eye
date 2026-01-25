@@ -135,7 +135,7 @@ func TestGetAvgSessionDuration_EmptyResult(t *testing.T) {
 			setup: func() {
 				clientID := createTestClient(t, db, site.ID, "hash1", "desktop", "Chrome", "Windows")
 				sessionTime := now.Add(-1 * time.Hour)
-				// Bounce session: page_view_count = 1
+
 				insertSession(t, db, site.ID, clientID, sessionTime, 10, 1)
 			},
 		},
@@ -175,7 +175,6 @@ func TestGetAvgSessionDuration_WithSessions(t *testing.T) {
 	from := now.Add(-24 * time.Hour)
 	to := now
 
-	// Insert test sessions (non-bounce sessions: page_view_count > 1)
 	client1 := createTestClient(t, db, site.ID, "hash1", "desktop", "Chrome", "Windows")
 	insertSession(t, db, site.ID, client1, now.Add(-2*time.Hour), 60, 2)
 
@@ -207,19 +206,17 @@ func TestGetAvgSessionDuration_ExcludesBounces(t *testing.T) {
 	from := now.Add(-24 * time.Hour)
 	to := now
 
-	// Insert non-bounce and bounce sessions
 	client1 := createTestClient(t, db, site.ID, "hash1", "desktop", "Chrome", "Windows")
-	insertSession(t, db, site.ID, client1, now.Add(-2*time.Hour), 100, 2) // non-bounce: page_view_count = 2
+	insertSession(t, db, site.ID, client1, now.Add(-2*time.Hour), 100, 2)
 
 	client2 := createTestClient(t, db, site.ID, "hash2", "mobile", "Safari", "iOS")
-	insertSession(t, db, site.ID, client2, now.Add(-3*time.Hour), 1000, 1) // bounce: page_view_count = 1
+	insertSession(t, db, site.ID, client2, now.Add(-3*time.Hour), 1000, 1)
 
 	got, err := repo.GetAvgSessionDuration(ctx, site.ID, from, to)
 	if err != nil {
 		t.Fatalf("GetAvgSessionDuration() error = %v", err)
 	}
 
-	// Should only include the non-bounce session
 	want := 100.0
 	if got != want {
 		t.Errorf("GetAvgSessionDuration() = %v, want %v (bounce sessions should be excluded)", got, want)
@@ -252,7 +249,7 @@ func TestGetAvgSessionDurationWithFilter_EmptyResult(t *testing.T) {
 			name:     "filter matches no sessions",
 			referrer: stringPtr("nonexistent.com"),
 			setup: func() {
-				// Create client and session with different referrer
+
 				clientID := createTestClient(t, db, site.ID, "hash1", "desktop", "Chrome", "Windows")
 				enterTime := now.Add(-1 * time.Hour).Unix()
 				exitTime := enterTime + 100
@@ -284,7 +281,16 @@ func TestGetAvgSessionDurationWithFilter_EmptyResult(t *testing.T) {
 				pages = []string{*tt.page}
 			}
 
-			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, referrers, devices, pages, nil, nil, nil)
+			got, err := repo.GetAvgSessionDurationWithFilter(ctx, AnalyticsQuery{
+				SiteID: site.ID,
+				From:   from,
+				To:     to,
+				Filter: AnalyticsFilter{
+					Referrer: referrers,
+					Device:   devices,
+					Page:     pages,
+				},
+			})
 			fmt.Println(got)
 			if err != nil {
 				t.Errorf("GetAvgSessionDurationWithFilter() error = %v, want nil", err)
@@ -307,8 +313,6 @@ func TestGetAvgSessionDurationWithFilter_WithData(t *testing.T) {
 	from := now.Add(-24 * time.Hour)
 	to := now
 
-	// Insert sessions with different referrers and devices
-	// Session 1: desktop, google.com referrer
 	client1 := createTestClient(t, db, site.ID, "hash1", "desktop", "Chrome", "Windows")
 	enterTime1 := now.Add(-2 * time.Hour).Unix()
 	exitTime1 := enterTime1 + 60
@@ -320,7 +324,6 @@ func TestGetAvgSessionDurationWithFilter_WithData(t *testing.T) {
 		t.Fatalf("failed to insert session 1: %v", err)
 	}
 
-	// Session 2: mobile, no referrer
 	client2 := createTestClient(t, db, site.ID, "hash2", "mobile", "Safari", "iOS")
 	enterTime2 := now.Add(-3 * time.Hour).Unix()
 	exitTime2 := enterTime2 + 120
@@ -370,7 +373,16 @@ func TestGetAvgSessionDurationWithFilter_WithData(t *testing.T) {
 				pages = []string{*tt.page}
 			}
 
-			got, err := repo.GetAvgSessionDurationWithFilter(ctx, site.ID, from, to, referrers, devices, pages, nil, nil, nil)
+			got, err := repo.GetAvgSessionDurationWithFilter(ctx, AnalyticsQuery{
+				SiteID: site.ID,
+				From:   from,
+				To:     to,
+				Filter: AnalyticsFilter{
+					Referrer: referrers,
+					Device:   devices,
+					Page:     pages,
+				},
+			})
 			if err != nil {
 				t.Errorf("GetAvgSessionDurationWithFilter() error = %v", err)
 			}

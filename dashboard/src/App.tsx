@@ -5,12 +5,12 @@ import { createApolloClient } from '@/lib/apollo';
 import { AuthProvider, useAuth } from '@/hooks';
 import { router } from '@/router';
 
-function InnerApp(): React.JSX.Element {
+const InnerApp = (): React.ReactNode => {
   const auth = useAuth();
   return <RouterProvider router={router} context={{ auth }} />;
 }
 
-export function App(): React.JSX.Element {
+export const App = (): React.ReactNode => {
   const authErrorHandlerRef = useRef<(() => void) | null>(null);
   const apolloClient = useMemo(() => createApolloClient(() => {
     authErrorHandlerRef.current?.();

@@ -22,7 +22,6 @@ func TestInitialAdminFromConfig(t *testing.T) {
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
-		// Should be able to login with configured credentials
 		resp, err := operations.Login(ctx, ts.graphqlClient(), operations.LoginInput{
 			Username: "initialadmin",
 			Password: "secure-password-123",
@@ -38,7 +37,6 @@ func TestInitialAdminFromConfig(t *testing.T) {
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
-		// Try to register a new user (should be regular user, not admin)
 		registerResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 			Username: "newuser",
 			Password: "newpassword",
@@ -53,7 +51,6 @@ func TestInitialAdminFromConfig(t *testing.T) {
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
-		// First user should become admin (normal behavior)
 		registerResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 			Username: "firstuser",
 			Password: "password",
@@ -68,7 +65,6 @@ func TestInitialAdminFromConfig(t *testing.T) {
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
-		// First user should become admin (normal behavior)
 		registerResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 			Username: "firstuser",
 			Password: "password",
@@ -83,7 +79,6 @@ func TestInitialAdminFromConfig(t *testing.T) {
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
-		// Verify initial admin exists
 		loginResp, err := operations.Login(ctx, ts.graphqlClient(), operations.LoginInput{
 			Username: "onlyonce",
 			Password: "password123",
@@ -91,7 +86,6 @@ func TestInitialAdminFromConfig(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "admin", loginResp.Login.User.Role)
 
-		// Register another user - should be regular user
 		registerResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 			Username: "seconduser",
 			Password: "password",
@@ -102,15 +96,12 @@ func TestInitialAdminFromConfig(t *testing.T) {
 	})
 }
 
-// TestInitialAdminFromEnvironment tests that the feature works with actual environment variables,
-// which is how it's used in production.
 func TestInitialAdminFromEnvironment(t *testing.T) {
 	t.Run("loads credentials from environment variables", func(t *testing.T) {
-		// Set environment variables
+
 		t.Setenv("INITIAL_ADMIN_USERNAME", "envadmin")
 		t.Setenv("INITIAL_ADMIN_PASSWORD", "envpassword123")
 
-		// Load config from environment
 		cfg := config.Load()
 		cfg.Database.Driver = "sqlite"
 		cfg.Database.DSN = "file::memory:?cache=shared"
@@ -120,7 +111,6 @@ func TestInitialAdminFromEnvironment(t *testing.T) {
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
-		// Should be able to login with env credentials
 		resp, err := operations.Login(ctx, ts.graphqlClient(), operations.LoginInput{
 			Username: "envadmin",
 			Password: "envpassword123",
@@ -132,7 +122,7 @@ func TestInitialAdminFromEnvironment(t *testing.T) {
 	})
 
 	t.Run("empty env vars result in no initial admin", func(t *testing.T) {
-		// Explicitly unset or set to empty
+
 		t.Setenv("INITIAL_ADMIN_USERNAME", "")
 		t.Setenv("INITIAL_ADMIN_PASSWORD", "")
 
@@ -145,7 +135,6 @@ func TestInitialAdminFromEnvironment(t *testing.T) {
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
-		// First registration should create admin
 		resp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 			Username: "firstuser",
 			Password: "password",
@@ -156,8 +145,6 @@ func TestInitialAdminFromEnvironment(t *testing.T) {
 	})
 }
 
-// TestInitialAdminWithRegistrationDisabled tests interaction between initial admin
-// and ALLOW_REGISTRATION setting.
 func TestInitialAdminWithRegistrationDisabled(t *testing.T) {
 	t.Run("admin can login when registration is disabled", func(t *testing.T) {
 		cfg := testConfigWithInitialAdmin("admin", "password")
@@ -165,7 +152,6 @@ func TestInitialAdminWithRegistrationDisabled(t *testing.T) {
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
-		// Admin login should work
 		resp, err := operations.Login(ctx, ts.graphqlClient(), operations.LoginInput{
 			Username: "admin",
 			Password: "password",
@@ -174,7 +160,6 @@ func TestInitialAdminWithRegistrationDisabled(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "admin", resp.Login.User.Role)
 
-		// Registration should fail
 		_, err = operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 			Username: "newuser",
 			Password: "password",
@@ -191,7 +176,6 @@ func TestInitialAdminAuthentication(t *testing.T) {
 	ts := newTestServerWithConfig(t, cfg)
 	ctx := context.Background()
 
-	// Login as initial admin
 	client := ts.authenticatedClient(ctx, t, "admin", "password")
 
 	t.Run("can create sites", func(t *testing.T) {
@@ -242,7 +226,6 @@ func TestInitialAdminSecurity(t *testing.T) {
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
-		// Correct case works
 		resp, err := operations.Login(ctx, ts.graphqlClient(), operations.LoginInput{
 			Username: "adminuser",
 			Password: "password",
@@ -250,7 +233,6 @@ func TestInitialAdminSecurity(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "adminuser", resp.Login.User.Username)
 
-		// Wrong case fails
 		_, err = operations.Login(ctx, ts.graphqlClient(), operations.LoginInput{
 			Username: "AdminUser",
 			Password: "password",
@@ -308,7 +290,6 @@ func TestInitialAdminEdgeCases(t *testing.T) {
 	}
 }
 
-// testConfigWithInitialAdmin creates a test config with initial admin credentials.
 func testConfigWithInitialAdmin(username, password string) *config.Config {
 	cfg := testConfig()
 	cfg.Auth.InitialAdminUsername = username
@@ -316,7 +297,6 @@ func testConfigWithInitialAdmin(username, password string) *config.Config {
 	return cfg
 }
 
-// newTestServerWithConfig creates a test server with custom config.
 func newTestServerWithConfig(t *testing.T, cfg *config.Config) *testServer {
 	t.Helper()
 
@@ -329,7 +309,7 @@ func newTestServerWithConfig(t *testing.T, cfg *config.Config) *testServer {
 		httpServer.Close()
 		err := srv.Close()
 		if nil != err {
-			slog.Error("server close failed","error",err)
+			slog.Error("server close failed", "error", err)
 		}
 	})
 
@@ -339,31 +319,29 @@ func newTestServerWithConfig(t *testing.T, cfg *config.Config) *testServer {
 	}
 }
 
-// TestInitialAdminWithUnsetEnvVars ensures the feature works when env vars are not set at all.
 func TestInitialAdminWithUnsetEnvVars(t *testing.T) {
-	// Save and restore original env vars
+
 	origUsername := os.Getenv("INITIAL_ADMIN_USERNAME")
 	origPassword := os.Getenv("INITIAL_ADMIN_PASSWORD")
 	defer func() {
 		if origUsername != "" {
 			err := os.Setenv("INITIAL_ADMIN_USERNAME", origUsername)
 			if nil != err {
-				slog.Error("failed to set env","error",err)
+				slog.Error("failed to set env", "error", err)
 			}
 		}
 		if origPassword != "" {
-			err:=os.Setenv("INITIAL_ADMIN_PASSWORD", origPassword)
-				if nil != err {
-				slog.Error("failed to set env","error",err)
+			err := os.Setenv("INITIAL_ADMIN_PASSWORD", origPassword)
+			if nil != err {
+				slog.Error("failed to set env", "error", err)
 			}
 		}
 	}()
 
-	// Unset the env vars
 	err := os.Unsetenv("INITIAL_ADMIN_USERNAME")
-	require.NoError(t,err)
+	require.NoError(t, err)
 	err = os.Unsetenv("INITIAL_ADMIN_PASSWORD")
-	require.NoError(t,err)
+	require.NoError(t, err)
 
 	cfg := config.Load()
 	cfg.Database.Driver = "sqlite"
@@ -374,7 +352,6 @@ func TestInitialAdminWithUnsetEnvVars(t *testing.T) {
 	ts := newTestServerWithConfig(t, cfg)
 	ctx := context.Background()
 
-	// First registration should create admin (normal behavior)
 	resp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
 		Username: "firstuser",
 		Password: "password",

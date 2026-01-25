@@ -14,9 +14,12 @@ interface EventsSectionProps {
   page: number;
   pageSize: number;
   onPageChange: (page: number) => void;
+  countsPage: number;
+  countsPageSize: number;
+  onCountsPageChange: (page: number) => void;
 }
 
-export function EventsSection({
+export const EventsSection = ({
   siteId,
   loading,
   eventsResult,
@@ -24,7 +27,10 @@ export function EventsSection({
   page,
   pageSize,
   onPageChange,
-}: EventsSectionProps): React.JSX.Element | null {
+  countsPage,
+  countsPageSize,
+  onCountsPageChange,
+}: EventsSectionProps): React.ReactNode => {
   const eventCountsData = getFragmentData(EventCountFieldsFragmentDoc, eventsCounts);
   if (eventsResult === undefined || loading) {
     return (
@@ -51,7 +57,13 @@ export function EventsSection({
         pageSize={pageSize}
         onPageChange={onPageChange}
       />
-      <EventCountsCard siteId={siteId} eventCounts={eventCountsData} />
+      <EventCountsCard
+        siteId={siteId}
+        eventCounts={eventCountsData}
+        page={countsPage}
+        pageSize={countsPageSize}
+        onPageChange={onCountsPageChange}
+      />
     </div>
   );
 }

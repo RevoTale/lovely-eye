@@ -27,7 +27,7 @@ func testConfig() *config.Config {
 		Server: config.ServerConfig{
 			Host:          "127.0.0.1",
 			Port:          "0",
-			DashboardPath: "", // Empty for tests - dashboard not required
+			DashboardPath: "",
 		},
 		Database: config.DatabaseConfig{
 			Driver: "sqlite",
@@ -61,10 +61,10 @@ func newTestServer(t *testing.T) *testServer {
 
 	t.Cleanup(func() {
 		httpServer.Close()
-	err :=	srv.Close()
-if nil != err {
-		slog.Error("Server close failed","error",err)
-}
+		err := srv.Close()
+		if nil != err {
+			slog.Error("Server close failed", "error", err)
+		}
 	})
 
 	return &testServer{
@@ -73,8 +73,6 @@ if nil != err {
 	}
 }
 
-// newTestHTTPServer creates a test HTTP server without t.Cleanup
-// for use in benchmarks and scenarios where cleanup is manual
 func newTestHTTPServer(handler http.Handler) *httptest.Server {
 	return httptest.NewServer(handler)
 }
@@ -101,6 +99,7 @@ func (ts *testServer) graphqlClient() graphql.Client {
 
 // authenticatedClient creates a client with a cookie jar and performs login
 // Returns the authenticated client that will use cookies for subsequent requests
+//
 //nolint:unparam
 func (ts *testServer) authenticatedClient(ctx context.Context, t *testing.T, username, password string) graphql.Client {
 	t.Helper()
@@ -109,7 +108,6 @@ func (ts *testServer) authenticatedClient(ctx context.Context, t *testing.T, use
 	httpClient := &http.Client{Jar: jar}
 	client := graphql.NewClient(ts.httpServer.URL+"/graphql", httpClient)
 
-	// Login to set cookies
 	_, err = operations.Login(ctx, client, operations.LoginInput{
 		Username: username,
 		Password: password,
@@ -212,7 +210,6 @@ func TestStatsCollection(t *testing.T) {
 		payload := map[string]any{
 			"site_key":     siteKey,
 			"path":         "/home",
-			"title":        "Home Page",
 			"referrer":     "https://google.com",
 			"screen_width": 1920,
 		}
@@ -225,10 +222,10 @@ func TestStatsCollection(t *testing.T) {
 			"https://example.com",
 		)
 		require.NoError(t, err)
-		defer func ()  {
+		defer func() {
 			err := resp.Body.Close()
 			if nil != err {
-				slog.Error("resp close failed","error",err)
+				slog.Error("resp close failed", "error", err)
 			}
 		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -245,16 +242,16 @@ func TestStatsCollection(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://example.com",
 		)
 		require.NoError(t, err)
-		defer func ()  {
-		err :=	resp.Body.Close()
-		if nil != err {
-			slog.Error("resp close","error",err)
-		}
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp close", "error", err)
+			}
 		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
@@ -271,10 +268,10 @@ func TestStatsCollection(t *testing.T) {
 			bytes.NewReader(body),
 		)
 		require.NoError(t, err)
-		defer func ()  {
+		defer func() {
 			err := resp.Body.Close()
 			if nil != err {
-				slog.Error("resp body close failed","error",err)
+				slog.Error("resp body close failed", "error", err)
 			}
 		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -429,16 +426,16 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer func ()  {
-		err := resp.Body.Close()
-		if nil != err {
-			slog.Error("failed to close resp","error",err)
-		}	
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("failed to close resp", "error", err)
+			}
 		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
@@ -454,16 +451,16 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer func ()  {
-		err :=  resp.Body.Close()
-		if nil != err {
-			slog.Error("resp body close failed","error",err)
-		}	
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp body close failed", "error", err)
+			}
 		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
@@ -479,16 +476,16 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer func ()  {
-		err := resp.Body.Close()
-		if nil != err {
-			slog.Error("resp body close failed", "error",err)
-		}	
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp body close failed", "error", err)
+			}
 		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
@@ -504,16 +501,16 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer func ()  {
-		err := resp.Body.Close()
-		if nil != err {
-			slog.Error("resp close failed","error",err)
-		}	
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp close failed", "error", err)
+			}
 		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
@@ -529,16 +526,16 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer func ()  {
-		err := resp.Body.Close()
-		if nil != err {
-			slog.Error("resp body failed","error",err)
-		}	
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp body failed", "error", err)
+			}
 		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
@@ -554,16 +551,16 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer func ()  {
-		err := resp.Body.Close()
-		if nil != err {
-			slog.Error("resp body close","error",err)
-		}	
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp body close", "error", err)
+			}
 		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
@@ -579,15 +576,15 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer func ()  {
+		defer func() {
 			err := resp.Body.Close()
 			if nil != err {
-				slog.Error("resp body close err","error",err)
+				slog.Error("resp body close err", "error", err)
 			}
 		}()
 		require.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -604,16 +601,16 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-		defer func ()  {
-		err :=  resp.Body.Close()
-		if nil != err {
-			slog.Error("resp body close failed","error",err)
-		}	
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp body close failed", "error", err)
+			}
 		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
@@ -629,16 +626,16 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-test.com",
 		)
 		require.NoError(t, err)
-			defer func ()  {
-		err :=  resp.Body.Close()
-		if nil != err {
-			slog.Error("resp body close failed","error",err)
-		}	
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp body close failed", "error", err)
+			}
 		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 	})
@@ -704,7 +701,7 @@ func TestEventPropertiesStored(t *testing.T) {
 	}
 
 	t.Run("event properties are persisted and retrieved via GraphQL", func(t *testing.T) {
-		// Send event with string:string properties
+
 		properties := `{"button": "signup", "variant": "blue", "position": "1"}`
 		payload := map[string]interface{}{
 			"site_key":   siteKey,
@@ -716,25 +713,23 @@ func TestEventPropertiesStored(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/event",
+			ts.httpServer.URL+"/api/collect",
 			body,
 			"https://events-storage-test.com",
 		)
 		require.NoError(t, err)
-			defer func ()  {
-		err :=  resp.Body.Close()
-		if nil != err {
-			slog.Error("resp body close failed","error",err)
-		}	
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp body close failed", "error", err)
+			}
 		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 
-		// Retrieve events via GraphQL API
 		eventsResp, err := operations.Events(ctx, client, siteID, nil, nil, nil)
 		require.NoError(t, err)
 		require.NotEmpty(t, eventsResp.Events.Events, "should have at least one event")
 
-		// Find our event
 		var foundEvent *operations.EventsEventsEventsResultEventsEvent
 		for _, e := range eventsResp.Events.Events {
 			if e.Name == "button_click" && e.Path == "/landing" {
@@ -746,7 +741,6 @@ func TestEventPropertiesStored(t *testing.T) {
 		require.NotNil(t, foundEvent, "should find the button_click event")
 		require.Len(t, foundEvent.Properties, 3, "should have 3 properties")
 
-		// Verify properties are returned correctly
 		propsMap := make(map[string]string)
 		for _, p := range foundEvent.Properties {
 			propsMap[p.Key] = p.Value
@@ -757,7 +751,7 @@ func TestEventPropertiesStored(t *testing.T) {
 	})
 
 	t.Run("multiple events with different properties", func(t *testing.T) {
-		// Send multiple events with string:string properties
+
 		events := []struct {
 			name       string
 			path       string
@@ -779,7 +773,7 @@ func TestEventPropertiesStored(t *testing.T) {
 
 			resp, err := postJSONWithOrigin(
 				ts.httpServer.Client(),
-				ts.httpServer.URL+"/api/event",
+				ts.httpServer.URL+"/api/collect",
 				body,
 				"https://events-storage-test.com",
 			)
@@ -790,11 +784,9 @@ func TestEventPropertiesStored(t *testing.T) {
 			require.Equal(t, http.StatusNoContent, resp.StatusCode)
 		}
 
-		// Retrieve events via GraphQL API
 		eventsResp, err := operations.Events(ctx, client, siteID, nil, nil, nil)
 		require.NoError(t, err)
 
-		// Verify each event exists
 		for _, expected := range events {
 			found := false
 			for _, stored := range eventsResp.Events.Events {
@@ -827,11 +819,11 @@ func TestHealthEndpoint(t *testing.T) {
 	t.Run("health endpoint returns healthy status", func(t *testing.T) {
 		resp, err := ts.httpServer.Client().Get(ts.httpServer.URL + "/health")
 		require.NoError(t, err)
-			defer func ()  {
-		err :=  resp.Body.Close()
-		if nil != err {
-			slog.Error("resp body close failed","error",err)
-		}	
+		defer func() {
+			err := resp.Body.Close()
+			if nil != err {
+				slog.Error("resp body close failed", "error", err)
+			}
 		}()
 
 		require.Equal(t, http.StatusOK, resp.StatusCode)

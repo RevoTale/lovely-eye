@@ -22,7 +22,7 @@ interface TrafficBlockingCardProps {
   onUpdateBlockedCountries: (blockedCountries: string[]) => Promise<void>;
 }
 
-export function TrafficBlockingCard({
+export const TrafficBlockingCard = ({
   initialBlockedIPs,
   initialBlockedCountries,
   savingBlockedIPs,
@@ -30,7 +30,7 @@ export function TrafficBlockingCard({
   geoIPReady,
   onUpdateBlockedIPs,
   onUpdateBlockedCountries,
-}: TrafficBlockingCardProps): ReactElement {
+}: TrafficBlockingCardProps): ReactElement => {
   const EMPTY_COUNT = 0;
   const EMPTY_STRING = '';
   const FIRST_INDEX = 0;

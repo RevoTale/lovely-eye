@@ -10,7 +10,7 @@ interface ActivePagesCardProps {
 
 const EMPTY_COUNT = 0;
 
-export function ActivePagesCard({ activePages }: ActivePagesCardProps): React.JSX.Element {
+export const ActivePagesCard = ({ activePages }: ActivePagesCardProps): React.ReactNode => {
   const pageItems = getFragmentData(ActivePageStatsFieldsFragmentDoc, activePages);
 
   return (
@@ -46,9 +46,6 @@ export function ActivePagesCard({ activePages }: ActivePagesCardProps): React.JS
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{page.path}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Currently viewing
-                    </p>
                   </div>
                 </div>
                 <Badge variant="secondary" className="flex items-center gap-1 ml-2">

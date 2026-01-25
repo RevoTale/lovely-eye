@@ -18,14 +18,14 @@ const EMPTY_COUNT = 0;
 const FALLBACK_PATH = '/';
 const EMPTY_STRING = '';
 
-export function EventsCard({
+export const EventsCard = ({
   siteId,
   events,
   total,
   page,
   pageSize,
   onPageChange,
-}: EventsCardProps): React.JSX.Element {
+}: EventsCardProps): React.ReactNode => {
   const eventItems = getFragmentData(EventFieldsFragmentDoc, events);
 
   return (
@@ -41,18 +41,25 @@ export function EventsCard({
           <p className="text-sm text-muted-foreground text-center py-6">No events recorded yet.</p>
         ) : (
           <div className="space-y-4">
-            {eventItems.map((event) => (
-              <div key={event.id} className="border rounded-md p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <FilterLink
-                      siteId={siteId}
-                      filterKey="eventName"
-                      value={event.name}
-                      className="text-sm font-medium truncate hover:underline underline-offset-2 block"
-                    >
-                      {event.name}
-                    </FilterLink>
+            {eventItems.map((event) => {
+              const definitionName = event.definition?.name ?? EMPTY_STRING;
+              const hasDefinitionName = definitionName !== EMPTY_STRING;
+              return (
+                <div key={event.id} className="border rounded-md p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      {hasDefinitionName ? (
+                        <FilterLink
+                          siteId={siteId}
+                          filterKey="eventName"
+                          value={definitionName}
+                          className="text-sm font-medium truncate hover:underline underline-offset-2 block"
+                        >
+                          {definitionName}
+                        </FilterLink>
+                      ) : (
+                        <span className="text-sm font-medium truncate block">{event.path}</span>
+                      )}
                     <FilterLink
                       siteId={siteId}
                       filterKey="eventPath"
@@ -62,9 +69,14 @@ export function EventsCard({
                       {event.path === EMPTY_STRING ? FALLBACK_PATH : event.path}
                     </FilterLink>
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0">
-                    {new Date(event.createdAt).toLocaleString()}
-                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="outline">
+                      {hasDefinitionName ? 'Event' : 'Pageview'}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(event.createdAt).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
                 {event.properties.length > EMPTY_COUNT ? (
                   <div className="flex flex-wrap gap-2 mt-2">
@@ -79,7 +91,8 @@ export function EventsCard({
                   </div>
                 ) : null}
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
         {total > pageSize ? (

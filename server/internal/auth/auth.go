@@ -7,7 +7,6 @@ import (
 
 // Service defines the authentication interface.
 type Service interface {
-	// Register creates a new user account. First user becomes admin.
 	Register(ctx context.Context, input RegisterInput) (*User, *Tokens, error)
 
 	// Login authenticates a user and returns tokens.
@@ -19,10 +18,8 @@ type Service interface {
 	// ValidateAccessToken validates a token and returns claims.
 	ValidateAccessToken(token string) (*Claims, error)
 
-	// GetUserByID retrieves a user by ID.
 	GetUserByID(ctx context.Context, id int64) (*User, error)
 
-	// CreateInitialAdmin creates the first admin if configured.
 	CreateInitialAdmin(ctx context.Context, username, password string) error
 
 	// SetAuthCookies sets HTTP-only authentication cookies.
@@ -32,13 +29,11 @@ type Service interface {
 	ClearAuthCookies(w http.ResponseWriter)
 }
 
-// RegisterInput contains registration data.
 type RegisterInput struct {
 	Username string
 	Password string
 }
 
-// LoginInput contains login credentials.
 type LoginInput struct {
 	Username string
 	Password string

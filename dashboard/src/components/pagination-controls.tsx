@@ -12,12 +12,12 @@ const EMPTY_COUNT = 0;
 const MIN_PAGE = 1;
 const PAGE_INCREMENT = 1;
 
-export function PaginationControls({
+export const PaginationControls = ({
   page,
   pageSize,
   total,
   onPageChange,
-}: PaginationControlsProps): React.JSX.Element {
+}: PaginationControlsProps): React.ReactNode => {
   const totalPages = Math.max(MIN_PAGE, Math.ceil(total / pageSize));
   const clampedPage = Math.min(Math.max(page, MIN_PAGE), totalPages);
   const start =

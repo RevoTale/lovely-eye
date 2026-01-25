@@ -21,7 +21,7 @@ const EMPTY_COUNT = 0;
 const PERCENT_MULTIPLIER = 100;
 const PERCENT_PRECISION = 1;
 
-export function DevicesCard({
+export const DevicesCard = ({
   devices,
   total,
   totalVisitors,
@@ -30,7 +30,7 @@ export function DevicesCard({
   siteId,
   onPageChange,
   loading = false,
-}: DevicesCardProps): React.JSX.Element {
+}: DevicesCardProps): React.ReactNode => {
   if (loading) {
     return <BoardCardSkeleton title="Device Types" icon={Monitor} />;
   }

@@ -23,7 +23,6 @@ func main() {
 func run() int {
 	cfg := config.Load()
 
-	// CI-friendly: cancel on SIGINT/SIGTERM + hard timeout.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -56,7 +55,6 @@ func run() int {
 	fmt.Printf("DB_DRIVER: %s\n", cfg.Database.Driver)
 	fmt.Printf("DB_DSN: %s\n\n", cfg.Database.DSN)
 
-	// Step 1: Initialize migration tables
 	fmt.Println("Step 1: Initialize migration tables")
 	if err := migrator.Init(ctx); err != nil {
 		slog.Error("init failed", "error", err)
@@ -76,12 +74,10 @@ func run() int {
 		return ms, 0
 	}
 
-	// Step 2: Initial status
 	if _, code := printStatus("Step 2: Initial status"); code != 0 {
 		return code
 	}
 
-	// Step 3: Apply all migrations
 	fmt.Println("\nStep 3: Apply all migrations (UP)")
 	group, err := migrator.Migrate(ctx)
 	if err != nil {
@@ -94,7 +90,6 @@ func run() int {
 		fmt.Printf("migrated to %s\n", group)
 	}
 
-	// Step 4: Status after UP + verify nothing left unapplied
 	ms, code := printStatus("Step 4: Status after migration (should show all applied)")
 	if code != 0 {
 		return code
@@ -104,7 +99,6 @@ func run() int {
 		return 1
 	}
 
-	// Step 5: Rollback all migration groups
 	fmt.Println("\nStep 5: Rollback all migrations (DOWN)")
 	for {
 		group, err := migrator.Rollback(ctx)
@@ -119,12 +113,10 @@ func run() int {
 		fmt.Printf("rolled back %s\n", group)
 	}
 
-	// Step 6: Status after rollback
 	if _, code := printStatus("Step 6: Status after rollback (should show none applied)"); code != 0 {
 		return code
 	}
 
-	// Step 7: Apply again (idempotency)
 	fmt.Println("\nStep 7: Apply migrations again (idempotency)")
 	group, err = migrator.Migrate(ctx)
 	if err != nil {
@@ -137,7 +129,6 @@ func run() int {
 		fmt.Printf("migrated to %s\n", group)
 	}
 
-	// Step 8: Final status + verify
 	ms, code = printStatus("Step 8: Final status check")
 	if code != 0 {
 		return code

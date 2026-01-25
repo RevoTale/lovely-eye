@@ -4,7 +4,7 @@ import { Link, useNavigate } from '@/router';
 import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { Logo } from '@/components/logo';
 
-export function RegisterPage(): ReactElement {
+export const RegisterPage = (): ReactElement => {
   const MIN_PASSWORD_LENGTH = 8;
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
