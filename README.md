@@ -9,7 +9,7 @@ Privacy-focused web analytics. Self-hosted alternative to Google Analytics, Umam
 
 ## Features
 
-- **Privacy-first**: no cookies, daily visitor ID rotation
+- **Privacy-first**: no analytics cookies, daily visitor ID rotation
 - **Bot filtering**: excludes crawlers, scrapers, monitoring bots
 - **Lightweight**: low-RAM Docker builds, SQLite or PostgreSQL
 - **Real-time dashboard**: GraphQL API with React UI
@@ -108,10 +108,10 @@ Server starts at http://localhost:8080. The first registered user becomes admin.
 | `SECURE_COOKIES` | `true` | Use secure cookies (requires HTTPS). Set to `false` for local dev |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
 | `GEOIP_DB_PATH` | `/data/GeoLite2-Country.mmdb` | Path to GeoLite2-Country.mmdb for country stats |
-| `GEOIP_DOWNLOAD_URL` | `https://download.db-ip.com/free/dbip-country-lite.mmdb.gz` | Custom GeoIP download URL (mmdb, gz, or tar.gz) |
+| `GEOIP_DOWNLOAD_URL` | `https://download.db-ip.com/free/dbip-country-lite.mmdb.gz` | Default GeoIP download URL (mmdb, gz, or tar.gz) |
 | `GEOIP_MAXMIND_LICENSE_KEY` | - | MaxMind license key for GeoLite2 auto-download |
 
-Country tracking downloads the GeoLite2 database on demand when at least one site enables it. If the download fails, the dashboard will show the error in site settings.
+Country tracking downloads the GeoIP database on demand when at least one site enables it. If the download fails, the dashboard will show the error in site settings.
 
 ## Custom Events
 

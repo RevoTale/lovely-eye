@@ -7,7 +7,7 @@ Privacy-focused web analytics for Lovely Eye.
 Anonymous hash computed from IP address, user agent, site key, and current date:
 - Hash algorithm: SHA256
 - Daily rotation: visitor ID changes every 24 hours
-- No persistent storage or cookies
+- No client-side storage or cookies
 - Same visitor receives consistent ID throughout the day
 
 ## Bot Filtering
@@ -23,13 +23,12 @@ Filters non-human traffic:
 
 Prevents duplicate counting:
 - 10-second deduplication window per visitor per page
-- Filters double-clicks, script reloads, SPA navigation
+- Filters double-clicks, script reloads, same-path SPA updates within 10s
 - Ensures accurate page view metrics
 
 ## Query Parameters
 
 - By default, query parameters are not included in tracked page paths
-- UTM parameters are captured separately for campaign reporting
 - Use `data-include-query="true"` on the tracker script to include full query strings
 
 ## IP Address Handling
@@ -51,7 +50,7 @@ Tracks browsing sessions:
 
 ## Privacy
 
-- No cookies or persistent identifiers
+- No client-side cookies or persistent identifiers
 - Visitor IDs rotate daily
 - Site key prevents cross-site tracking
 - IP addresses never stored in database

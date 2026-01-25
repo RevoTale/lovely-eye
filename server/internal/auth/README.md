@@ -31,7 +31,7 @@ No CSRF tokens needed. See [discussion](https://www.reddit.com/r/node/comments/1
 | `JWT_SECRET` | (random) | Secret key for signing tokens. Must be at least 32 characters. |
 | `JWT_ACCESS_EXPIRY_MINUTES` | `15` | Access token lifetime in minutes |
 | `JWT_REFRESH_DAYS` | `7` | Refresh token lifetime in days |
-| `SECURE_COOKIES` | `false` | Set to `true` in production (requires HTTPS) |
+| `SECURE_COOKIES` | `true` | Set to `true` in production (requires HTTPS) |
 | `COOKIE_DOMAIN` | (empty) | Cookie domain (leave empty for current domain) |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
 

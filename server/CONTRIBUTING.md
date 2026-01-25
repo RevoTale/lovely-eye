@@ -17,8 +17,7 @@
   - User profile queries
 
 - **REST API** - Limited to tracking functionality only:
-  - `POST /api/collect` - Track page views
-  - `POST /api/collect` - Track page views and custom events (legacy: `/api/event`)
+  - `POST /api/collect` - Track page views and custom events
   - `GET /tracker.js` - Serve the tracking script
 
 ## Database
