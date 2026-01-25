@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/oschwald/geoip2-golang/v2"
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/oschwald/maxminddb-golang/v2"
 )
 
 const (
@@ -134,13 +134,14 @@ func (g *GeoIPService) ListCountries(search string) ([]GeoIPCountry, error) {
 		} `maxminddb:"registered_country"`
 	}
 
-	network := reader.Networks(maxminddb.SkipAliasedNetworks)
 	seen := make(map[string]string)
-	var record countryRecord
-	for network.Next() {
-		_, err := network.Network(&record)
-		if err != nil {
+	for result := range reader.Networks() {
+		var record countryRecord
+		if err := result.Decode(&record); err != nil {
 			return nil, fmt.Errorf("read GeoIP network: %w", err)
+		}
+		if !result.Found() {
+			continue
 		}
 
 		code := record.Country.ISOCode
@@ -159,9 +160,6 @@ func (g *GeoIPService) ListCountries(search string) ([]GeoIPCountry, error) {
 			continue
 		}
 		seen[code] = name
-	}
-	if err := network.Err(); err != nil {
-		return nil, fmt.Errorf("read GeoIP networks: %w", err)
 	}
 
 	countries := make([]GeoIPCountry, 0, len(seen))
@@ -202,9 +200,10 @@ func (g *GeoIPService) EnsureAvailable(ctx context.Context) error {
 
 	if g.hasReader() {
 		g.setStatus(GeoIPStatus{
-			State:  geoIPStateReady,
-			DBPath: g.dbPath,
-			Source: "file",
+			State:     geoIPStateReady,
+			DBPath:    g.dbPath,
+			Source:    "file",
+			UpdatedAt: g.dbFileUpdatedAt(),
 		})
 		return nil
 	}
@@ -212,9 +211,10 @@ func (g *GeoIPService) EnsureAvailable(ctx context.Context) error {
 	if g.fileExists(g.dbPath) {
 		if err := g.loadReader(); err == nil {
 			g.setStatus(GeoIPStatus{
-				State:  geoIPStateReady,
-				DBPath: g.dbPath,
-				Source: "file",
+				State:     geoIPStateReady,
+				DBPath:    g.dbPath,
+				Source:    "file",
+				UpdatedAt: g.dbFileUpdatedAt(),
 			})
 			return nil
 		}
@@ -229,9 +229,10 @@ func (g *GeoIPService) EnsureAvailable(ctx context.Context) error {
 
 	if g.hasReader() {
 		g.setStatus(GeoIPStatus{
-			State:  geoIPStateReady,
-			DBPath: g.dbPath,
-			Source: "file",
+			State:     geoIPStateReady,
+			DBPath:    g.dbPath,
+			Source:    "file",
+			UpdatedAt: g.dbFileUpdatedAt(),
 		})
 		return nil
 	}
@@ -241,9 +242,10 @@ func (g *GeoIPService) EnsureAvailable(ctx context.Context) error {
 	}
 
 	g.setStatus(GeoIPStatus{
-		State:  geoIPStateReady,
-		DBPath: g.dbPath,
-		Source: g.downloadSource(),
+		State:     geoIPStateReady,
+		DBPath:    g.dbPath,
+		Source:    g.downloadSource(),
+		UpdatedAt: g.dbFileUpdatedAt(),
 	})
 	return nil
 }
@@ -397,17 +399,20 @@ func (g *GeoIPService) replaceDatabase(tempPath string) error {
 }
 
 func (g *GeoIPService) isTarGz(url, contentType string) bool {
+	url = strings.ToLower(url)
 	if strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz") {
 		return true
 	}
-	return strings.Contains(contentType, "gzip")
+	return strings.Contains(strings.ToLower(contentType), "tar")
 }
 
 func (g *GeoIPService) isGzip(url, contentType string) bool {
-	if strings.HasSuffix(url, ".gz") {
+	url = strings.ToLower(url)
+	if strings.HasSuffix(url, ".gz") && !strings.HasSuffix(url, ".tar.gz") && !strings.HasSuffix(url, ".tgz") {
 		return true
 	}
-	return strings.Contains(contentType, "gzip")
+	contentType = strings.ToLower(contentType)
+	return strings.Contains(contentType, "gzip") && !strings.Contains(contentType, "tar")
 }
 
 func (g *GeoIPService) extractGzip(archivePath string) error {
@@ -517,11 +522,22 @@ func (g *GeoIPService) fileExists(path string) bool {
 }
 
 func (g *GeoIPService) setStatus(status GeoIPStatus) {
-	now := time.Now()
-	status.UpdatedAt = &now
+	if status.UpdatedAt == nil {
+		now := time.Now()
+		status.UpdatedAt = &now
+	}
 	g.statusMu.Lock()
 	g.status = status
 	g.statusMu.Unlock()
+}
+
+func (g *GeoIPService) dbFileUpdatedAt() *time.Time {
+	info, err := os.Stat(g.dbPath)
+	if err != nil || info.IsDir() {
+		return nil
+	}
+	modTime := info.ModTime()
+	return &modTime
 }
 
 func (g *GeoIPService) getCachedCountries(updatedAt time.Time) []GeoIPCountry {
@@ -595,17 +611,17 @@ type Country struct {
 }
 
 func (g *GeoIPService) ResolveCountry(ipStr string) (Country, error) {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
 	ip, err := netip.ParseAddr(ipStr)
 	if err != nil {
 		return UnknownCountry, fmt.Errorf("failed parse country IP: %s", err.Error())
 	}
 
-	if ip.IsPrivate() {
+	if !ip.IsGlobalUnicast() || ip.IsPrivate() {
 		return LocalNetworkCountry, nil
 	}
+
+	g.mu.RLock()
+	defer g.mu.RUnlock()
 
 	if g.reader == nil {
 		return UnknownCountry, ErrNoDBReader
@@ -616,10 +632,19 @@ func (g *GeoIPService) ResolveCountry(ipStr string) (Country, error) {
 		return UnknownCountry, fmt.Errorf("failed to get country: %s", err.Error())
 	}
 
-	return Country{
-		Name:    record.Country.Names.English,
-		ISOCode: record.Country.ISOCode,
-	}, nil
+	name := record.Country.Names.English
+	code := record.Country.ISOCode
+	if code == "" {
+		name = record.RegisteredCountry.Names.English
+		code = record.RegisteredCountry.ISOCode
+	}
+	if name == "" {
+		name = code
+	}
+	if code == "" {
+		return UnknownCountry, nil
+	}
+	return Country{Name: name, ISOCode: code}, nil
 }
 
 func (g *GeoIPService) Close() error {
