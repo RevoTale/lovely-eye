@@ -62,6 +62,30 @@ jobs:
       - name: Typecheck
         run: bun run tsc
 
+  validate-static-assets:
+    defaults:
+      run:
+        working-directory: ./server/static
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+      - name: Install dependencies
+        run: go mod download
+      - name: Build tracker asset
+        run: go run build.go
+      - name: Ensure generated assets are committed
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Generated assets are out of date. Run 'make -C server/static build' and commit the results."
+            git diff
+            exit 1
+          fi
+
   production-setup-test:
     runs-on: ubuntu-latest
     steps:

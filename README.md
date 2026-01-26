@@ -7,6 +7,8 @@ Self-hosted web analytics with a Go backend and React dashboard. Runs on low-res
 > [!WARNING]
 > Work in progress
 
+![Tracker Size Badge](./server/static/dist/tracker-size.svg "Tracker size")
+
 ## Features
 
 - **Privacy-first**: no analytics cookies, daily visitor ID rotation

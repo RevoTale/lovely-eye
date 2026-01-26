@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="250" height="26" viewBox="0 0 250 26" role="img" aria-label="tracker.js 2.1 KB | gzip 994 B">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="stroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22c55e"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="250" height="26" rx="8" fill="url(#bg)"/>
+  <rect x="0.5" y="0.5" width="249" height="25" rx="7.5" fill="none" stroke="url(#stroke)" stroke-opacity="0.7"/>
+  <text x="16" y="17" fill="#f8fafc" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="12" letter-spacing="0.2">tracker.js 2.1 KB | gzip 994 B</text>
+</svg>

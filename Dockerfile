@@ -22,6 +22,8 @@ COPY ./server/go.mod ./server/go.sum ./
 RUN go mod download && go mod verify
 COPY ./server .
 
+RUN cd static && go mod download && go run build.go
+
 RUN CGO_ENABLED=0 GOOS=linux go build \
     -trimpath \
     -ldflags='-s -w' \
@@ -48,6 +50,7 @@ FROM alpine
 WORKDIR /app
 COPY --from=builder /app/server .
 COPY --from=builder /app/static ./static
+COPY --from=builder /app/static/dist/tracker.js ./static/tracker.js
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/load-example-data .
 COPY --from=dashboard-builder /app/dist ./dashboard

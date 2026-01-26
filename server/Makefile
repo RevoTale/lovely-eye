@@ -9,6 +9,7 @@ run:
 
 test:
 	go test ./... --count=2
+	$(MAKE) -C static typecheck
 	golangci-lint run 
 
 clean:
@@ -17,6 +18,7 @@ clean:
 
 generate:
 	go generate ./...
+	$(MAKE) -C static build
 
 # Production migration commands (runtime)
 migrate-init:
