@@ -110,7 +110,7 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		}
 	}
 
-	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.Name)
+	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.ISOCode)
 	if err != nil {
 		return fmt.Errorf("find or create client: %w", err)
 	}
@@ -281,7 +281,7 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		}
 	}
 
-	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.Name)
+	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.ISOCode)
 	if err != nil {
 		return fmt.Errorf("find or create client: %w", err)
 	}
