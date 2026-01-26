@@ -23,7 +23,6 @@ const (
 	refreshTokenCookie = "le_refresh"
 )
 
-// Config contains authentication configuration.
 type Config struct {
 	JWTSecret         string
 	AccessTokenExpiry time.Duration
@@ -247,7 +246,6 @@ func (s *jwtService) ClearAuthCookies(w http.ResponseWriter) {
 	}
 }
 
-// getTokensFromRequest extracts tokens from cookies.
 func (s *jwtService) getTokensFromRequest(r *http.Request) (accessToken, refreshToken string) {
 	if cookie, err := r.Cookie(accessTokenCookie); err == nil {
 		accessToken = cookie.Value
