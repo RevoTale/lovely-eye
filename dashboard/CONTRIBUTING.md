@@ -16,7 +16,7 @@
 
 ## Code Generation
 
-- Run `bun run codegen` after modifying GraphQL operations in `src/graphql/`
+- Run `bun run codegen` after modifying GraphQL operations in `src/gql/`
 
 ## Commands
 

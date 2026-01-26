@@ -237,6 +237,7 @@ export const OverviewChartSection = ({ siteId, dateRange, filter, bucket, onBuck
               dataKey="timestamp"
               type="number"
               scale="time"
+              domain={['dataMin', 'dataMax']}
               tickFormatter={(value) => formatTimestamp(Number(value))}
               tickLine={false}
               axisLine={false}

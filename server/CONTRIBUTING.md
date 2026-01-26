@@ -17,8 +17,7 @@
   - User profile queries
 
 - **REST API** - Limited to tracking functionality only:
-  - `POST /api/collect` - Track page views
-  - `POST /api/collect` - Track page views and custom events (legacy: `/api/event`)
+  - `POST /api/collect` - Track page views and custom events
   - `GET /tracker.js` - Serve the tracking script
 
 ## Database
@@ -26,7 +25,7 @@
 - Supports both SQLite and PostgreSQL
 - SQLite is default for development (no configuration needed)
 - `DB_DRIVER` and `DB_DSN` are optional - defaults to SQLite with `data/lovely_eye.db`
-- To use PostgreSQL, set both `DB_DRIVER=postgres` and `DB_DSN=postgres://...`'
+- To use PostgreSQL, set both `DB_DRIVER=postgres` and `DB_DSN=postgres://...`
 
 ## Code structure
 - [Migrations](./migrations/README.md)
