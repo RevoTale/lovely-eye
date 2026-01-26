@@ -4,15 +4,15 @@
 
 Self-hosted web analytics with a Go backend and React dashboard. Built for low-resource hosts, with Go's small memory footprint and single-binary deployment keeping it lightweight. Supports SQLite or PostgreSQL.
 
-![Lovely Eye Logo Banner](./preview.png "Lovely Eye")
 
 ## Features
 
 - **Privacy-first**: no analytics cookies, daily visitor ID rotation
-- **Bot filtering**: excludes crawlers, scrapers, monitoring bots
-- **Lightweight**: low-RAM Docker builds, SQLite or PostgreSQL
-- **Dashboard**: GraphQL API with React UI
-- **Custom events**: allowlisted event names and fields
+- **Bot filtering**: excludes crawlers, scrapers, monitoring bots.
+- **Lightweight**: runtime consumes around ~15MB of RAM on AMD processor.
+- **SQLite and PostgreSQL** supported.
+- **Dashboard**: GraphQL API with React UI deployed as a static assets.
+- **Custom events**: allowlisted event names and fields. Prevents spamming your database with unnecessary data.
 
 ## Quick Start
 
@@ -92,6 +92,7 @@ networks:
 
 ```
 
+
 ### From Source
 
 Requires Go 1.25+.
@@ -100,8 +101,18 @@ Requires Go 1.25+.
 cd server
 go run ./cmd/server
 ```
-
 Server starts at http://localhost:8080. The first registered user becomes admin. SQLite by default.
+
+### Next Step. Install the tracking script.
+
+After you started your containers:
+- login into dashboard.
+- Create "Site" and enter domain you want to track.
+- Open your "Site". You will find the "Settings" button in right top corner. Click it and scroll to the "Tracking Code" section.
+- Copy the tracking code and install into your website via `javascript` or `html`.
+<img width="1060" height="586" alt="Screenshot 2026-01-26 at 20 58 55" src="https://github.com/user-attachments/assets/e4f878dd-fca2-4678-bf49-3dddf04920a2" />
+
+
 
 ## Configuration
 
@@ -152,3 +163,5 @@ JWT tokens in HttpOnly cookies with SameSite settings:
 Copyright 2025 RevoTale
 
 Licensed under [AGPL-3.0](./LICENSE).
+
+![Lovely Eye Logo Banner](./preview.png "Lovely Eye")
