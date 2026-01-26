@@ -1,13 +1,10 @@
 # Lovely Eye
 
-Self-hosted web analytics with a Go backend and React dashboard. Runs on low-resource hosts and supports SQLite or PostgreSQL.
+![Tracker Size Badge](./server/static/dist/tracker-size.svg "Tracker size")
+
+Self-hosted web analytics with a Go backend and React dashboard. Built for low-resource hosts, with Go's small memory footprint and single-binary deployment keeping it lightweight. Supports SQLite or PostgreSQL.
 
 ![Lovely Eye Logo Banner](./preview.png "Lovely Eye")
-
-> [!WARNING]
-> Work in progress
-
-![Tracker Size Badge](./server/static/dist/tracker-size.svg "Tracker size")
 
 ## Features
 
@@ -29,6 +26,10 @@ services:
       - "8080:8080"
     environment:
       - JWT_SECRET=your-secret-key-min-32-chars
+      # Dashboard auth uses cookies and requires HTTPS (serve behind a reverse proxy)
+      # Default is true; you can disable it to serve over HTTP.
+      # Tracking is cookieless; this setting only affects dashboard auth.
+      - SECURE_COOKIES=true
       # Optional: enable country stats with a MaxMind license key (auto-downloads to /data)
       - GEOIP_MAXMIND_LICENSE_KEY=your-maxmind-license-key
     volumes:
@@ -53,6 +54,10 @@ services:
       - DB_DRIVER=postgres
       - DB_DSN=postgres://${POSTGRES_USER:-lovely}:${POSTGRES_PASSWORD:-lovely}@lovely-eye-db:5432/${POSTGRES_DB:-lovely_eye}?sslmode=disable
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      # Dashboard auth uses cookies and requires HTTPS (serve behind a reverse proxy)
+      # Default is true; you can disable it to serve over HTTP.
+      # Tracking is cookieless; this setting only affects dashboard auth.
+      - SECURE_COOKIES=true
       - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
       - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
     depends_on:
