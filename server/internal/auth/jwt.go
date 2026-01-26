@@ -21,7 +21,6 @@ const (
 	refreshTokenType tokenType = "refresh"
 )
 
-// jwtClaims is the internal JWT claims structure.
 type jwtClaims struct {
 	UserID    int64     `json:"uid"`
 	Username  string    `json:"usr"`
@@ -30,7 +29,6 @@ type jwtClaims struct {
 	jwt.RegisteredClaims
 }
 
-// jwtProvider handles JWT token generation and validation.
 type jwtProvider struct {
 	secret        []byte
 	accessExpiry  time.Duration

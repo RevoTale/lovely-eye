@@ -13,12 +13,10 @@ const (
 	UserContextKey contextKey = "auth_user"
 )
 
-// Middleware provides HTTP middleware for authentication.
 type Middleware struct {
 	service *jwtService
 }
 
-// NewMiddleware creates a new authentication middleware.
 func NewMiddleware(service Service) *Middleware {
 	jwtSvc, ok := service.(*jwtService)
 	if !ok {
@@ -36,7 +34,6 @@ func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 		access, refresh := m.service.getTokensFromRequest(r)
 		accessToken = access
 
-		// Fallback to Authorization header
 		if accessToken == "" {
 			if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
 				accessToken = strings.TrimPrefix(h, "Bearer ")
