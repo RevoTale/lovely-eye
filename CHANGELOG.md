@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.5.0](https://github.com/RevoTale/lovely-eye/compare/v1.4.0...v1.5.0) (2026-01-26)
+
+
+### Features
+
+* add example data seed command and add it to the CI to test data write works. ([2ab7573](https://github.com/RevoTale/lovely-eye/commit/2ab7573faa13485aa9ea258b480ad246cc727159))
+* refactor static tracker to typecript and minify via esbuild; add auto size badge ([566625d](https://github.com/RevoTale/lovely-eye/commit/566625d1f37ecf241508c704504da57721d0c191))
+
+
+### Bug Fixes
+
+* chart not display all range of points ([678daf1](https://github.com/RevoTale/lovely-eye/commit/678daf1f4903fbf35416ed2c94333e602ce969a8))
+* info mismatch in readmes ([fee632d](https://github.com/RevoTale/lovely-eye/commit/fee632d18eb4fa1c9961fe1d780b308c827db8c1))
+* polish readme to be ready for publishing ([030379a](https://github.com/RevoTale/lovely-eye/commit/030379ad75153bfe18fa771bd72d57fc04bfa3ec))
+
 ## [1.4.0](https://github.com/RevoTale/lovely-eye/compare/v1.3.0...v1.4.0) (2026-01-25)
 
 
