@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1](https://github.com/RevoTale/lovely-eye/compare/v1.5.0...v1.5.1) (2026-01-26)
+
+
+### Bug Fixes
+
+* data was not collected with countries enabled: https://github.com/RevoTale/lovely-eye/issues/44 ([435b4a8](https://github.com/RevoTale/lovely-eye/commit/435b4a8eb9725eaa462be7c305548510a373b9bf))
+* data was not collected with countries enabled: https://github.com/RevoTale/lovely-eye/issues/44 ([f02d57b](https://github.com/RevoTale/lovely-eye/commit/f02d57b3514147fa564daa0fef26426d64699139))
+
 ## [1.5.0](https://github.com/RevoTale/lovely-eye/compare/v1.4.0...v1.5.0) (2026-01-26)
 
 
