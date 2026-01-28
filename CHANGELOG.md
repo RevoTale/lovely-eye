@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/RevoTale/lovely-eye/compare/v1.5.1...v1.6.0) (2026-01-28)
+
+
+### Features
+
+* more information about how to setup for newbies ([65a8af9](https://github.com/RevoTale/lovely-eye/commit/65a8af9c2bbc494d859b12f8af0e9c86aa4ae5f8))
+* more information about how to setup for newbies ([2f271aa](https://github.com/RevoTale/lovely-eye/commit/2f271aa67034b255f8484c91c8ce12b0e9b7e5b7))
+
 ## [1.5.1](https://github.com/RevoTale/lovely-eye/compare/v1.5.0...v1.5.1) (2026-01-26)
 
 
