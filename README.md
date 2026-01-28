@@ -144,6 +144,12 @@ Country tracking downloads the GeoIP database on demand when at least one site e
 
 Events must be allowlisted in site settings. Unknown event names or fields are ignored.
 
+## Showcase screenshots
+<img width="1512" height="982" alt="Screenshot 2026-01-26 at 15 21 10" src="https://github.com/user-attachments/assets/a231dad7-02dc-442d-8d7c-2d7dd459c05d" />
+<img width="1512" height="885" alt="Screenshot 2026-01-26 at 15 23 44" src="https://github.com/user-attachments/assets/f7916173-9a92-4502-b055-aca27089205d" />
+
+
+
 ## Documentation
 
 - [ANALYTICS.md](./ANALYTICS.md) - tracking mechanics
