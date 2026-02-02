@@ -7,7 +7,7 @@ require (
 	ariga.io/atlas-provider-bun v0.0.3
 	github.com/99designs/gqlgen v0.17.86
 	github.com/Khan/genqlient v0.8.1
-	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/mileusna/useragent v1.3.5
 	github.com/oschwald/geoip2-golang/v2 v2.1.0
 	github.com/oschwald/maxminddb-golang/v2 v2.1.1
