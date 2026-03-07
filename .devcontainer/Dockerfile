@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/go:2-1.25-bookworm
+FROM mcr.microsoft.com/devcontainers/base:2-bookworm
 
 # Install Atlas CLI
 RUN curl -sSf https://atlasgo.sh | sh

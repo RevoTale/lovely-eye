@@ -15,7 +15,7 @@ COPY ./dashboard .
 RUN bun run build
 
 # Stage 2: Build the Go server
-FROM golang:1.25-alpine AS builder
+FROM golang:1.26-alpine AS builder
 
 WORKDIR /app
 COPY ./server/go.mod ./server/go.sum ./

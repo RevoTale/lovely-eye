@@ -95,7 +95,7 @@ networks:
 
 ### From Source
 
-Requires Go 1.25+.
+Requires Go 1.26+.
 
 ```bash
 cd server
