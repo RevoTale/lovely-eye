@@ -9,7 +9,7 @@ import (
 
 	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/repository"
-	"github.com/lovely-eye/server/pkg/utils"
+	"github.com/lovely-eye/server/pkg/validation"
 )
 
 var (
@@ -48,7 +48,7 @@ func (s *SiteService) Create(ctx context.Context, input CreateSiteInput) (*model
 		return nil, err
 	}
 
-	validatedName, err := utils.ValidateSiteName(input.Name)
+	validatedName, err := validation.ValidateSiteName(input.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate site name: %w", err)
 	}
@@ -109,7 +109,7 @@ func (s *SiteService) GetUserSites(ctx context.Context, userID int64, limit, off
 }
 
 func (s *SiteService) Update(ctx context.Context, id, userID int64, input UpdateSiteInput) (*models.Site, error) {
-	validatedName, err := utils.ValidateSiteName(input.Name)
+	validatedName, err := validation.ValidateSiteName(input.Name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to validate site name: %w", err)
 	}
@@ -233,7 +233,7 @@ func normalizeDomains(domains []string) ([]string, error) {
 	normalized := make([]string, 0, len(domains))
 	seen := make(map[string]struct{}, len(domains))
 	for _, domain := range domains {
-		normalizedDomain, err := utils.ValidateDomain(domain)
+		normalizedDomain, err := validation.ValidateDomain(domain)
 		if err != nil {
 			return nil, fmt.Errorf("failed to validate domain: %w", err)
 		}
@@ -245,7 +245,7 @@ func normalizeDomains(domains []string) ([]string, error) {
 	}
 
 	if len(normalized) == 0 {
-		return nil, utils.ErrInvalidDomain
+		return nil, validation.ErrInvalidDomain
 	}
 
 	return normalized, nil
@@ -289,7 +289,7 @@ func normalizeBlockedIPs(ips []string) ([]string, error) {
 	normalized := make([]string, 0, len(ips))
 	seen := make(map[string]struct{}, len(ips))
 	for _, value := range ips {
-		ip, err := utils.ValidateIPAddress(value)
+		ip, err := validation.ValidateIPAddress(value)
 		if err != nil {
 			return nil, fmt.Errorf("failed to validate IP address: %w", err)
 		}
@@ -310,7 +310,7 @@ func normalizeBlockedCountries(countries []string) ([]string, error) {
 	normalized := make([]string, 0, len(countries))
 	seen := make(map[string]struct{}, len(countries))
 	for _, value := range countries {
-		code, err := utils.ValidateCountryCode(value)
+		code, err := validation.ValidateCountryCode(value)
 		if err != nil {
 			return nil, fmt.Errorf("failed to validate country code: %w", err)
 		}

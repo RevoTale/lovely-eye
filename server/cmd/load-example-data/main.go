@@ -14,7 +14,9 @@ import (
 	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/repository"
 	"github.com/lovely-eye/server/internal/services"
-	"github.com/lovely-eye/server/pkg/utils"
+	"github.com/lovely-eye/server/pkg/random"
+	"github.com/lovely-eye/server/pkg/textutil"
+	"github.com/lovely-eye/server/pkg/urlpath"
 	"github.com/uptrace/bun"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -101,9 +103,9 @@ func main() {
 }
 
 type seedCounts struct {
-	clients         int
-	sessions        int
-	pageViews       int
+	clients          int
+	sessions         int
+	pageViews        int
 	predefinedEvents int
 }
 
@@ -286,7 +288,7 @@ func seedData(ctx context.Context, db *bun.DB, siteID int64, defs []*models.Even
 	recentRemaining := recentSessions
 
 	for range defaultUsers {
-		hash, err := utils.GenerateRandomString(64)
+		hash, err := random.GenerateRandomString(64)
 		if err != nil {
 			return counts, fmt.Errorf("generate client hash: %w", err)
 		}
@@ -324,7 +326,7 @@ func seedData(ctx context.Context, db *bun.DB, siteID int64, defs []*models.Even
 }
 
 type patternCounts struct {
-	pageViews       int
+	pageViews        int
 	predefinedEvents int
 }
 
@@ -395,7 +397,7 @@ func applyPattern(
 			Time:         eventTime,
 			Hour:         eventTime / 3600,
 			Day:          eventTime / 86400,
-			Path:         utils.NormalizeURL(seed.path),
+			Path:         urlpath.NormalizeURL(seed.path),
 			DefinitionID: &defID,
 		}
 		if err := analyticsRepo.CreateEvent(ctx, event); err != nil {
@@ -418,7 +420,7 @@ func applyPattern(
 func normalizePaths(input []string) []string {
 	paths := make([]string, 0, len(input))
 	for _, path := range input {
-		paths = append(paths, utils.NormalizeURL(path))
+		paths = append(paths, urlpath.NormalizeURL(path))
 	}
 	if len(paths) == 0 {
 		return []string{"/"}
@@ -436,7 +438,7 @@ func buildEventData(def *models.EventDefinition, props map[string]string) []*mod
 		if value == "" {
 			value = fallbackEventValue(field)
 		}
-		value = utils.TruncateString(value, field.MaxLength)
+		value = textutil.TruncateString(value, field.MaxLength)
 		data = append(data, &models.EventData{
 			FieldID: field.ID,
 			Value:   value,

@@ -16,7 +16,7 @@ import (
 
 	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/repository"
-	"github.com/lovely-eye/server/pkg/utils"
+	"github.com/lovely-eye/server/pkg/validation"
 	"github.com/mileusna/useragent"
 )
 
@@ -808,7 +808,7 @@ func hostFromHeader(raw string) string {
 		return ""
 	}
 
-	normalized, err := utils.ValidateDomain(host)
+	normalized, err := validation.ValidateDomain(host)
 	if err != nil {
 		return ""
 	}
