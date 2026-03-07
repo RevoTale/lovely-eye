@@ -296,7 +296,7 @@ func (r *AnalyticsRepository) GetEventsByIDs(ctx context.Context, eventIDs []int
 		Model(&events).
 		Relation("Data.Field").
 		Relation("Definition.Fields").
-		Where("e.id IN (?)", bun.In(eventIDs)).
+		Where("e.id IN (?)", bun.List(eventIDs)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events by IDs: %w", err)
@@ -623,18 +623,18 @@ func eventTypeFlags(eventTypes []EventType) (bool, bool) {
 func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQuery {
 	if len(filter.Referrer) > 0 {
 
-		q = q.Where("s.referrer IN (?)", bun.In(filter.Referrer))
+		q = q.Where("s.referrer IN (?)", bun.List(filter.Referrer))
 	}
 	if len(filter.Device) > 0 {
 
-		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE device IN (?))", bun.In(filter.Device))
+		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE device IN (?))", bun.List(filter.Device))
 	}
 	if len(filter.Page) > 0 {
-		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NULL AND path IN (?))", bun.In(filter.Page))
+		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NULL AND path IN (?))", bun.List(filter.Page))
 	}
 	if len(filter.Country) > 0 {
 
-		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE country IN (?))", bun.In(normalizeCountryValues(filter.Country)))
+		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE country IN (?))", bun.List(normalizeCountryValues(filter.Country)))
 	}
 	if len(filter.EventTypes) > 0 {
 		hasPageView, hasPredefined := eventTypeFlags(filter.EventTypes)
@@ -645,13 +645,13 @@ func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.Select
 		}
 	}
 	if len(filter.EventName) > 0 {
-		q = q.Where("s.id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.In(filter.EventName))
+		q = q.Where("s.id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.List(filter.EventName))
 	}
 	if len(filter.EventPath) > 0 {
-		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE path IN (?))", bun.In(filter.EventPath))
+		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE path IN (?))", bun.List(filter.EventPath))
 	}
 	if len(filter.EventDefinitionIDs) > 0 {
-		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IN (?))", bun.In(filter.EventDefinitionIDs))
+		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IN (?))", bun.List(filter.EventDefinitionIDs))
 	}
 	return q
 }
@@ -666,27 +666,27 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 		}
 	}
 	if len(filter.Page) > 0 {
-		q = q.Where("e.path IN (?)", bun.In(filter.Page))
+		q = q.Where("e.path IN (?)", bun.List(filter.Page))
 	}
 	if len(filter.Referrer) > 0 || len(filter.Device) > 0 || len(filter.Country) > 0 || len(filter.EventTypes) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
 
 		if len(filter.Referrer) > 0 {
-			q = q.Where("e.session_id IN (SELECT id FROM sessions WHERE referrer IN (?))", bun.In(filter.Referrer))
+			q = q.Where("e.session_id IN (SELECT id FROM sessions WHERE referrer IN (?))", bun.List(filter.Referrer))
 		}
 		if len(filter.Device) > 0 {
-			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.device IN (?))", bun.In(filter.Device))
+			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.device IN (?))", bun.List(filter.Device))
 		}
 		if len(filter.Country) > 0 {
-			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.country IN (?))", bun.In(normalizeCountryValues(filter.Country)))
+			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.country IN (?))", bun.List(normalizeCountryValues(filter.Country)))
 		}
 		if len(filter.EventName) > 0 {
-			q = q.Where("e.session_id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.In(filter.EventName))
+			q = q.Where("e.session_id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.List(filter.EventName))
 		}
 		if len(filter.EventPath) > 0 {
-			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE path IN (?))", bun.In(filter.EventPath))
+			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE path IN (?))", bun.List(filter.EventPath))
 		}
 		if len(filter.EventDefinitionIDs) > 0 {
-			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IN (?))", bun.In(filter.EventDefinitionIDs))
+			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IN (?))", bun.List(filter.EventDefinitionIDs))
 		}
 	}
 	return q
@@ -695,13 +695,13 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 func applyEventNamePathFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQuery {
 	if len(filter.EventName) > 0 {
 		q = q.Join("INNER JOIN event_definitions ed ON e.definition_id = ed.id")
-		q = q.Where("ed.name IN (?)", bun.In(filter.EventName))
+		q = q.Where("ed.name IN (?)", bun.List(filter.EventName))
 	}
 	if len(filter.EventPath) > 0 {
-		q = q.Where("e.path IN (?)", bun.In(filter.EventPath))
+		q = q.Where("e.path IN (?)", bun.List(filter.EventPath))
 	}
 	if len(filter.EventDefinitionIDs) > 0 {
-		q = q.Where("e.definition_id IN (?)", bun.In(filter.EventDefinitionIDs))
+		q = q.Where("e.definition_id IN (?)", bun.List(filter.EventDefinitionIDs))
 	}
 	return q
 }
