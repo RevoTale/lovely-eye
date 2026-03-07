@@ -15,6 +15,9 @@
     "remoteUser": "root",
     "customizations": {
         "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "fish"
+            },
             "extensions": [
                 "golang.go",
                 "GraphQL.vscode-graphql",
