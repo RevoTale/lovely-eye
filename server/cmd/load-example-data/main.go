@@ -285,7 +285,7 @@ func seedData(ctx context.Context, db *bun.DB, siteID int64, defs []*models.Even
 	now := time.Now()
 	recentRemaining := recentSessions
 
-	for i := 0; i < defaultUsers; i++ {
+	for range defaultUsers {
 		hash, err := utils.GenerateRandomString(64)
 		if err != nil {
 			return counts, fmt.Errorf("generate client hash: %w", err)

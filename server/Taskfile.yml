@@ -1,0 +1,100 @@
+version: "3"
+
+includes:
+  static:
+    taskfile: ./static/Taskfile.yml
+    dir: ./static
+
+vars:
+  GO: go
+  DASHBOARD_PATH: '{{default "../dashboard/dist" .DASHBOARD_PATH}}'
+
+tasks:
+  build:
+    desc: Build server and migration binaries
+    cmds:
+      - "{{.GO}} build -o bin/server ./cmd/server"
+      - "{{.GO}} build -o bin/migrate ./cmd/migrate"
+
+  run:
+    desc: Run the server
+    cmds:
+      - "{{.GO}} run ./cmd/server"
+
+  test:
+    desc: Run server tests, static typecheck, and lint
+    env:
+      DASHBOARD_PATH: "{{.DASHBOARD_PATH}}"
+    cmds:
+      - "{{.GO}} test ./... --count=2"
+      - task: static:typecheck
+      - golangci-lint run
+
+  clean:
+    desc: Clean build output and local data
+    cmds:
+      - rm -rf bin/
+      - rm -rf data/*
+
+  generate:
+    desc: Generate Go code and static tracker asset
+    cmds:
+      - "{{.GO}} generate ./..."
+      - task: static:build
+
+  migrate-init:
+    desc: Initialize migration tracking tables
+    cmds:
+      - "{{.GO}} run ./cmd/migrate init"
+
+  migrate-up:
+    desc: Apply pending migrations
+    cmds:
+      - "{{.GO}} run ./cmd/migrate up"
+
+  migrate-down:
+    desc: Roll back last migration
+    cmds:
+      - "{{.GO}} run ./cmd/migrate down"
+
+  migrate-status:
+    desc: Show migration status
+    cmds:
+      - "{{.GO}} run ./cmd/migrate status"
+
+  migrator-diff:
+    desc: Generate SQLite and PostgreSQL migration files
+    cmds:
+      - |
+        read -p "Migration name: " name
+        echo "\nGenerating SQLite migration..."
+        atlas migrate diff "$name" --env sqlite
+        echo "\nGenerating PostgreSQL migration..."
+        atlas migrate diff "$name" --env postgres
+        echo "\nMigrations generated successfully!"
+
+  migrator-hash:
+    desc: Update migration hashes for SQLite and PostgreSQL
+    cmds:
+      - |
+        echo "Hashing SQLite migrations..."
+        atlas migrate hash --env sqlite
+        echo "Hashing PostgreSQL migrations..."
+        atlas migrate hash --env postgres
+        echo "\nHash files updated successfully!"
+
+  test-migrations-sqlite:
+    desc: Run SQLite migration integration test
+    cmds:
+      - ../scripts/test-migrations-sqlite.sh
+
+  test-migrations-postgres:
+    desc: Run PostgreSQL migration integration test
+    cmds:
+      - ../scripts/test-migrations-postgres.sh
+
+  test-migrations:
+    desc: Run migration integration tests for both databases
+    cmds:
+      - task: test-migrations-sqlite
+      - task: test-migrations-postgres

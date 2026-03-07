@@ -81,7 +81,7 @@ jobs:
       - name: Ensure generated assets are committed
         run: |
           if ! git diff --exit-code; then
-            echo "::error::Generated assets are out of date. Run 'make -C server/static build' and commit the results."
+            echo "::error::Generated assets are out of date. Run 'task -d server/static build' and commit the results."
             git diff
             exit 1
           fi

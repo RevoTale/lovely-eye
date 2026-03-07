@@ -35,4 +35,4 @@
 
 ## Code Generation
 
-- Run `make generate` after modifying `schema.graphqls` or e2e operations to regenerate GraphQL code
+- Run `task generate` after modifying `schema.graphqls` or e2e operations to regenerate GraphQL code
