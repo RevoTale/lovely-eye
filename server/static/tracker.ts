@@ -159,7 +159,9 @@ declare global {
       track();
     };
 
-    window.addEventListener('popstate', track);
+    window.addEventListener('popstate', ()=>{
+      track()
+    });
     window.addEventListener('beforeunload', trackLeave);
   };
 
