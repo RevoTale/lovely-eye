@@ -61,4 +61,4 @@ Separate directories needed because SQLite and PostgreSQL use different syntax (
 
 - `DB_DRIVER` - `sqlite` (default) or `postgres`
 - `DB_DSN` - Connection string
-- `JWT_SECRET` - Required for app initialization
+- `JWT_SECRET` - Optional. If unset, the app generates one at startup. Set it explicitly in production because dashboard sessions will not survive restarts.

@@ -28,7 +28,7 @@ No CSRF tokens needed. See [discussion](https://www.reddit.com/r/node/comments/1
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `JWT_SECRET` | (random) | Secret key for signing tokens. Must be at least 32 characters. |
+| `JWT_SECRET` | generated at startup if empty | Secret key for signing tokens. Must be at least 32 characters when set. Set it explicitly in production if sessions should survive restarts. |
 | `JWT_ACCESS_EXPIRY_MINUTES` | `15` | Access token lifetime in minutes |
 | `JWT_REFRESH_DAYS` | `7` | Refresh token lifetime in days |
 | `SECURE_COOKIES` | `true` | Set to `true` in production (requires HTTPS) |

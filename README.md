@@ -25,7 +25,9 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - JWT_SECRET=your-secret-key-min-32-chars
+      # Optional for local development. Set a fixed value in production to
+      # preserve dashboard sessions across restarts.
+      - JWT_SECRET=${JWT_SECRET:-}
       # Dashboard auth uses cookies and requires HTTPS (serve behind a reverse proxy)
       # Default is true; you can disable it to serve over HTTP.
       # Tracking is cookieless; this setting only affects dashboard auth.
@@ -53,7 +55,9 @@ services:
     environment:
       - DB_DRIVER=postgres
       - DB_DSN=postgres://${POSTGRES_USER:-lovely}:${POSTGRES_PASSWORD:-lovely}@lovely-eye-db:5432/${POSTGRES_DB:-lovely_eye}?sslmode=disable
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      # Optional for local development. Set a fixed value in production to
+      # preserve dashboard sessions across restarts.
+      - JWT_SECRET=${JWT_SECRET:-}
       # Dashboard auth uses cookies and requires HTTPS (serve behind a reverse proxy)
       # Default is true; you can disable it to serve over HTTP.
       # Tracking is cookieless; this setting only affects dashboard auth.
@@ -102,6 +106,7 @@ cd server
 go run ./cmd/server
 ```
 Server starts at http://localhost:8080. The first registered user becomes admin. SQLite by default.
+If `JWT_SECRET` is unset, the server generates one at startup and dashboard sessions do not survive restarts.
 
 ### Next Step. Install the tracking script.
 
@@ -122,7 +127,7 @@ After you started your containers:
 | `SERVER_PORT` | `8080` | Server port |
 | `DB_DRIVER` | `sqlite` | `sqlite` or `postgres` |
 | `DB_DSN` | `file:data/lovely_eye.db?cache=shared&mode=rwc` | Database connection string |
-| `JWT_SECRET` | (random) | JWT signing key (min 32 chars, required for production) |
+| `JWT_SECRET` | generated at startup if empty | JWT signing key. Must be at least 32 chars when set. Set it explicitly in production or multi-instance deployments. |
 | `SECURE_COOKIES` | `true` | Use secure cookies (requires HTTPS). Set to `false` for local dev |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
 | `GEOIP_DB_PATH` | `/data/GeoLite2-Country.mmdb` | Path to GeoLite2-Country.mmdb for country stats |
