@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -50,7 +49,7 @@ func run() int {
 	// Without it, Bun may mark a failed migration as applied so you can rollback. :contentReference[oaicite:2]{index=2}
 	migrator := migrate.NewMigrator(db, migs, migrate.WithMarkAppliedOnSuccess(true))
 
-	dbType := strings.ToUpper(cfg.Database.Driver)
+	dbType := (cfg.Database.Driver)
 	fmt.Printf("=== Testing %s Migrations ===\n", dbType)
 	fmt.Printf("DB_DRIVER: %s\n", cfg.Database.Driver)
 	fmt.Printf("DB_DSN: %s\n\n", cfg.Database.DSN)

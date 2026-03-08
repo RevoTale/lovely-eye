@@ -10,6 +10,18 @@ import (
 	"strings"
 	"time"
 )
+const (
+	defaultIPDBURL string ="https://download.db-ip.com/free/dbip-country-lite.mmdb.gz"
+	defaultIPDBLocalPath string = "/data/GeoLite2-Country.mmdb"
+)
+
+const defaultDBDSN string = "file:data/lovely_eye.db?cache=shared&mode=rwc"
+const (
+	DBDriverPG DBDriver= "postgres"
+	DBDriverSQLite DBDriver = "sqlite"
+)
+
+type DBDriver = string
 
 type Config struct {
 	Server                 ServerConfig
@@ -30,7 +42,7 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Driver         string
+	Driver         DBDriver
 	DSN            string
 	MaxConns       int
 	MinConns       int
@@ -53,7 +65,7 @@ func Load() Config {
 	downloadURL := getEnv("GEOIP_DOWNLOAD_URL", "")
 	maxMindKey := getEnv("GEOIP_MAXMIND_LICENSE_KEY", "")
 	if downloadURL == "" && maxMindKey == "" {
-		downloadURL = "https://download.db-ip.com/free/dbip-country-lite.mmdb.gz"
+		downloadURL = defaultIPDBURL
 	}
 
 	if basePath != "/" {
@@ -67,8 +79,8 @@ func Load() Config {
 			DashboardPath: getEnv("DASHBOARD_PATH", "dashboard"),
 		},
 		Database: DatabaseConfig{
-			Driver:         getEnv("DB_DRIVER", "sqlite"),
-			DSN:            getEnv("DB_DSN", "file:data/lovely_eye.db?cache=shared&mode=rwc"),
+			Driver:         getEnv("DB_DRIVER", DBDriverSQLite),
+			DSN:            getEnv("DB_DSN",defaultDBDSN),
 			MaxConns:       getEnvInt("DB_MAX_CONNS", 10),
 			MinConns:       getEnvInt("DB_MIN_CONNS", 1),
 			ConnectTimeout: getEnvDuration("DB_CONNECT_TIMEOUT", 7*time.Second),
@@ -84,7 +96,7 @@ func Load() Config {
 			InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
 		},
 		LogLevel:               getEnvLogLevel("LOG_LEVEL", slog.LevelWarn),
-		GeoIPDBPath:            getEnv("GEOIP_DB_PATH", "/data/GeoLite2-Country.mmdb"),
+		GeoIPDBPath:            getEnv("GEOIP_DB_PATH", defaultIPDBLocalPath),
 		GeoIPDownloadURL:       downloadURL,
 		GeoIPMaxMindLicenseKey: maxMindKey,
 	}

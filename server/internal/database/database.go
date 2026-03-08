@@ -19,13 +19,13 @@ func New(cfg config.DatabaseConfig) (*bun.DB, error) {
 	var db *bun.DB
 
 	switch cfg.Driver {
-	case "postgres", "postgresql":
+	case "postgres":
 		sqldb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(cfg.DSN)))
 		sqldb.SetMaxOpenConns(cfg.MaxConns)
 		sqldb.SetMaxIdleConns(cfg.MinConns)
 		db = bun.NewDB(sqldb, pgdialect.New())
 
-	case "sqlite", "sqlite3":
+	case "sqlite":
 		sqldb, err := sql.Open("sqlite", cfg.DSN)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open sqlite: %w", err)
