@@ -173,7 +173,8 @@ func convertToGraphQLEventDefinitions(definitions []*models.EventDefinition) []*
 func convertToGraphQLGeoIPStatus(status services.GeoIPStatus) *model.GeoIPStatus {
 	var source *string
 	if status.Source != "" {
-		source = &status.Source
+		value := status.Source.String()
+		source = &value
 	}
 	var lastError *string
 	if status.LastError != "" {

@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -73,14 +74,11 @@ func New(cfg config.Config) (*Server, error) {
 		CookieDomain:      cfg.Auth.CookieDomain,
 	})
 
-	geoIPService, err := services.NewGeoIPService(services.GeoIPConfig{
+	geoIPService := services.NewGeoIPService(services.GeoIPConfig{
 		DBPath:            cfg.GeoIP.DBPath,
 		DownloadURL:       cfg.GeoIP.DownloadURL,
 		MaxMindLicenseKey: cfg.GeoIP.MaxMindLicenseKey,
 	})
-	if err != nil {
-		fmt.Printf("Warning: Failed to initialize GeoIP service: %v. Country detection will be disabled.\n", err)
-	}
 
 	siteService := services.NewSiteService(siteRepo)
 	eventDefinitionService := services.NewEventDefinitionService(eventDefinitionRepo)
@@ -183,10 +181,16 @@ func New(cfg config.Config) (*Server, error) {
 }
 
 func (s *Server) Close() error {
-	if err := database.Close(s.DB); err != nil {
-		return fmt.Errorf("close database: %w", err)
+	var err error
+	if s.AnalyticsService != nil {
+		if closeErr := s.AnalyticsService.Close(); closeErr != nil {
+			err = errors.Join(err, closeErr)
+		}
 	}
-	return nil
+	if closeErr := database.Close(s.DB); closeErr != nil {
+		err = errors.Join(err, fmt.Errorf("close database: %w", closeErr))
+	}
+	return err
 }
 
 func graphqlPlaygroundHandler(graphqlPath string) http.HandlerFunc {

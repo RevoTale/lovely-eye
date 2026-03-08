@@ -103,11 +103,7 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 
 	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
-		country, err = s.geoIPService.ResolveCountry(input.IP)
-		if err != nil {
-			err = fmt.Errorf("get country for ip %s: %w", input.IP, err)
-			slog.Error("country resolve failed", "err", err)
-		}
+		country = s.resolveCountryBestEffort(input.IP)
 	}
 
 	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.ISOCode)
@@ -274,11 +270,7 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 
 	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
-		country, err = s.geoIPService.ResolveCountry(input.IP)
-		if err != nil {
-			err = fmt.Errorf("get country for ip %s: %w", input.IP, err)
-			slog.Error("country resolve failed", "err", err)
-		}
+		country = s.resolveCountryBestEffort(input.IP)
 	}
 
 	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.ISOCode)
@@ -449,10 +441,20 @@ func (s *AnalyticsService) RefreshGeoIPDatabase(ctx context.Context) (GeoIPStatu
 	if s.geoIPService == nil {
 		return GeoIPStatus{State: geoIPStateDisabled}, nil
 	}
-	if err := s.geoIPService.EnsureAvailable(ctx); err != nil {
-		return s.geoIPService.Status(), fmt.Errorf("ensure geoip available: %w", err)
+	if err := s.geoIPService.Refresh(ctx); err != nil {
+		return s.geoIPService.Status(), fmt.Errorf("refresh geoip database: %w", err)
 	}
 	return s.geoIPService.Status(), nil
+}
+
+func (s *AnalyticsService) Close() error {
+	if s.geoIPService == nil {
+		return nil
+	}
+	if err := s.geoIPService.Close(); err != nil {
+		return fmt.Errorf("close geoip service: %w", err)
+	}
+	return nil
 }
 
 func (s *AnalyticsService) GetDashboardOverviewWithFilter(ctx context.Context, query AnalyticsQuery) (*DashboardOverview, error) {
@@ -852,13 +854,9 @@ func (s *AnalyticsService) isCountryBlocked(blocked []*models.SiteBlockedCountry
 	if len(blocked) == 0 || s.geoIPService == nil {
 		return false
 	}
-	c, err := s.geoIPService.ResolveCountry(ip)
-	if nil != err {
-		err = fmt.Errorf("get country for ip %s: %w", ip, err)
-		slog.Error("country resolve failed", "err", err)
-	}
+	c := s.resolveCountryBestEffort(ip)
 
-	if c == (Country{}) || c == LocalNetworkCountry {
+	if c == (Country{}) || c == UnknownCountry || c == LocalNetworkCountry {
 		return false
 	}
 	for _, entry := range blocked {
@@ -867,4 +865,22 @@ func (s *AnalyticsService) isCountryBlocked(blocked []*models.SiteBlockedCountry
 		}
 	}
 	return false
+}
+
+func (s *AnalyticsService) resolveCountryBestEffort(ip string) Country {
+	if s.geoIPService == nil {
+		return UnknownCountry
+	}
+
+	country, err := s.geoIPService.ResolveCountry(ip)
+	if err == nil {
+		return country
+	}
+
+	if errors.Is(err, ErrNoDBReader) {
+		return UnknownCountry
+	}
+
+	slog.Error("country resolve failed", "err", fmt.Errorf("get country for ip %s: %w", ip, err))
+	return UnknownCountry
 }
