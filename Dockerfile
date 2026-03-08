@@ -1,10 +1,7 @@
 # Stage 1: Build the React dashboard
-FROM node:25-alpine AS dashboard-builder
+FROM oven/bun:1-alpine AS dashboard-builder
 
 WORKDIR /app
-
-# Install bun for faster builds
-RUN npm install -g bun
 
 # Copy package files and install dependencies
 COPY ./dashboard/package.json ./dashboard/bun.lock ./
