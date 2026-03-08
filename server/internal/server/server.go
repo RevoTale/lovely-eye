@@ -74,9 +74,9 @@ func New(cfg config.Config) (*Server, error) {
 	})
 
 	geoIPService, err := services.NewGeoIPService(services.GeoIPConfig{
-		DBPath:            cfg.GeoIPDBPath,
-		DownloadURL:       cfg.GeoIPDownloadURL,
-		MaxMindLicenseKey: cfg.GeoIPMaxMindLicenseKey,
+		DBPath:            cfg.GeoIP.DBPath,
+		DownloadURL:       cfg.GeoIP.DownloadURL,
+		MaxMindLicenseKey: cfg.GeoIP.MaxMindLicenseKey,
 	})
 	if err != nil {
 		fmt.Printf("Warning: Failed to initialize GeoIP service: %v. Country detection will be disabled.\n", err)

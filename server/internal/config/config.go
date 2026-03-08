@@ -10,28 +10,27 @@ import (
 	"strings"
 	"time"
 )
+
 const (
-	defaultIPDBURL string ="https://download.db-ip.com/free/dbip-country-lite.mmdb.gz"
+	defaultIPDBURL       string = "https://download.db-ip.com/free/dbip-country-lite.mmdb.gz"
 	defaultIPDBLocalPath string = "/data/GeoLite2-Country.mmdb"
 )
 
 const defaultDBDSN string = "file:data/lovely_eye.db?cache=shared&mode=rwc"
 const (
-	DBDriverPG DBDriver= "postgres"
+	DBDriverPG     DBDriver = "postgres"
 	DBDriverSQLite DBDriver = "sqlite"
 )
 
 type DBDriver = string
 
 type Config struct {
-	Server                 ServerConfig
-	Database               DatabaseConfig
-	Auth                   AuthConfig
-	LogLevel               slog.Level // Log level: DEBUG(-4), INFO(0), WARN(4), ERROR(8) - default: WARN
-	GeoIPDBPath            string
-	GeoIPDownloadURL       string
-	GeoIPMaxMindLicenseKey string
-	TrackerJS              []byte // Optional: for testing, to avoid loading from file
+	Server    ServerConfig
+	Database  DatabaseConfig
+	Auth      AuthConfig
+	GeoIP     GeoIPConfig
+	LogLevel  slog.Level // Log level: DEBUG(-4), INFO(0), WARN(4), ERROR(8) - default: WARN
+	TrackerJS []byte     // Optional: for testing, to avoid loading from file
 }
 
 type ServerConfig struct {
@@ -60,6 +59,12 @@ type AuthConfig struct {
 	InitialAdminPassword string // password for initial admin (optional)
 }
 
+type GeoIPConfig struct {
+	DBPath            string
+	DownloadURL       string
+	MaxMindLicenseKey string
+}
+
 func Load() Config {
 	basePath := getEnv("BASE_PATH", "/")
 	downloadURL := getEnv("GEOIP_DOWNLOAD_URL", "")
@@ -80,7 +85,7 @@ func Load() Config {
 		},
 		Database: DatabaseConfig{
 			Driver:         getEnv("DB_DRIVER", DBDriverSQLite),
-			DSN:            getEnv("DB_DSN",defaultDBDSN),
+			DSN:            getEnv("DB_DSN", defaultDBDSN),
 			MaxConns:       getEnvInt("DB_MAX_CONNS", 10),
 			MinConns:       getEnvInt("DB_MIN_CONNS", 1),
 			ConnectTimeout: getEnvDuration("DB_CONNECT_TIMEOUT", 7*time.Second),
@@ -95,10 +100,12 @@ func Load() Config {
 			InitialAdminUsername: getEnv("INITIAL_ADMIN_USERNAME", ""),
 			InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
 		},
-		LogLevel:               getEnvLogLevel("LOG_LEVEL", slog.LevelWarn),
-		GeoIPDBPath:            getEnv("GEOIP_DB_PATH", defaultIPDBLocalPath),
-		GeoIPDownloadURL:       downloadURL,
-		GeoIPMaxMindLicenseKey: maxMindKey,
+		GeoIP: GeoIPConfig{
+			DBPath:            getEnv("GEOIP_DB_PATH", defaultIPDBLocalPath),
+			DownloadURL:       downloadURL,
+			MaxMindLicenseKey: maxMindKey,
+		},
+		LogLevel: getEnvLogLevel("LOG_LEVEL", slog.LevelWarn),
 	}
 }
 
