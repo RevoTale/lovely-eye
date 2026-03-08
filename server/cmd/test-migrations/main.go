@@ -28,7 +28,7 @@ func run() int {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	db, err := database.New(&cfg.Database)
+	db, err := database.New(cfg.Database)
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)
 		return 1

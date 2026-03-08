@@ -290,14 +290,14 @@ func TestInitialAdminEdgeCases(t *testing.T) {
 	}
 }
 
-func testConfigWithInitialAdmin(username, password string) *config.Config {
+func testConfigWithInitialAdmin(username, password string) config.Config {
 	cfg := testConfig()
 	cfg.Auth.InitialAdminUsername = username
 	cfg.Auth.InitialAdminPassword = password
 	return cfg
 }
 
-func newTestServerWithConfig(t *testing.T, cfg *config.Config) *testServer {
+func newTestServerWithConfig(t *testing.T, cfg config.Config) *testServer {
 	t.Helper()
 
 	srv, err := server.New(cfg)

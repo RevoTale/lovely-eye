@@ -22,8 +22,8 @@ import (
 
 var defaultPaging = operations.PagingInput{Limit: 50, Offset: 0}
 
-func testConfig() *config.Config {
-	return &config.Config{
+func testConfig() config.Config {
+	return config.Config{
 		Server: config.ServerConfig{
 			Host:          "127.0.0.1",
 			Port:          "0",

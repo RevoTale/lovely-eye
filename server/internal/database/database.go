@@ -15,7 +15,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func New(cfg *config.DatabaseConfig) (*bun.DB, error) {
+func New(cfg config.DatabaseConfig) (*bun.DB, error) {
 	var db *bun.DB
 
 	switch cfg.Driver {

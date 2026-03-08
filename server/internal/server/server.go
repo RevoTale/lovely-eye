@@ -32,7 +32,7 @@ type Server struct {
 	trackerJS        []byte
 }
 
-func New(cfg *config.Config) (*Server, error) {
+func New(cfg config.Config) (*Server, error) {
 
 	var trackerJS []byte
 	if len(cfg.TrackerJS) == 0 {
@@ -46,7 +46,7 @@ func New(cfg *config.Config) (*Server, error) {
 		trackerJS = cfg.TrackerJS
 	}
 
-	db, err := database.New(&cfg.Database)
+	db, err := database.New(cfg.Database)
 	if err != nil {
 		return nil, fmt.Errorf("create database connection: %w", err)
 	}

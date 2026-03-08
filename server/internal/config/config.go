@@ -48,7 +48,7 @@ type AuthConfig struct {
 	InitialAdminPassword string // password for initial admin (optional)
 }
 
-func Load() *Config {
+func Load() Config {
 	basePath := getEnv("BASE_PATH", "/")
 	downloadURL := getEnv("GEOIP_DOWNLOAD_URL", "")
 	maxMindKey := getEnv("GEOIP_MAXMIND_LICENSE_KEY", "")
@@ -59,7 +59,7 @@ func Load() *Config {
 	if basePath != "/" {
 		basePath = "/" + strings.Trim(basePath, "/")
 	}
-	return &Config{
+	return Config{
 		Server: ServerConfig{
 			Host:          getEnv("SERVER_HOST", "0.0.0.0"),
 			Port:          getEnv("SERVER_PORT", "8080"),
