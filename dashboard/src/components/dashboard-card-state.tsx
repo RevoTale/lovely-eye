@@ -24,7 +24,7 @@ const DashboardCardState: FunctionComponent<DashboardCardStateProps> = ({
 
   return (
     <div className="relative">
-      <div className={cn(className, state === 'refreshing' && 'opacity-55 transition-opacity duration-200')}>
+      <div className={cn(className, state === 'refreshing' && 'opacity-80 transition-opacity duration-200')}>
         {children}
       </div>
       {state === 'refreshing' ? (
