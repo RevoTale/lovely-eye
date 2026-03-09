@@ -48,11 +48,3 @@ export {
   TabsList,
   TabsTrigger,
 } from './tabs';
-export {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-  type ChartConfig,
-} from './chart';

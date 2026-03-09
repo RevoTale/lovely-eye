@@ -1,13 +1,12 @@
 import { TrendingUp } from 'lucide-react';
 import type { FunctionComponent } from 'react';
 import { useMemo } from 'react';
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import DashboardCardState from '@/components/dashboard-card-state';
-import { Card, CardContent, CardHeader, CardTitle, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, Progress, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from '@/components/ui';
+import OverviewChartPlot from '@/components/overview-chart/overview-chart-plot';
+import { Card, CardContent, CardHeader, CardTitle, Progress, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Skeleton } from '@/components/ui';
 import type { FilterInput } from '@/gql/graphql';
+import { buildOverviewChartData } from '@/components/overview-chart/overview-chart-data';
 import { useChartDataLoader } from '@/hooks/use-chart-data-loader';
-import { buildTimeFormatter, parseChartDate } from '@/lib/chart-date';
-import { CHART_CONFIG, CHART_MARGIN, TICK_MARGIN } from '@/lib/chart-config';
 
 interface OverviewChartSectionProps {
   siteId: string;
@@ -22,11 +21,7 @@ const PROGRESS_MIN = 0;
 
 const OverviewChartSection: FunctionComponent<OverviewChartSectionProps> = ({ siteId, dateRange, filter, bucket, onBucketChange }) => {
   const { loadedData, state, loadingMore, progress, expectedCount } = useChartDataLoader({ siteId, dateRange, filter, bucket });
-  const formatters = useMemo(() => ({ daily: buildTimeFormatter('daily'), hourly: buildTimeFormatter('hourly') }), []);
-  const chartData = useMemo(() => loadedData.map((stat) => {
-    const timestamp = parseChartDate(stat.date);
-    return timestamp === null ? null : { timestamp, visitors: stat.visitors, pageViews: stat.pageViews, sessions: stat.sessions };
-  }).filter((item): item is NonNullable<typeof item> => item !== null).sort((a, b) => a.timestamp - b.timestamp), [loadedData]);
+  const chartData = useMemo(() => buildOverviewChartData(loadedData), [loadedData]);
   const showProgress = (state === 'refreshing' && chartData.length > EMPTY_COUNT) || loadingMore;
   const progressLabel = expectedCount === null ? `Loaded ${loadedData.length.toLocaleString()} points` : `Loaded ${Math.min(loadedData.length, expectedCount).toLocaleString()} of ${expectedCount.toLocaleString()} points`;
 
@@ -42,19 +37,8 @@ const OverviewChartSection: FunctionComponent<OverviewChartSectionProps> = ({ si
         {showProgress ? <div className="space-y-2"><div className="flex items-center justify-between text-xs text-muted-foreground"><span>{loadingMore ? 'Loading more data' : 'Refreshing chart data'}</span><span>{progressLabel}</span></div><Progress value={progress ?? PROGRESS_MIN} className="h-2" /></div> : null}
       </CardHeader>
       <CardContent>
-        <DashboardCardState state={state} overlayLabel={loadingMore ? 'Loading more' : 'Refreshing chart'} skeleton={<Skeleton className="h-[300px] w-full" />} className="min-h-[300px]">
-          <ChartContainer config={CHART_CONFIG} className="h-[300px] w-full">
-            <AreaChart data={chartData} margin={CHART_MARGIN}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="timestamp" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={(value) => formatters[bucket].format(Number(value))} tickLine={false} axisLine={false} tickMargin={TICK_MARGIN} className="text-xs" />
-              <YAxis tickLine={false} axisLine={false} tickMargin={TICK_MARGIN} className="text-xs" />
-              <ChartTooltip content={<ChartTooltipContent labelFormatter={(value) => typeof value === 'number' ? formatters[bucket].format(value) : String(value)} />} />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Area type="monotone" dataKey="visitors" stackId="1" stroke="var(--color-visitors)" fill="var(--color-visitors)" fillOpacity={0.6} />
-              <Area type="monotone" dataKey="pageViews" stackId="2" stroke="var(--color-pageViews)" fill="var(--color-pageViews)" fillOpacity={0.6} />
-              <Area type="monotone" dataKey="sessions" stackId="3" stroke="var(--color-sessions)" fill="var(--color-sessions)" fillOpacity={0.6} />
-            </AreaChart>
-          </ChartContainer>
+        <DashboardCardState state={state} overlayLabel={loadingMore ? 'Loading more' : 'Refreshing chart'} skeleton={<Skeleton className="h-[clamp(240px,44vw,320px)] w-full" />} className="min-h-[clamp(240px,44vw,320px)]">
+          <OverviewChartPlot bucket={bucket} data={chartData} />
         </DashboardCardState>
       </CardContent>
     </Card>
