@@ -1,5 +1,45 @@
 # Changelog
 
+## [1.6.0](https://github.com/RevoTale/lovely-eye/compare/v1.5.1...v1.6.0) (2026-03-09)
+
+
+### Features
+
+* add devcontainer config to support VsCode biome validation ([0194d83](https://github.com/RevoTale/lovely-eye/commit/0194d83fbdfb551f507ff62c92de4bdf8c438ebb))
+* convert Makefile to the Taskfile ([36a3739](https://github.com/RevoTale/lovely-eye/commit/36a37394b69fc7369408bcf793f5a51b6d9f33d9))
+* extended analytics browser, OS, and device detection. Added filters by browser, cards with browser. More deep detection of the browers, device range support, and much more OS namings ([026c212](https://github.com/RevoTale/lovely-eye/commit/026c2125b9d3cbd422c0329f3e4ecce928f4f57a))
+* fix performance issue by storing the countries data in database. Display full country names in the Admin UI. ([fe0f535](https://github.com/RevoTale/lovely-eye/commit/fe0f535fc0688d301aefccf0832369f0ba3fdc62))
+* go 1.26 ([aafc2cd](https://github.com/RevoTale/lovely-eye/commit/aafc2cd698fee81a883e77f18ac82cc12df62008))
+* migrate from EsLint to the Biome linting. ([0194d83](https://github.com/RevoTale/lovely-eye/commit/0194d83fbdfb551f507ff62c92de4bdf8c438ebb))
+* more information about how to setup for newbies ([65a8af9](https://github.com/RevoTale/lovely-eye/commit/65a8af9c2bbc494d859b12f8af0e9c86aa4ae5f8))
+* more information about how to setup for newbies ([2f271aa](https://github.com/RevoTale/lovely-eye/commit/2f271aa67034b255f8484c91c8ce12b0e9b7e5b7))
+* optimize database space used, dashboard UX polished, improve analytics identity rotation,  display more country data and optimize it ([4a183e0](https://github.com/RevoTale/lovely-eye/commit/4a183e0cc22360bb8572c312ba3b26fe80536862))
+* OS list card and filtering by the OS ([d8c9cfe](https://github.com/RevoTale/lovely-eye/commit/d8c9cfeb64b8cb7eb695430c16c549d052f13ef5))
+* refactor components. Fix the flickering loading state. Add the data loading indicators. ([baa660b](https://github.com/RevoTale/lovely-eye/commit/baa660bd54e1522cab65d1f2c0510b67d93d8364))
+* refactor shadcn chart to the v3 recharts ([b8e874d](https://github.com/RevoTale/lovely-eye/commit/b8e874d93bfd6a24bc63f56c685301fe598532a9))
+* refactor the carchart type for the OS, Browser, Screen sizes etc to the uint8 as a prdefined enum. That improves database performance a lot and reduce data usage. ([55131e8](https://github.com/RevoTale/lovely-eye/commit/55131e8058a66dc445d23827bff9fe3761c893a5))
+* refactor the geoip module to be split by packaghes and what they do. Some perfoamce and RAM optimization. Make code cleaner to understand whats going on. Disable the cache for the county list due to rare usage in admin UI ([4b1019b](https://github.com/RevoTale/lovely-eye/commit/4b1019bdb094dad8148141381e3b12b442c37d12))
+* remove the nodejs image during build ([35fb85b](https://github.com/RevoTale/lovely-eye/commit/35fb85be8cb7f29340d05a16b610b0e014ed3611))
+* replace analytics visitor identity with keyed truncated hashing. Switch analytics visitor identity to keyed HMAC with truncated IP prefixes ([b41ff6c](https://github.com/RevoTale/lovely-eye/commit/b41ff6cfca6caff0715b51d87896728e5cc9e73f))
+* require mobile friendly instructions. ([2d800da](https://github.com/RevoTale/lovely-eye/commit/2d800da4cb356f89cbe3a326c89e81ede4e5c035))
+* use fishshell furing developemnt ([e44985b](https://github.com/RevoTale/lovely-eye/commit/e44985bf596ebfdd2371795e76bd36113e2483c1))
+
+
+### Bug Fixes
+
+* broken postgresql CI due to wrong path ([d9f649c](https://github.com/RevoTale/lovely-eye/commit/d9f649c99488e333d0eaca13b9235210f87d5de1))
+* chart point labels overflow and layering ([b8e874d](https://github.com/RevoTale/lovely-eye/commit/b8e874d93bfd6a24bc63f56c685301fe598532a9))
+* **deps:** update all non-major dependencies ([93aff8d](https://github.com/RevoTale/lovely-eye/commit/93aff8db140c5aeff25fdb3074f0edb20c45092f))
+* **deps:** update all non-major dependencies ([2c126f9](https://github.com/RevoTale/lovely-eye/commit/2c126f9eea83d12c24cf64f93c5ec1bbace54768))
+* **deps:** update module github.com/golang-jwt/jwt/v5 to v5.3.1 ([b097731](https://github.com/RevoTale/lovely-eye/commit/b097731cb175f9449caf77fc350ac32d71499d5f))
+* **deps:** update module github.com/golang-jwt/jwt/v5 to v5.3.1 ([4911152](https://github.com/RevoTale/lovely-eye/commit/49111521ce11516de8c3db3489552d36f5040016))
+* implement UTC-day-skipped analytics client rotation ([e6ae386](https://github.com/RevoTale/lovely-eye/commit/e6ae386c0f70d76742009f54725a6e5cc904e3bc))
+* light theme colors were too dim ([ce6ee6a](https://github.com/RevoTale/lovely-eye/commit/ce6ee6ae6f89acc8f23a8724bf92cec78d2cd62f))
+* lint error ([6dd2633](https://github.com/RevoTale/lovely-eye/commit/6dd263378158dc43525deb3b131cec351457507d))
+* regenerate the assets ([fd5fc1e](https://github.com/RevoTale/lovely-eye/commit/fd5fc1eb2ff44f587038cb7c70bda43a41d02eb4))
+* specify that JWT_SECRET is optional but required for stable deployment ([d2e830b](https://github.com/RevoTale/lovely-eye/commit/d2e830b3fdab2e728e8ed796bf22533d0aa5e0e0))
+* xss warning ([82e2f41](https://github.com/RevoTale/lovely-eye/commit/82e2f41dc9de4b083bdf1a7cebbccb6a4ac58728))
+
 ## [1.5.1](https://github.com/RevoTale/lovely-eye/compare/v1.5.0...v1.5.1) (2026-01-26)
 
 
