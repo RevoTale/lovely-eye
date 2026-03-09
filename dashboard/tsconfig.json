@@ -43,12 +43,5 @@
       "@/*": ["src/*"]
     }
   },
-  "include": [
-    "src",
-    "codegen.ts",
-    "vite.config.ts",
-    "tailwind.config.ts",
-    "postcss.config.js",
-    "eslint.config.ts"
-  ]
+  "include": ["src", "codegen.ts", "vite.config.ts", "tailwind.config.ts", "postcss.config.js"]
 }

@@ -1,34 +1,60 @@
 {
-    "name": "Lovely Eye analytics",
-    "initializeCommand": "test -f .devcontainer/docker-compose.override.yml || cp .devcontainer/docker-compose.override.empty.yml .devcontainer/docker-compose.override.yml",
-    "dockerComposeFile": [
-        "docker-compose.yml",
-        "docker-compose.override.yml"
-    ],
-    "service": "app",
-    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-    "features": {
-        "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
-        "ghcr.io/rails/devcontainer/features/bun:1.0.2": {},
-        "ghcr.io/devcontainers-extra/features/go-task:1": {},
-            "ghcr.io/devcontainers/features/go:1": {
+  "name": "Lovely Eye analytics",
+  "initializeCommand": "test -f .devcontainer/docker-compose.override.yml || cp .devcontainer/docker-compose.override.empty.yml .devcontainer/docker-compose.override.yml",
+  "dockerComposeFile": ["docker-compose.yml", "docker-compose.override.yml"],
+  "service": "app",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/rails/devcontainer/features/bun:1.0.2": {},
+    "ghcr.io/devcontainers-extra/features/go-task:1": {},
+    "ghcr.io/devcontainers/features/go:1": {
       "version": "1.26"
     }
-    },
-    "forwardPorts": [],
-    "remoteUser": "root",
-    "customizations": {
-        "vscode": {
-            "settings": {
-                "terminal.integrated.defaultProfile.linux": "fish"
-            },
-            "extensions": [
-                "golang.go",
-                "GraphQL.vscode-graphql",
-                "GraphQL.vscode-graphql-syntax",
-                "-ms-vscode.azure-repos",
-                "-dbaeumer.vscode-eslint"
-            ]
+  },
+  "forwardPorts": [],
+  "remoteUser": "root",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "fish",
+        "biome.requireConfiguration": true,
+        "[css]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[graphql]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[html]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[javascript]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[javascriptreact]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[json]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[jsonc]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "biomejs.biome"
         }
+      },
+      "extensions": [
+        "biomejs.biome",
+        "golang.go",
+        "GraphQL.vscode-graphql",
+        "GraphQL.vscode-graphql-syntax",
+        "-ms-vscode.azure-repos",
+        "-dbaeumer.vscode-eslint"
+      ]
     }
+  }
 }

@@ -6,10 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
+    "lint": "biome check ..",
+    "format": "biome check --write ..",
     "preview": "vite preview",
-    "test": "bun --bun run lint && bun --bun run tsc",
+    "test": "bun --bun run lint && bun --bun run typecheck",
+    "typecheck": "bun --bun run tsc && bun --bun run tsc:tracker",
     "tsc": "tsc --noEmit",
+    "tsc:tracker": "tsc --noEmit -p ../server/static/tsconfig.json",
     "codegen": "graphql-codegen --config codegen.ts"
   },
   "dependencies": {
@@ -39,7 +42,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
+    "@biomejs/biome": "^2.4.6",
     "@graphql-codegen/cli": "^6.1.1",
     "@graphql-codegen/client-preset": "^5.2.2",
     "@tailwindcss/postcss": "^4.1.18",
@@ -52,17 +55,10 @@
     "@vitejs/plugin-react": "^5.1.2",
     "@vitejs/plugin-react-swc": "^4.2.2",
     "autoprefixer": "^10.4.23",
-    "eslint": "^9.39.2",
-    "eslint-config-love": "^147.0.0",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "globals": "^17.0.0",
     "lightningcss": "^1.31.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.53.1",
     "vite": "^7.3.1"
   }
 }

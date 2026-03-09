@@ -1,0 +1,123 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.6/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      ".devcontainer/devcontainer.json",
+      "dashboard/codegen.ts",
+      "dashboard/components.json",
+      "dashboard/index.html",
+      "dashboard/package.json",
+      "dashboard/src",
+      "dashboard/tailwind.config.ts",
+      "dashboard/tsconfig.json",
+      "dashboard/vite.config.ts",
+      "server/e2e/operations",
+      "server/schema.graphqls",
+      "server/static/tracker.ts",
+      "server/static/tsconfig.json"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "arrowParentheses": "always",
+      "jsxQuoteStyle": "single",
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "es5"
+    },
+    "jsxRuntime": "transparent"
+  },
+  "json": {
+    "formatter": {
+      "indentStyle": "space",
+      "indentWidth": 2
+    },
+    "parser": {
+      "allowComments": true
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "complexity": {
+        "noArguments": "error",
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": {
+            "maxAllowedComplexity": 25
+          }
+        }
+      },
+      "performance": {
+        "noNamespaceImport": "error"
+      },
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@apollo/client": {
+                "importNames": ["gql"],
+                "message": "Use .graphql files instead of gql templates."
+              },
+              "graphql-tag": "Use .graphql files instead of gql templates."
+            }
+          }
+        },
+        "useImportType": "error",
+        "useNodejsImportProtocol": "error",
+        "useThrowOnlyError": "error"
+      },
+      "suspicious": {
+        "noArrayIndexKey": "error",
+        "noExplicitAny": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["dashboard/src/gql", "dashboard/src/routeTree.gen.ts"],
+      "assist": {
+        "enabled": false
+      },
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
+        "enabled": false
+      }
+    },
+    {
+      "includes": ["dashboard/src/router.tsx", "dashboard/src/routes"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useThrowOnlyError": "off"
+          }
+        }
+      }
+    }
+  ]
+}

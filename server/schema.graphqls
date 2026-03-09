@@ -8,16 +8,26 @@ type User {
 
 type Site {
   id: ID!
-  """All tracked domains (includes primary)"""
+  """
+  All tracked domains (includes primary)
+  """
   domains: [String!]!
   name: String!
-  """Used in tracking script"""
+  """
+  Used in tracking script
+  """
   publicKey: String!
-  """Enable country tracking (requires GeoIP database)"""
+  """
+  Enable country tracking (requires GeoIP database)
+  """
   trackCountry: Boolean!
-  """IP addresses blocked from tracking"""
+  """
+  IP addresses blocked from tracking
+  """
   blockedIPs: [String!]!
-  """ISO country codes blocked from tracking"""
+  """
+  ISO country codes blocked from tracking
+  """
   blockedCountries: [String!]!
   createdAt: Time!
 }
@@ -38,7 +48,9 @@ type DashboardStats {
   pageViews: Int!
   sessions: Int!
   bounceRate: Float!
-  """Average session duration in seconds"""
+  """
+  Average session duration in seconds
+  """
   avgDuration: Float!
   topPages(paging: PagingInput!): PagedPageStats!
   topReferrers(paging: PagingInput!): PagedReferrerStats!
@@ -118,9 +130,13 @@ type Session {
 }
 
 type RealtimeStats {
-  """Visitors active in last 5 minutes"""
+  """
+  Visitors active in last 5 minutes
+  """
   visitors: Int!
-  """Active pages with visitor count"""
+  """
+  Active pages with visitor count
+  """
   activePages(paging: PagingInput!): [ActivePageStats!]!
 }
 
@@ -139,7 +155,9 @@ type GeoIPCountry {
 
 type ActivePageStats {
   path: String!
-  """Number of visitors currently viewing this page"""
+  """
+  Number of visitors currently viewing this page
+  """
   visitors: Int!
 }
 
@@ -148,7 +166,9 @@ type Event {
   name: String!
   path: String!
   definition: EventDefinition
-  """Key-value properties associated with the event"""
+  """
+  Key-value properties associated with the event
+  """
   properties: [EventProperty!]!
   createdAt: Time!
 }
@@ -213,11 +233,17 @@ input CreateSiteInput {
 input UpdateSiteInput {
   name: String!
   trackCountry: Boolean
-  """Full list of tracked domains (includes primary)"""
+  """
+  Full list of tracked domains (includes primary)
+  """
   domains: [String!]
-  """Full list of blocked IPs"""
+  """
+  Full list of blocked IPs
+  """
   blockedIPs: [String!]
-  """Full list of blocked country codes"""
+  """
+  Full list of blocked country codes
+  """
   blockedCountries: [String!]
 }
 
@@ -227,21 +253,37 @@ input DateRangeInput {
 }
 
 input FilterInput {
-  """Filter by specific referrer"""
+  """
+  Filter by specific referrer
+  """
   referrer: [String!]
-  """Filter by device type (desktop, mobile, tablet)"""
+  """
+  Filter by device type (desktop, mobile, tablet)
+  """
   device: [String!]
-  """Filter by page path"""
+  """
+  Filter by page path
+  """
   page: [String!]
-  """Filter by country (stored country name)"""
+  """
+  Filter by country (stored country name)
+  """
   country: [String!]
-  """Filter by event type (page view or predefined)"""
+  """
+  Filter by event type (page view or predefined)
+  """
   eventType: [EventType!]
-  """Filter by event name"""
+  """
+  Filter by event name
+  """
   eventName: [String!]
-  """Filter by event path"""
+  """
+  Filter by event path
+  """
   eventPath: [String!]
-  """Filter by event definition ID"""
+  """
+  Filter by event definition ID
+  """
   eventDefinitionId: [ID!]
 }
 
@@ -267,26 +309,51 @@ type Query {
   realtime(siteId: ID!): RealtimeStats!
   geoIPStatus: GeoIPStatus!
   geoIPCountries(search: String, paging: PagingInput!): [GeoIPCountry!]!
-  """Get events for a site with pagination"""
-  events(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, limit: Int, offset: Int): EventsResult!
-  """Get event counts aggregated by event with the most recent occurrence"""
-  eventCounts(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, paging: PagingInput!): [EventCount!]!
-  """Get event definitions for a site"""
+  """
+  Get events for a site with pagination
+  """
+  events(
+    siteId: ID!
+    dateRange: DateRangeInput
+    filter: FilterInput
+    limit: Int
+    offset: Int
+  ): EventsResult!
+  """
+  Get event counts aggregated by event with the most recent occurrence
+  """
+  eventCounts(
+    siteId: ID!
+    dateRange: DateRangeInput
+    filter: FilterInput
+    paging: PagingInput!
+  ): [EventCount!]!
+  """
+  Get event definitions for a site
+  """
   eventDefinitions(siteId: ID!, paging: PagingInput!): [EventDefinition!]!
 }
 
 type Mutation {
-  """First user becomes admin"""
+  """
+  First user becomes admin
+  """
   register(input: RegisterInput!): AuthPayload!
   login(input: LoginInput!): AuthPayload!
-  """Clears auth cookies"""
+  """
+  Clears auth cookies
+  """
   logout: Boolean!
   refreshToken(refreshToken: String!): TokenPayload!
   createSite(input: CreateSiteInput!): Site!
   updateSite(id: ID!, input: UpdateSiteInput!): Site!
-  """Deletes site and all analytics data"""
+  """
+  Deletes site and all analytics data
+  """
   deleteSite(id: ID!): Boolean!
-  """Invalidates old tracking scripts"""
+  """
+  Invalidates old tracking scripts
+  """
   regenerateSiteKey(id: ID!): Site!
   refreshGeoIPDatabase: GeoIPStatus!
   upsertEventDefinition(siteId: ID!, input: EventDefinitionInput!): EventDefinition!
