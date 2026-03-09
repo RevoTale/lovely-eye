@@ -1,7 +1,7 @@
 services:
   # PostgreSQL database for migration testing
   postgres:
-    image: postgres:18.1-alpine
+    image: postgres:18.3-alpine
     environment:
       - POSTGRES_USER=test
       - POSTGRES_PASSWORD=test
