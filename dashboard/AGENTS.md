@@ -4,6 +4,8 @@
 - use `FunctionComponent` for the Next.js/React components.
 - name of the component defined should match the file name.
 - for React components use the `export default` keyword for exporting.
+- all UI should be desktop, tablet and mobile friendly. Do the proper architecture to achieve it without harcoded screen sizes. Use the harcoded `@media screen max-width()` only when you relaly need or it is reccomended for specific case.
+
 
 # Data loading behaviour
 - each component should have the fallback skeleton which repeats the visual structure
