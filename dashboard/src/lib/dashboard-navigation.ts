@@ -5,6 +5,7 @@ const PAGINATION_KEYS = new Set([
   'topPagesPage',
   'referrersPage',
   'devicesPage',
+  'osPage',
   'countriesPage',
 ]);
 

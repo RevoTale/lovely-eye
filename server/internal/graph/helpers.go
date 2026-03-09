@@ -37,9 +37,19 @@ func parseFilterInput(input *model.FilterInput) services.DashboardFilter {
 	if input == nil {
 		return services.DashboardFilter{}
 	}
+
+	referrers := make([]string, 0, len(input.Referrer))
+	for _, referrer := range input.Referrer {
+		if referrer == "(direct)" {
+			referrer = ""
+		}
+		referrers = append(referrers, referrer)
+	}
+
 	return services.DashboardFilter{
-		Referrer:           input.Referrer,
+		Referrer:           referrers,
 		Device:             input.Device,
+		OS:                 input.Os,
 		Page:               input.Page,
 		Country:            input.Country,
 		EventTypes:         parseEventTypes(input.EventType),
@@ -52,6 +62,7 @@ func parseFilterInput(input *model.FilterInput) services.DashboardFilter {
 func isFilterEmpty(filter services.DashboardFilter) bool {
 	return len(filter.Referrer) == 0 &&
 		len(filter.Device) == 0 &&
+		len(filter.OS) == 0 &&
 		len(filter.Page) == 0 &&
 		len(filter.Country) == 0 &&
 		len(filter.EventTypes) == 0 &&

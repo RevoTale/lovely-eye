@@ -53,6 +53,11 @@ type DeviceStats struct {
 	Visitors int    `json:"visitors"`
 }
 
+type OperatingSystemStats struct {
+	OS       string `json:"os"`
+	Visitors int    `json:"visitors"`
+}
+
 type Country struct {
 	Code      string  `json:"code"`
 	NameCache *string `json:"-"`

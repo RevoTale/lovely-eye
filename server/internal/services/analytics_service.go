@@ -517,6 +517,14 @@ func (s *AnalyticsService) GetDeviceStatsWithFilterPaged(ctx context.Context, qu
 	return stats, total, totalVisitors, nil
 }
 
+func (s *AnalyticsService) GetOperatingSystemStatsWithFilterPaged(ctx context.Context, query AnalyticsQuery) ([]repository.OperatingSystemStats, int, int, error) {
+	stats, total, totalVisitors, err := s.analyticsRepo.GetOperatingSystemStatsWithFilterPaged(ctx, query)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("get operating system stats with filter paged: %w", err)
+	}
+	return stats, total, totalVisitors, nil
+}
+
 func (s *AnalyticsService) GetCountryStatsWithFilterPaged(ctx context.Context, query AnalyticsQuery) ([]repository.CountryStats, int, int, error) {
 	stats, total, totalVisitors, err := s.analyticsRepo.GetCountryStatsWithFilterPaged(ctx, query)
 	if err != nil {

@@ -6,6 +6,7 @@ import type {
   EventCountsQuery,
   EventsQuery,
   FilterInput,
+  OperatingSystemStatsFieldsFragment,
   PageStatsFieldsFragment,
   ReferrerStatsFieldsFragment,
   RealtimeQuery,
@@ -20,6 +21,7 @@ import { TopPagesCard } from '@/components/top-pages-card';
 import { ReferrersCard } from '@/components/referrers-card';
 import { CountryCard } from '@/components/country-card';
 import { DevicesCard } from '@/components/devices-card';
+import { OSCard } from '@/components/os-card';
 import { formatDuration } from '@/lib/dashboard-utils';
 
 interface AnalyticsContentProps {
@@ -65,6 +67,13 @@ interface AnalyticsContentProps {
   devicesPageSize: number;
   devicesLoading?: boolean;
   onDevicesPageChange: (page: number) => void;
+  operatingSystems: OperatingSystemStatsFieldsFragment[];
+  operatingSystemsTotal: number;
+  operatingSystemsTotalVisitors: number;
+  osPage: number;
+  osPageSize: number;
+  operatingSystemsLoading?: boolean;
+  onOSPageChange: (page: number) => void;
 }
 
 export const AnalyticsContent = (props: AnalyticsContentProps): React.ReactNode => {
@@ -76,6 +85,8 @@ export const AnalyticsContent = (props: AnalyticsContentProps): React.ReactNode 
     referrers, referrersTotal, referrersPage, referrersPageSize, referrersLoading = false, onReferrersPageChange,
     countries, countriesTotal, countriesTotalVisitors, countriesPage, countriesPageSize, countriesLoading = false, onCountriesPageChange,
     devices, devicesTotal, devicesTotalVisitors, devicesPage, devicesPageSize, devicesLoading = false, onDevicesPageChange,
+    operatingSystems, operatingSystemsTotal, operatingSystemsTotalVisitors, osPage, osPageSize,
+    operatingSystemsLoading = false, onOSPageChange,
   } = props;
   const statsData = getFragmentData(DashboardStatsFieldsFragmentDoc, stats);
   const realtimeData =
@@ -166,16 +177,29 @@ export const AnalyticsContent = (props: AnalyticsContentProps): React.ReactNode 
         onPageChange={onCountriesPageChange}
       />
 
-      <DevicesCard
-        devices={devices}
-        total={devicesTotal}
-        totalVisitors={devicesTotalVisitors}
-        page={devicesPage}
-        pageSize={devicesPageSize}
-        siteId={siteId}
-        loading={devicesLoading}
-        onPageChange={onDevicesPageChange}
-      />
+      <div className="grid gap-6 md:grid-cols-2">
+        <DevicesCard
+          devices={devices}
+          total={devicesTotal}
+          totalVisitors={devicesTotalVisitors}
+          page={devicesPage}
+          pageSize={devicesPageSize}
+          siteId={siteId}
+          loading={devicesLoading}
+          onPageChange={onDevicesPageChange}
+        />
+
+        <OSCard
+          operatingSystems={operatingSystems}
+          total={operatingSystemsTotal}
+          totalVisitors={operatingSystemsTotalVisitors}
+          page={osPage}
+          pageSize={osPageSize}
+          siteId={siteId}
+          loading={operatingSystemsLoading}
+          onPageChange={onOSPageChange}
+        />
+      </div>
     </>
   );
 }

@@ -81,6 +81,7 @@ func TestDashboardCountryNamesAreResolvedLazily(t *testing.T) {
 		defaultPaging,
 		defaultPaging,
 		defaultPaging,
+		defaultPaging,
 		nil,
 		nil,
 	)

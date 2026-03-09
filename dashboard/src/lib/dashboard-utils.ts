@@ -3,6 +3,7 @@ import {
   CountryStatsFieldsFragmentDoc,
   DashboardStatsFieldsFragmentDoc,
   DeviceStatsFieldsFragmentDoc,
+  OperatingSystemStatsFieldsFragmentDoc,
   PageStatsFieldsFragmentDoc,
   ReferrerStatsFieldsFragmentDoc,
 } from '@/gql/graphql';
@@ -11,6 +12,7 @@ import type {
   DashboardStatsFieldsFragment,
   DashboardQuery,
   DeviceStatsFieldsFragment,
+  OperatingSystemStatsFieldsFragment,
   PageStatsFieldsFragment,
   ReferrerStatsFieldsFragment,
 } from '@/gql/graphql';
@@ -39,6 +41,7 @@ export function normalizeStatsBucket(value: PageValue): 'daily' | 'hourly' {
 interface FilterResult {
   referrers: string[];
   devices: string[];
+  operatingSystems: string[];
   pages: string[];
   countries: string[];
   eventNames: string[];
@@ -50,6 +53,7 @@ interface FilterResult {
 export function buildFilters(search: Record<string, string | string[] | undefined>): FilterResult {
   const referrers = normalizeFilterValue(search['referrer']);
   const devices = normalizeFilterValue(search['device']);
+  const operatingSystems = normalizeFilterValue(search['os']);
   const pages = normalizeFilterValue(search['page']);
   const countries = normalizeFilterValue(search['country']);
   const eventNames = normalizeFilterValue(search['eventName']);
@@ -59,6 +63,7 @@ export function buildFilters(search: Record<string, string | string[] | undefine
     ...search,
     ...(referrers.length > EMPTY_COUNT ? { referrer: referrers } : {}),
     ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
+    ...(operatingSystems.length > EMPTY_COUNT ? { os: operatingSystems } : {}),
     ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
     ...(countries.length > EMPTY_COUNT ? { country: countries } : {}),
     ...(eventNames.length > EMPTY_COUNT ? { eventName: eventNames } : {}),
@@ -68,13 +73,14 @@ export function buildFilters(search: Record<string, string | string[] | undefine
   const filter = {
     ...(referrers.length > EMPTY_COUNT ? { referrer: referrers } : {}),
     ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
+    ...(operatingSystems.length > EMPTY_COUNT ? { os: operatingSystems } : {}),
     ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
     ...(countries.length > EMPTY_COUNT ? { country: countries } : {}),
     ...(eventNames.length > EMPTY_COUNT ? { eventName: eventNames } : {}),
     ...(eventPaths.length > EMPTY_COUNT ? { eventPath: eventPaths } : {}),
   };
 
-  return { referrers, devices, pages, countries, eventNames, eventPaths, decodedSearch, filter };
+  return { referrers, devices, operatingSystems, pages, countries, eventNames, eventPaths, decodedSearch, filter };
 }
 
 interface StatsDataResult {
@@ -85,6 +91,9 @@ interface StatsDataResult {
   devicesItems: DeviceStatsFieldsFragment[];
   devicesTotal: number;
   devicesTotalVisitors: number;
+  operatingSystemsItems: OperatingSystemStatsFieldsFragment[];
+  operatingSystemsTotal: number;
+  operatingSystemsTotalVisitors: number;
   countriesItems: CountryStatsFieldsFragment[];
   countriesTotal: number;
   countriesTotalVisitors: number;
@@ -115,6 +124,12 @@ export function createEmptyDashboardStats(): DashboardStatsFieldsFragment {
       totalVisitors: EMPTY_COUNT,
       items: [],
     },
+    operatingSystems: {
+      __typename: 'PagedOperatingSystemStats',
+      total: EMPTY_COUNT,
+      totalVisitors: EMPTY_COUNT,
+      items: [],
+    },
     countries: {
       __typename: 'PagedCountryStats',
       total: EMPTY_COUNT,
@@ -134,6 +149,10 @@ export function extractStatsData(
   const topPages = getFragmentData(PageStatsFieldsFragmentDoc, normalizedStats.topPages.items);
   const referrersItems = getFragmentData(ReferrerStatsFieldsFragmentDoc, normalizedStats.topReferrers.items);
   const devicesItems = getFragmentData(DeviceStatsFieldsFragmentDoc, normalizedStats.devices.items);
+  const operatingSystemsItems = getFragmentData(
+    OperatingSystemStatsFieldsFragmentDoc,
+    normalizedStats.operatingSystems.items
+  );
   const countriesItems = getFragmentData(CountryStatsFieldsFragmentDoc, normalizedStats.countries.items);
 
   return {
@@ -144,6 +163,9 @@ export function extractStatsData(
     devicesItems,
     devicesTotal: normalizedStats.devices.total,
     devicesTotalVisitors: normalizedStats.devices.totalVisitors,
+    operatingSystemsItems,
+    operatingSystemsTotal: normalizedStats.operatingSystems.total,
+    operatingSystemsTotalVisitors: normalizedStats.operatingSystems.totalVisitors,
     countriesItems,
     countriesTotal: normalizedStats.countries.total,
     countriesTotalVisitors: normalizedStats.countries.totalVisitors,

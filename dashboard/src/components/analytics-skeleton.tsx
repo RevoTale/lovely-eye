@@ -11,6 +11,7 @@ const EVENTS_COUNTS_PAGE_SIZE = 20;
 const TOP_PAGES_PAGE_SIZE = 5;
 const REFERRERS_PAGE_SIZE = 5;
 const DEVICES_PAGE_SIZE = 6;
+const OS_PAGE_SIZE = 6;
 const COUNTRIES_PAGE_SIZE = 6;
 
 interface AnalyticsSkeletonProps {
@@ -89,6 +90,15 @@ export const AnalyticsSkeleton = ({
       devicesLoading={true}
       onDevicesPageChange={(page) => {
         onPageChange('devicesPage', page);
+      }}
+      operatingSystems={[]}
+      operatingSystemsTotal={EMPTY_COUNT}
+      operatingSystemsTotalVisitors={EMPTY_COUNT}
+      osPage={FIRST_PAGE}
+      osPageSize={OS_PAGE_SIZE}
+      operatingSystemsLoading={true}
+      onOSPageChange={(page) => {
+        onPageChange('osPage', page);
       }}
     />
   );

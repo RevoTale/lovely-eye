@@ -57,13 +57,14 @@ type DashboardDashboardDashboardStats struct {
 	Sessions   int     `json:"sessions"`
 	BounceRate float64 `json:"bounceRate"`
 	// Average session duration in seconds
-	AvgDuration  float64                                                        `json:"avgDuration"`
-	TopPages     DashboardDashboardDashboardStatsTopPagesPagedPageStats         `json:"topPages"`
-	TopReferrers DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats `json:"topReferrers"`
-	Browsers     []DashboardDashboardDashboardStatsBrowsersBrowserStats         `json:"browsers"`
-	Devices      DashboardDashboardDashboardStatsDevicesPagedDeviceStats        `json:"devices"`
-	Countries    DashboardDashboardDashboardStatsCountriesPagedCountryStats     `json:"countries"`
-	DailyStats   []DashboardDashboardDashboardStatsDailyStats                   `json:"dailyStats"`
+	AvgDuration      float64                                                                   `json:"avgDuration"`
+	TopPages         DashboardDashboardDashboardStatsTopPagesPagedPageStats                    `json:"topPages"`
+	TopReferrers     DashboardDashboardDashboardStatsTopReferrersPagedReferrerStats            `json:"topReferrers"`
+	Browsers         []DashboardDashboardDashboardStatsBrowsersBrowserStats                    `json:"browsers"`
+	Devices          DashboardDashboardDashboardStatsDevicesPagedDeviceStats                   `json:"devices"`
+	OperatingSystems DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStats `json:"operatingSystems"`
+	Countries        DashboardDashboardDashboardStatsCountriesPagedCountryStats                `json:"countries"`
+	DailyStats       []DashboardDashboardDashboardStatsDailyStats                              `json:"dailyStats"`
 }
 
 // GetVisitors returns DashboardDashboardDashboardStats.Visitors, and is useful for accessing the field via an interface.
@@ -99,6 +100,11 @@ func (v *DashboardDashboardDashboardStats) GetBrowsers() []DashboardDashboardDas
 // GetDevices returns DashboardDashboardDashboardStats.Devices, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStats) GetDevices() DashboardDashboardDashboardStatsDevicesPagedDeviceStats {
 	return v.Devices
+}
+
+// GetOperatingSystems returns DashboardDashboardDashboardStats.OperatingSystems, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStats) GetOperatingSystems() DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStats {
+	return v.OperatingSystems
 }
 
 // GetCountries returns DashboardDashboardDashboardStats.Countries, and is useful for accessing the field via an interface.
@@ -228,6 +234,44 @@ func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats
 
 // GetVisitors returns DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats.Visitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsDevicesPagedDeviceStatsItemsDeviceStats) GetVisitors() int {
+	return v.Visitors
+}
+
+// DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStats includes the requested fields of the GraphQL type PagedOperatingSystemStats.
+type DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStats struct {
+	Total         int                                                                                                  `json:"total"`
+	TotalVisitors int                                                                                                  `json:"totalVisitors"`
+	Items         []DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStatsItemsOperatingSystemStats `json:"items"`
+}
+
+// GetTotal returns DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStats.Total, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStats) GetTotal() int {
+	return v.Total
+}
+
+// GetTotalVisitors returns DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStats.TotalVisitors, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStats) GetTotalVisitors() int {
+	return v.TotalVisitors
+}
+
+// GetItems returns DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStats.Items, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStats) GetItems() []DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStatsItemsOperatingSystemStats {
+	return v.Items
+}
+
+// DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStatsItemsOperatingSystemStats includes the requested fields of the GraphQL type OperatingSystemStats.
+type DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStatsItemsOperatingSystemStats struct {
+	Os       string `json:"os"`
+	Visitors int    `json:"visitors"`
+}
+
+// GetOs returns DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStatsItemsOperatingSystemStats.Os, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStatsItemsOperatingSystemStats) GetOs() string {
+	return v.Os
+}
+
+// GetVisitors returns DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStatsItemsOperatingSystemStats.Visitors, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsOperatingSystemsPagedOperatingSystemStatsItemsOperatingSystemStats) GetVisitors() int {
 	return v.Visitors
 }
 
@@ -450,6 +494,8 @@ type FilterInput struct {
 	Referrer []string `json:"referrer"`
 	// Filter by device type (desktop, mobile, tablet)
 	Device []string `json:"device"`
+	// Filter by operating system
+	Os []string `json:"os"`
 	// Filter by page path
 	Page []string `json:"page"`
 	// Filter by ISO country code
@@ -469,6 +515,9 @@ func (v *FilterInput) GetReferrer() []string { return v.Referrer }
 
 // GetDevice returns FilterInput.Device, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetDevice() []string { return v.Device }
+
+// GetOs returns FilterInput.Os, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetOs() []string { return v.Os }
 
 // GetPage returns FilterInput.Page, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetPage() []string { return v.Page }
@@ -787,6 +836,7 @@ type __DashboardInput struct {
 	ReferrersPaging  PagingInput     `json:"referrersPaging"`
 	BrowsersPaging   PagingInput     `json:"browsersPaging"`
 	DevicesPaging    PagingInput     `json:"devicesPaging"`
+	OsPaging         PagingInput     `json:"osPaging"`
 	CountriesPaging  PagingInput     `json:"countriesPaging"`
 	DailyStatsBucket *TimeBucket     `json:"dailyStatsBucket"`
 	DailyStatsLimit  *int            `json:"dailyStatsLimit"`
@@ -812,6 +862,9 @@ func (v *__DashboardInput) GetBrowsersPaging() PagingInput { return v.BrowsersPa
 
 // GetDevicesPaging returns __DashboardInput.DevicesPaging, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetDevicesPaging() PagingInput { return v.DevicesPaging }
+
+// GetOsPaging returns __DashboardInput.OsPaging, and is useful for accessing the field via an interface.
+func (v *__DashboardInput) GetOsPaging() PagingInput { return v.OsPaging }
 
 // GetCountriesPaging returns __DashboardInput.CountriesPaging, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetCountriesPaging() PagingInput { return v.CountriesPaging }
@@ -941,7 +994,7 @@ func CreateSite(
 
 // The query executed by Dashboard.
 const Dashboard_Operation = `
-query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $topPagesPaging: PagingInput!, $referrersPaging: PagingInput!, $browsersPaging: PagingInput!, $devicesPaging: PagingInput!, $countriesPaging: PagingInput!, $dailyStatsBucket: TimeBucket, $dailyStatsLimit: Int) {
+query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $topPagesPaging: PagingInput!, $referrersPaging: PagingInput!, $browsersPaging: PagingInput!, $devicesPaging: PagingInput!, $osPaging: PagingInput!, $countriesPaging: PagingInput!, $dailyStatsBucket: TimeBucket, $dailyStatsLimit: Int) {
 	dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
 		visitors
 		pageViews
@@ -972,6 +1025,14 @@ query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput,
 			totalVisitors
 			items {
 				device
+				visitors
+			}
+		}
+		operatingSystems(paging: $osPaging) {
+			total
+			totalVisitors
+			items {
+				os
 				visitors
 			}
 		}
@@ -1006,6 +1067,7 @@ func Dashboard(
 	referrersPaging PagingInput,
 	browsersPaging PagingInput,
 	devicesPaging PagingInput,
+	osPaging PagingInput,
 	countriesPaging PagingInput,
 	dailyStatsBucket *TimeBucket,
 	dailyStatsLimit *int,
@@ -1021,6 +1083,7 @@ func Dashboard(
 			ReferrersPaging:  referrersPaging,
 			BrowsersPaging:   browsersPaging,
 			DevicesPaging:    devicesPaging,
+			OsPaging:         osPaging,
 			CountriesPaging:  countriesPaging,
 			DailyStatsBucket: dailyStatsBucket,
 			DailyStatsLimit:  dailyStatsLimit,

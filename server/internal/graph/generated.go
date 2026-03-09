@@ -71,17 +71,18 @@ type ComplexityRoot struct {
 	}
 
 	DashboardStats struct {
-		AvgDuration  func(childComplexity int) int
-		BounceRate   func(childComplexity int) int
-		Browsers     func(childComplexity int, paging model.PagingInput) int
-		Countries    func(childComplexity int, paging model.PagingInput) int
-		DailyStats   func(childComplexity int, bucket *model.TimeBucket, limit *int, offset *int) int
-		Devices      func(childComplexity int, paging model.PagingInput) int
-		PageViews    func(childComplexity int) int
-		Sessions     func(childComplexity int) int
-		TopPages     func(childComplexity int, paging model.PagingInput) int
-		TopReferrers func(childComplexity int, paging model.PagingInput) int
-		Visitors     func(childComplexity int) int
+		AvgDuration      func(childComplexity int) int
+		BounceRate       func(childComplexity int) int
+		Browsers         func(childComplexity int, paging model.PagingInput) int
+		Countries        func(childComplexity int, paging model.PagingInput) int
+		DailyStats       func(childComplexity int, bucket *model.TimeBucket, limit *int, offset *int) int
+		Devices          func(childComplexity int, paging model.PagingInput) int
+		OperatingSystems func(childComplexity int, paging model.PagingInput) int
+		PageViews        func(childComplexity int) int
+		Sessions         func(childComplexity int) int
+		TopPages         func(childComplexity int, paging model.PagingInput) int
+		TopReferrers     func(childComplexity int, paging model.PagingInput) int
+		Visitors         func(childComplexity int) int
 	}
 
 	DeviceStats struct {
@@ -151,6 +152,11 @@ type ComplexityRoot struct {
 		UpsertEventDefinition func(childComplexity int, siteID string, input model.EventDefinitionInput) int
 	}
 
+	OperatingSystemStats struct {
+		OS       func(childComplexity int) int
+		Visitors func(childComplexity int) int
+	}
+
 	PageStats struct {
 		Path     func(childComplexity int) int
 		Views    func(childComplexity int) int
@@ -164,6 +170,12 @@ type ComplexityRoot struct {
 	}
 
 	PagedDeviceStats struct {
+		Items         func(childComplexity int) int
+		Total         func(childComplexity int) int
+		TotalVisitors func(childComplexity int) int
+	}
+
+	PagedOperatingSystemStats struct {
 		Items         func(childComplexity int) int
 		Total         func(childComplexity int) int
 		TotalVisitors func(childComplexity int) int
@@ -239,6 +251,7 @@ type DashboardStatsResolver interface {
 	TopReferrers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedReferrerStats, error)
 	Browsers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) ([]*model.BrowserStats, error)
 	Devices(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedDeviceStats, error)
+	OperatingSystems(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedOperatingSystemStats, error)
 	Countries(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedCountryStats, error)
 	DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int, offset *int) ([]*model.DailyStats, error)
 }
@@ -425,6 +438,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.DashboardStats.Devices(childComplexity, args["paging"].(model.PagingInput)), true
+	case "DashboardStats.operatingSystems":
+		if e.ComplexityRoot.DashboardStats.OperatingSystems == nil {
+			break
+		}
+
+		args, err := ec.field_DashboardStats_operatingSystems_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.ComplexityRoot.DashboardStats.OperatingSystems(childComplexity, args["paging"].(model.PagingInput)), true
 	case "DashboardStats.pageViews":
 		if e.ComplexityRoot.DashboardStats.PageViews == nil {
 			break
@@ -760,6 +784,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Mutation.UpsertEventDefinition(childComplexity, args["siteId"].(string), args["input"].(model.EventDefinitionInput)), true
 
+	case "OperatingSystemStats.os":
+		if e.ComplexityRoot.OperatingSystemStats.OS == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OperatingSystemStats.OS(childComplexity), true
+	case "OperatingSystemStats.visitors":
+		if e.ComplexityRoot.OperatingSystemStats.Visitors == nil {
+			break
+		}
+
+		return e.ComplexityRoot.OperatingSystemStats.Visitors(childComplexity), true
+
 	case "PageStats.path":
 		if e.ComplexityRoot.PageStats.Path == nil {
 			break
@@ -816,6 +853,25 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.PagedDeviceStats.TotalVisitors(childComplexity), true
+
+	case "PagedOperatingSystemStats.items":
+		if e.ComplexityRoot.PagedOperatingSystemStats.Items == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PagedOperatingSystemStats.Items(childComplexity), true
+	case "PagedOperatingSystemStats.total":
+		if e.ComplexityRoot.PagedOperatingSystemStats.Total == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PagedOperatingSystemStats.Total(childComplexity), true
+	case "PagedOperatingSystemStats.totalVisitors":
+		if e.ComplexityRoot.PagedOperatingSystemStats.TotalVisitors == nil {
+			break
+		}
+
+		return e.ComplexityRoot.PagedOperatingSystemStats.TotalVisitors(childComplexity), true
 
 	case "PagedPageStats.items":
 		if e.ComplexityRoot.PagedPageStats.Items == nil {
@@ -1231,6 +1287,7 @@ type DashboardStats {
   topReferrers(paging: PagingInput!): PagedReferrerStats!
   browsers(paging: PagingInput!): [BrowserStats!]!
   devices(paging: PagingInput!): PagedDeviceStats!
+  operatingSystems(paging: PagingInput!): PagedOperatingSystemStats!
   countries(paging: PagingInput!): PagedCountryStats!
   dailyStats(bucket: TimeBucket = DAILY, limit: Int, offset: Int): [DailyStats!]!
 }
@@ -1253,6 +1310,11 @@ type BrowserStats {
 
 type DeviceStats {
   device: String!
+  visitors: Int!
+}
+
+type OperatingSystemStats {
+  os: String!
   visitors: Int!
 }
 
@@ -1285,6 +1347,12 @@ type PagedReferrerStats {
 
 type PagedDeviceStats {
   items: [DeviceStats!]!
+  total: Int!
+  totalVisitors: Int!
+}
+
+type PagedOperatingSystemStats {
+  items: [OperatingSystemStats!]!
   total: Int!
   totalVisitors: Int!
 }
@@ -1437,6 +1505,10 @@ input FilterInput {
   """
   device: [String!]
   """
+  Filter by operating system
+  """
+  os: [String!]
+  """
   Filter by page path
   """
   page: [String!]
@@ -1586,6 +1658,17 @@ func (ec *executionContext) field_DashboardStats_dailyStats_args(ctx context.Con
 }
 
 func (ec *executionContext) field_DashboardStats_devices_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
+	if err != nil {
+		return nil, err
+	}
+	args["paging"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_DashboardStats_operatingSystems_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
@@ -2689,6 +2772,55 @@ func (ec *executionContext) fieldContext_DashboardStats_devices(ctx context.Cont
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_DashboardStats_devices_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DashboardStats_operatingSystems(ctx context.Context, field graphql.CollectedField, obj *model.DashboardStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_DashboardStats_operatingSystems,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.DashboardStats().OperatingSystems(ctx, obj, fc.Args["paging"].(model.PagingInput))
+		},
+		nil,
+		ec.marshalNPagedOperatingSystemStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagedOperatingSystemStats,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_DashboardStats_operatingSystems(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DashboardStats",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "items":
+				return ec.fieldContext_PagedOperatingSystemStats_items(ctx, field)
+			case "total":
+				return ec.fieldContext_PagedOperatingSystemStats_total(ctx, field)
+			case "totalVisitors":
+				return ec.fieldContext_PagedOperatingSystemStats_totalVisitors(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PagedOperatingSystemStats", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_DashboardStats_operatingSystems_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4213,6 +4345,64 @@ func (ec *executionContext) fieldContext_Mutation_deleteEventDefinition(ctx cont
 	return fc, nil
 }
 
+func (ec *executionContext) _OperatingSystemStats_os(ctx context.Context, field graphql.CollectedField, obj *model.OperatingSystemStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_OperatingSystemStats_os,
+		func(ctx context.Context) (any, error) {
+			return obj.OS, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_OperatingSystemStats_os(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OperatingSystemStats",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _OperatingSystemStats_visitors(ctx context.Context, field graphql.CollectedField, obj *model.OperatingSystemStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_OperatingSystemStats_visitors,
+		func(ctx context.Context) (any, error) {
+			return obj.Visitors, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_OperatingSystemStats_visitors(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "OperatingSystemStats",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _PageStats_path(ctx context.Context, field graphql.CollectedField, obj *model.PageStats) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4476,6 +4666,99 @@ func (ec *executionContext) _PagedDeviceStats_totalVisitors(ctx context.Context,
 func (ec *executionContext) fieldContext_PagedDeviceStats_totalVisitors(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "PagedDeviceStats",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PagedOperatingSystemStats_items(ctx context.Context, field graphql.CollectedField, obj *model.PagedOperatingSystemStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PagedOperatingSystemStats_items,
+		func(ctx context.Context) (any, error) {
+			return obj.Items, nil
+		},
+		nil,
+		ec.marshalNOperatingSystemStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐOperatingSystemStatsᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PagedOperatingSystemStats_items(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PagedOperatingSystemStats",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "os":
+				return ec.fieldContext_OperatingSystemStats_os(ctx, field)
+			case "visitors":
+				return ec.fieldContext_OperatingSystemStats_visitors(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type OperatingSystemStats", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PagedOperatingSystemStats_total(ctx context.Context, field graphql.CollectedField, obj *model.PagedOperatingSystemStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PagedOperatingSystemStats_total,
+		func(ctx context.Context) (any, error) {
+			return obj.Total, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PagedOperatingSystemStats_total(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PagedOperatingSystemStats",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PagedOperatingSystemStats_totalVisitors(ctx context.Context, field graphql.CollectedField, obj *model.PagedOperatingSystemStats) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_PagedOperatingSystemStats_totalVisitors,
+		func(ctx context.Context) (any, error) {
+			return obj.TotalVisitors, nil
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_PagedOperatingSystemStats_totalVisitors(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PagedOperatingSystemStats",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -4818,6 +5101,8 @@ func (ec *executionContext) fieldContext_Query_dashboard(ctx context.Context, fi
 				return ec.fieldContext_DashboardStats_browsers(ctx, field)
 			case "devices":
 				return ec.fieldContext_DashboardStats_devices(ctx, field)
+			case "operatingSystems":
+				return ec.fieldContext_DashboardStats_operatingSystems(ctx, field)
 			case "countries":
 				return ec.fieldContext_DashboardStats_countries(ctx, field)
 			case "dailyStats":
@@ -7305,6 +7590,10 @@ func (ec *executionContext) fieldContext___Type_isOneOf(_ context.Context, field
 
 func (ec *executionContext) unmarshalInputCreateSiteInput(ctx context.Context, obj any) (model.CreateSiteInput, error) {
 	var it model.CreateSiteInput
+	if obj == nil {
+		return it, nil
+	}
+
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
@@ -7338,6 +7627,10 @@ func (ec *executionContext) unmarshalInputCreateSiteInput(ctx context.Context, o
 
 func (ec *executionContext) unmarshalInputDateRangeInput(ctx context.Context, obj any) (model.DateRangeInput, error) {
 	var it model.DateRangeInput
+	if obj == nil {
+		return it, nil
+	}
+
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
@@ -7371,6 +7664,10 @@ func (ec *executionContext) unmarshalInputDateRangeInput(ctx context.Context, ob
 
 func (ec *executionContext) unmarshalInputEventDefinitionFieldInput(ctx context.Context, obj any) (model.EventDefinitionFieldInput, error) {
 	var it model.EventDefinitionFieldInput
+	if obj == nil {
+		return it, nil
+	}
+
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
@@ -7418,6 +7715,10 @@ func (ec *executionContext) unmarshalInputEventDefinitionFieldInput(ctx context.
 
 func (ec *executionContext) unmarshalInputEventDefinitionInput(ctx context.Context, obj any) (model.EventDefinitionInput, error) {
 	var it model.EventDefinitionInput
+	if obj == nil {
+		return it, nil
+	}
+
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
@@ -7451,12 +7752,16 @@ func (ec *executionContext) unmarshalInputEventDefinitionInput(ctx context.Conte
 
 func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj any) (model.FilterInput, error) {
 	var it model.FilterInput
+	if obj == nil {
+		return it, nil
+	}
+
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"referrer", "device", "page", "country", "eventType", "eventName", "eventPath", "eventDefinitionId"}
+	fieldsInOrder := [...]string{"referrer", "device", "os", "page", "country", "eventType", "eventName", "eventPath", "eventDefinitionId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -7477,6 +7782,13 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 				return it, err
 			}
 			it.Device = data
+		case "os":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("os"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Os = data
 		case "page":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("page"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
@@ -7526,6 +7838,10 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 
 func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj any) (model.LoginInput, error) {
 	var it model.LoginInput
+	if obj == nil {
+		return it, nil
+	}
+
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
@@ -7559,6 +7875,10 @@ func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj an
 
 func (ec *executionContext) unmarshalInputPagingInput(ctx context.Context, obj any) (model.PagingInput, error) {
 	var it model.PagingInput
+	if obj == nil {
+		return it, nil
+	}
+
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
@@ -7592,6 +7912,10 @@ func (ec *executionContext) unmarshalInputPagingInput(ctx context.Context, obj a
 
 func (ec *executionContext) unmarshalInputRegisterInput(ctx context.Context, obj any) (model.RegisterInput, error) {
 	var it model.RegisterInput
+	if obj == nil {
+		return it, nil
+	}
+
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
@@ -7625,6 +7949,10 @@ func (ec *executionContext) unmarshalInputRegisterInput(ctx context.Context, obj
 
 func (ec *executionContext) unmarshalInputUpdateSiteInput(ctx context.Context, obj any) (model.UpdateSiteInput, error) {
 	var it model.UpdateSiteInput
+	if obj == nil {
+		return it, nil
+	}
+
 	asMap := map[string]any{}
 	for k, v := range obj.(map[string]any) {
 		asMap[k] = v
@@ -8139,6 +8467,42 @@ func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.Selecti
 					}
 				}()
 				res = ec._DashboardStats_devices(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "operatingSystems":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._DashboardStats_operatingSystems(ctx, field, obj)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -8784,6 +9148,50 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
+var operatingSystemStatsImplementors = []string{"OperatingSystemStats"}
+
+func (ec *executionContext) _OperatingSystemStats(ctx context.Context, sel ast.SelectionSet, obj *model.OperatingSystemStats) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, operatingSystemStatsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("OperatingSystemStats")
+		case "os":
+			out.Values[i] = ec._OperatingSystemStats_os(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "visitors":
+			out.Values[i] = ec._OperatingSystemStats_visitors(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var pageStatsImplementors = []string{"PageStats"}
 
 func (ec *executionContext) _PageStats(ctx context.Context, sel ast.SelectionSet, obj *model.PageStats) graphql.Marshaler {
@@ -8905,6 +9313,55 @@ func (ec *executionContext) _PagedDeviceStats(ctx context.Context, sel ast.Selec
 			}
 		case "totalVisitors":
 			out.Values[i] = ec._PagedDeviceStats_totalVisitors(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var pagedOperatingSystemStatsImplementors = []string{"PagedOperatingSystemStats"}
+
+func (ec *executionContext) _PagedOperatingSystemStats(ctx context.Context, sel ast.SelectionSet, obj *model.PagedOperatingSystemStats) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, pagedOperatingSystemStatsImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PagedOperatingSystemStats")
+		case "items":
+			out.Values[i] = ec._PagedOperatingSystemStats_items(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "total":
+			out.Values[i] = ec._PagedOperatingSystemStats_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "totalVisitors":
+			out.Values[i] = ec._PagedOperatingSystemStats_totalVisitors(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -10429,6 +10886,32 @@ func (ec *executionContext) unmarshalNLoginInput2githubᚗcomᚋlovelyᚑeyeᚋs
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) marshalNOperatingSystemStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐOperatingSystemStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.OperatingSystemStats) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNOperatingSystemStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐOperatingSystemStats(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNOperatingSystemStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐOperatingSystemStats(ctx context.Context, sel ast.SelectionSet, v *model.OperatingSystemStats) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._OperatingSystemStats(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNPageStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPageStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PageStats) graphql.Marshaler {
 	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
 		fc := graphql.GetFieldContext(ctx)
@@ -10481,6 +10964,20 @@ func (ec *executionContext) marshalNPagedDeviceStats2ᚖgithubᚗcomᚋlovelyᚑ
 		return graphql.Null
 	}
 	return ec._PagedDeviceStats(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNPagedOperatingSystemStats2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagedOperatingSystemStats(ctx context.Context, sel ast.SelectionSet, v model.PagedOperatingSystemStats) graphql.Marshaler {
+	return ec._PagedOperatingSystemStats(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPagedOperatingSystemStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagedOperatingSystemStats(ctx context.Context, sel ast.SelectionSet, v *model.PagedOperatingSystemStats) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PagedOperatingSystemStats(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNPagedPageStats2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagedPageStats(ctx context.Context, sel ast.SelectionSet, v model.PagedPageStats) graphql.Marshaler {

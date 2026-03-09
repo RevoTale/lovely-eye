@@ -26,6 +26,8 @@ type FilterInput struct {
 	Referrer []string `json:"referrer,omitempty"`
 	// Filter by device type (desktop, mobile, tablet)
 	Device []string `json:"device,omitempty"`
+	// Filter by operating system
+	Os []string `json:"os,omitempty"`
 	// Filter by page path
 	Page []string `json:"page,omitempty"`
 	// Filter by ISO country code
@@ -61,6 +63,12 @@ type PagedDeviceStats struct {
 	Items         []*DeviceStats `json:"items"`
 	Total         int            `json:"total"`
 	TotalVisitors int            `json:"totalVisitors"`
+}
+
+type PagedOperatingSystemStats struct {
+	Items         []*OperatingSystemStats `json:"items"`
+	Total         int                     `json:"total"`
+	TotalVisitors int                     `json:"totalVisitors"`
 }
 
 type PagedPageStats struct {

@@ -17,6 +17,7 @@ type AnalyticsRepository struct {
 type AnalyticsFilter struct {
 	Referrer           []string
 	Device             []string
+	OS                 []string
 	Page               []string
 	Country            []string
 	EventTypes         []EventType
@@ -496,6 +497,11 @@ type DeviceStats struct {
 	Visitors int
 }
 
+type OperatingSystemStats struct {
+	OS       string
+	Visitors int
+}
+
 func (r *AnalyticsRepository) GetDeviceStats(ctx context.Context, siteID int64, from, to time.Time, limit int) ([]DeviceStats, error) {
 	var stats []DeviceStats
 	fromUnix := from.Unix()
@@ -630,6 +636,10 @@ func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.Select
 
 		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE device IN (?))", bun.List(filter.Device))
 	}
+	if len(filter.OS) > 0 {
+
+		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE os IN (?))", bun.List(filter.OS))
+	}
 	if len(filter.Page) > 0 {
 		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NULL AND path IN (?))", bun.List(filter.Page))
 	}
@@ -669,13 +679,16 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 	if len(filter.Page) > 0 {
 		q = q.Where("e.path IN (?)", bun.List(filter.Page))
 	}
-	if len(filter.Referrer) > 0 || len(filter.Device) > 0 || len(filter.Country) > 0 || len(filter.EventTypes) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
+	if len(filter.Referrer) > 0 || len(filter.Device) > 0 || len(filter.OS) > 0 || len(filter.Country) > 0 || len(filter.EventTypes) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
 
 		if len(filter.Referrer) > 0 {
 			q = q.Where("e.session_id IN (SELECT id FROM sessions WHERE referrer IN (?))", bun.List(filter.Referrer))
 		}
 		if len(filter.Device) > 0 {
 			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.device IN (?))", bun.List(filter.Device))
+		}
+		if len(filter.OS) > 0 {
+			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.os IN (?))", bun.List(filter.OS))
 		}
 		if len(filter.Country) > 0 {
 			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE COALESCE(NULLIF(c.country, ''), '-') IN (?))", bun.List(normalizeCountryCodes(filter.Country)))
@@ -1096,6 +1109,66 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Scan(ctx, &totalVisitors)
 	if err != nil {
 		return nil, 0, 0, fmt.Errorf("failed to sum device visitors with filter: %w", err)
+	}
+	return stats, total, totalVisitors, nil
+}
+
+func (r *AnalyticsRepository) GetOperatingSystemStatsWithFilterPaged(ctx context.Context, query AnalyticsQuery) ([]OperatingSystemStats, int, int, error) {
+	var stats []OperatingSystemStats
+	var total int
+	var totalVisitors int
+	fromUnix := query.From.Unix()
+	toUnix := query.To.Unix()
+	q := r.db.NewSelect().
+		TableExpr("sessions s").
+		Join("INNER JOIN clients c ON s.client_id = c.id").
+		ColumnExpr("c.os").
+		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
+		Where("s.site_id = ?", query.SiteID).
+		Where("s.enter_time >= ?", fromUnix).
+		Where("s.enter_time <= ?", toUnix).
+		Where("c.os != ''")
+	q = applySessionFilters(q, query.Filter)
+	err := q.Group("c.os").
+		Order("visitors DESC", "c.os ASC").
+		Limit(query.Limit).
+		Offset(query.Offset).
+		Scan(ctx, &stats)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("failed to get operating system stats with filter paged: %w", err)
+	}
+
+	countQuery := r.db.NewSelect().
+		TableExpr("sessions s").
+		Join("INNER JOIN clients c ON s.client_id = c.id").
+		ColumnExpr("COUNT(DISTINCT c.os)").
+		Where("s.site_id = ?", query.SiteID).
+		Where("s.enter_time >= ?", fromUnix).
+		Where("s.enter_time <= ?", toUnix).
+		Where("c.os != ''")
+	countQuery = applySessionFilters(countQuery, query.Filter)
+	err = countQuery.Scan(ctx, &total)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("failed to count operating systems with filter: %w", err)
+	}
+
+	osCounts := r.db.NewSelect().
+		TableExpr("sessions s").
+		Join("INNER JOIN clients c ON s.client_id = c.id").
+		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
+		Where("s.site_id = ?", query.SiteID).
+		Where("s.enter_time >= ?", fromUnix).
+		Where("s.enter_time <= ?", toUnix).
+		Where("c.os != ''")
+	osCounts = applySessionFilters(osCounts, query.Filter)
+	osCounts = osCounts.Group("c.os")
+
+	err = r.db.NewSelect().
+		TableExpr("(?) as os_counts", osCounts).
+		ColumnExpr("COALESCE(SUM(visitors), 0)").
+		Scan(ctx, &totalVisitors)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("failed to sum operating system visitors with filter: %w", err)
 	}
 	return stats, total, totalVisitors, nil
 }

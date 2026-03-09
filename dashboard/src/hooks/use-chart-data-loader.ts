@@ -59,6 +59,7 @@ export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseCha
     filter: filter === null ? null : {
       referrer: filter.referrer ?? null,
       device: filter.device ?? null,
+      os: filter.os ?? null,
       page: filter.page ?? null,
       country: filter.country ?? null,
       eventType: filter.eventType ?? null,
@@ -84,7 +85,7 @@ export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseCha
 
   useEffect(() => {
     if (data === undefined) return;
-    const { dashboard: { dailyStats } } = data;
+    const dailyStats = data.dashboard.dailyStats as Array<FragmentType<typeof DailyStatsFieldsFragmentDoc>>;
     const fragmentStats: Array<FragmentType<typeof DailyStatsFieldsFragmentDoc>> = dailyStats;
     const initialData = getFragmentData(DailyStatsFieldsFragmentDoc, fragmentStats);
     setLoadedData(initialData);
@@ -93,7 +94,7 @@ export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseCha
 
   const loadNextBatch = useCallback(async () => {
     if (data === undefined) return;
-    const { dashboard: { dailyStats } } = data;
+    const dailyStats = data.dashboard.dailyStats;
     if (isLoadingMore || loading || !hasMore) return;
     if (dailyStats.length < BATCH_SIZE) return;
 
@@ -107,7 +108,7 @@ export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseCha
 
       const { data: resultData } = result;
       if (resultData === undefined) return;
-      const { dashboard: { dailyStats: newData } } = resultData;
+      const newData = resultData.dashboard.dailyStats as Array<FragmentType<typeof DailyStatsFieldsFragmentDoc>>;
       const fragmentBatch: Array<FragmentType<typeof DailyStatsFieldsFragmentDoc>> = newData;
       const nextBatch = getFragmentData(DailyStatsFieldsFragmentDoc, fragmentBatch);
       if (nextBatch.length > EMPTY_COUNT) {

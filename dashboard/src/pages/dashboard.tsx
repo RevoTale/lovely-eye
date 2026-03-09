@@ -26,10 +26,11 @@ export const DashboardPage = (): ReactElement => {
   const topPagesPage = useMemo(() => parsePage(search.topPagesPage), [search.topPagesPage]);
   const referrersPage = useMemo(() => parsePage(search.referrersPage), [search.referrersPage]);
   const devicesPage = useMemo(() => parsePage(search.devicesPage), [search.devicesPage]);
+  const osPage = useMemo(() => parsePage(search.osPage), [search.osPage]);
   const countriesPage = useMemo(() => parsePage(search.countriesPage), [search.countriesPage]);
   const statsBucket = useMemo(() => normalizeStatsBucket(search.statsBucket), [search.statsBucket]);
 
-  const { referrers, devices, pages, countries, eventNames, eventPaths, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
+  const { referrers, devices, operatingSystems, pages, countries, eventNames, eventPaths, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
   const filterInput = useMemo<FilterInput | null>(() => {
     if (Object.keys(filter).length === EMPTY_COUNT) {
       return null;
@@ -37,6 +38,7 @@ export const DashboardPage = (): ReactElement => {
     return {
       referrer: filter['referrer'] ?? null,
       device: filter['device'] ?? null,
+      os: filter['os'] ?? null,
       page: filter['page'] ?? null,
       country: filter['country'] ?? null,
       eventType: null,
@@ -47,8 +49,8 @@ export const DashboardPage = (): ReactElement => {
   }, [filter]);
 
   const filterKey = useMemo(
-    () => [referrers, devices, pages, countries, eventNames, eventPaths].map((v) => v.join(',')).join('|'),
-    [referrers, devices, pages, countries, eventNames, eventPaths]
+    () => [referrers, devices, operatingSystems, pages, countries, eventNames, eventPaths].map((v) => v.join(',')).join('|'),
+    [referrers, devices, operatingSystems, pages, countries, eventNames, eventPaths]
   );
 
   const dateRangeForChart = useMemo(() => {
@@ -66,6 +68,7 @@ export const DashboardPage = (): ReactElement => {
       topPagesPage,
       referrersPage,
       devicesPage,
+      osPage,
       countriesPage,
     });
 
@@ -113,6 +116,9 @@ export const DashboardPage = (): ReactElement => {
     devicesItems,
     devicesTotal,
     devicesTotalVisitors,
+    operatingSystemsItems,
+    operatingSystemsTotal,
+    operatingSystemsTotalVisitors,
     countriesItems,
     countriesTotal,
     countriesTotalVisitors,
@@ -193,6 +199,15 @@ export const DashboardPage = (): ReactElement => {
           devicesLoading={isRefreshing}
           onDevicesPageChange={(page) => {
             setPage('devicesPage', page);
+          }}
+          operatingSystems={operatingSystemsItems}
+          operatingSystemsTotal={operatingSystemsTotal}
+          operatingSystemsTotalVisitors={operatingSystemsTotalVisitors}
+          osPage={osPage}
+          osPageSize={PAGE_SIZES.OS}
+          operatingSystemsLoading={isRefreshing}
+          onOSPageChange={(page) => {
+            setPage('osPage', page);
           }}
         />
       ) : showSkeletons ? (

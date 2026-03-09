@@ -56,6 +56,7 @@ type DashboardStats {
   topReferrers(paging: PagingInput!): PagedReferrerStats!
   browsers(paging: PagingInput!): [BrowserStats!]!
   devices(paging: PagingInput!): PagedDeviceStats!
+  operatingSystems(paging: PagingInput!): PagedOperatingSystemStats!
   countries(paging: PagingInput!): PagedCountryStats!
   dailyStats(bucket: TimeBucket = DAILY, limit: Int, offset: Int): [DailyStats!]!
 }
@@ -78,6 +79,11 @@ type BrowserStats {
 
 type DeviceStats {
   device: String!
+  visitors: Int!
+}
+
+type OperatingSystemStats {
+  os: String!
   visitors: Int!
 }
 
@@ -110,6 +116,12 @@ type PagedReferrerStats {
 
 type PagedDeviceStats {
   items: [DeviceStats!]!
+  total: Int!
+  totalVisitors: Int!
+}
+
+type PagedOperatingSystemStats {
+  items: [OperatingSystemStats!]!
   total: Int!
   totalVisitors: Int!
 }
@@ -261,6 +273,10 @@ input FilterInput {
   Filter by device type (desktop, mobile, tablet)
   """
   device: [String!]
+  """
+  Filter by operating system
+  """
+  os: [String!]
   """
   Filter by page path
   """

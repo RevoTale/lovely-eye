@@ -9,6 +9,7 @@ import { normalizeFilterValue, removeFilterValue, updateFilterSearch } from '@/l
 interface FilterSearch {
   referrer?: string | string[] | undefined;
   device?: string | string[] | undefined;
+  os?: string | string[] | undefined;
   page?: string | string[] | undefined;
   country?: string | string[] | undefined;
   eventName?: string | string[] | undefined;
@@ -25,6 +26,7 @@ const EMPTY_COUNT = 0;
 export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.ReactNode => {
   const referrers = normalizeFilterValue(search.referrer);
   const devices = normalizeFilterValue(search.device);
+  const operatingSystems = normalizeFilterValue(search.os);
   const pages = normalizeFilterValue(search.page);
   const countries = normalizeFilterValue(search.country);
   const normalizedCountryCodes = Array.from(
@@ -54,6 +56,7 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
   const hasFilters =
     referrers.length > EMPTY_COUNT ||
     devices.length > EMPTY_COUNT ||
+    operatingSystems.length > EMPTY_COUNT ||
     pages.length > EMPTY_COUNT ||
     countries.length > EMPTY_COUNT ||
     eventNames.length > EMPTY_COUNT ||
@@ -96,6 +99,21 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
         >
           <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
             <span className="text-xs">Device: {device}</span>
+            <span className="ml-1 text-xs">×</span>
+          </Badge>
+        </Link>
+      ))}
+      {operatingSystems.map((os) => (
+        <Link
+          key={`os-${os}`}
+          to="/sites/$siteId"
+          params={{ siteId }}
+          search={(prev) => ({
+            ...updateFilterSearch(prev, 'os', removeFilterValue(prev.os, os)),
+          })}
+        >
+          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
+            <span className="text-xs">OS: {os}</span>
             <span className="ml-1 text-xs">×</span>
           </Badge>
         </Link>

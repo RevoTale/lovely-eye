@@ -22,6 +22,7 @@ const TOP_PAGES_PAGE_SIZE = 5;
 const REFERRERS_PAGE_SIZE = 5;
 const BROWSERS_PAGE_SIZE = 10;
 const DEVICES_PAGE_SIZE = 6;
+const OS_PAGE_SIZE = 6;
 const COUNTRIES_PAGE_SIZE = 6;
 const ACTIVE_PAGES_PAGE_SIZE = 10;
 const EMPTY_COUNT = 0;
@@ -39,6 +40,7 @@ interface UseDashboardDataParams {
   topPagesPage: number;
   referrersPage: number;
   devicesPage: number;
+  osPage: number;
   countriesPage: number;
 }
 
@@ -58,6 +60,7 @@ const buildEventCountsFilter = (filter: FilterInput | null): FilterInput => ({
   device: filter?.device ?? null,
   page: filter?.page ?? null,
   country: filter?.country ?? null,
+  os: filter?.os ?? null,
   eventType: [EventType.Predefined],
   eventDefinitionId: filter?.eventDefinitionId ?? null,
   eventName: filter?.eventName ?? null,
@@ -74,6 +77,7 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
     topPagesPage,
     referrersPage,
     devicesPage,
+    osPage,
     countriesPage,
   } = params;
   const hasSiteId = siteId !== '';
@@ -103,6 +107,10 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
       devicesPaging: {
         limit: DEVICES_PAGE_SIZE,
         offset: (devicesPage - PAGE_INDEX_OFFSET) * DEVICES_PAGE_SIZE,
+      },
+      osPaging: {
+        limit: OS_PAGE_SIZE,
+        offset: (osPage - PAGE_INDEX_OFFSET) * OS_PAGE_SIZE,
       },
       countriesPaging: {
         limit: COUNTRIES_PAGE_SIZE,
@@ -171,5 +179,6 @@ export const PAGE_SIZES = {
   REFERRERS: REFERRERS_PAGE_SIZE,
   BROWSERS: BROWSERS_PAGE_SIZE,
   DEVICES: DEVICES_PAGE_SIZE,
+  OS: OS_PAGE_SIZE,
   COUNTRIES: COUNTRIES_PAGE_SIZE,
 } as const;
