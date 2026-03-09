@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	ariga.io/atlas v1.1.0
 	ariga.io/atlas-provider-bun v0.0.3
-	github.com/99designs/gqlgen v0.17.87
+	github.com/99designs/gqlgen v0.17.88
 	github.com/Khan/genqlient v0.8.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/mileusna/useragent v1.3.5
@@ -55,8 +55,8 @@ require (
 	go.opentelemetry.io/otel v1.42.0 // indirect
 	go.opentelemetry.io/otel/trace v1.42.0 // indirect
 	golang.org/x/mod v0.33.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
