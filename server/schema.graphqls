@@ -81,8 +81,13 @@ type DeviceStats {
   visitors: Int!
 }
 
+type Country {
+  code: String!
+  name: String!
+}
+
 type CountryStats {
-  country: String!
+  country: Country!
   visitors: Int!
 }
 
@@ -146,11 +151,6 @@ type GeoIPStatus {
   source: String
   lastError: String
   updatedAt: Time
-}
-
-type GeoIPCountry {
-  code: String!
-  name: String!
 }
 
 type ActivePageStats {
@@ -266,7 +266,7 @@ input FilterInput {
   """
   page: [String!]
   """
-  Filter by country (stored country name)
+  Filter by ISO country code
   """
   country: [String!]
   """
@@ -308,7 +308,7 @@ type Query {
   dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
   realtime(siteId: ID!): RealtimeStats!
   geoIPStatus: GeoIPStatus!
-  geoIPCountries(search: String, paging: PagingInput!): [GeoIPCountry!]!
+  geoIPCountries(search: String, codes: [String!], paging: PagingInput!): [Country!]!
   """
   Get events for a site with pagination
   """

@@ -62,6 +62,7 @@ func New(cfg config.Config) (*Server, error) {
 	userRepo := repository.NewUserRepository(db)
 	siteRepo := repository.NewSiteRepository(db)
 	analyticsRepo := repository.NewAnalyticsRepository(db)
+	countryRepo := repository.NewCountryRepository(db)
 	eventDefinitionRepo := repository.NewEventDefinitionRepository(db)
 
 	// Initialize auth service
@@ -82,7 +83,8 @@ func New(cfg config.Config) (*Server, error) {
 
 	siteService := services.NewSiteService(siteRepo)
 	eventDefinitionService := services.NewEventDefinitionService(eventDefinitionRepo)
-	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo, eventDefinitionRepo, geoIPService)
+	countryService := services.NewCountryService(countryRepo, geoIPService)
+	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo, eventDefinitionRepo, geoIPService, countryService)
 	if err := analyticsService.SyncGeoIPRequirement(context.Background()); err != nil {
 		fmt.Printf("Warning: GeoIP database sync failed: %v\n", err)
 	}
@@ -99,7 +101,7 @@ func New(cfg config.Config) (*Server, error) {
 	// Initialize auth middleware
 	authMiddleware := auth.NewMiddleware(authService)
 
-	resolver := graph.NewResolver(authService, siteService, analyticsService, eventDefinitionService)
+	resolver := graph.NewResolver(authService, siteService, analyticsService, countryService, eventDefinitionService)
 
 	mux := http.NewServeMux()
 

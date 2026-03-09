@@ -71,7 +71,9 @@ fragment DeviceStatsFields on DeviceStats {
 }
 
 fragment CountryStatsFields on CountryStats {
-  country
+  country {
+    ...CountryFields
+  }
   visitors
 }
 

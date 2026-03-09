@@ -28,7 +28,7 @@ type FilterInput struct {
 	Device []string `json:"device,omitempty"`
 	// Filter by page path
 	Page []string `json:"page,omitempty"`
-	// Filter by country (stored country name)
+	// Filter by ISO country code
 	Country []string `json:"country,omitempty"`
 	// Filter by event type (page view or predefined)
 	EventType []EventType `json:"eventType,omitempty"`
@@ -38,11 +38,6 @@ type FilterInput struct {
 	EventPath []string `json:"eventPath,omitempty"`
 	// Filter by event definition ID
 	EventDefinitionID []string `json:"eventDefinitionId,omitempty"`
-}
-
-type GeoIPCountry struct {
-	Code string `json:"code"`
-	Name string `json:"name"`
 }
 
 type GeoIPStatus struct {

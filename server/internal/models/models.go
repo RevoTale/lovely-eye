@@ -78,6 +78,13 @@ type SiteBlockedCountry struct {
 	Site *Site `bun:"rel:belongs-to,join:site_id=id" json:"site,omitempty"`
 }
 
+type Country struct {
+	bun.BaseModel `bun:"table:countries,alias:co"`
+
+	Code string `bun:"code,pk,type:varchar(2)" json:"code"`
+	Name string `bun:"name,notnull,type:varchar(128)" json:"name"`
+}
+
 // Client represents a unique visitor, deduplicated by hash.
 // Stores STABLE attributes (don't change between sessions).
 // Same visitor = same hash = same row → keeps DB small.

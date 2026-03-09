@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/lovely-eye/server/internal/models"
@@ -519,8 +520,8 @@ func (r *AnalyticsRepository) GetDeviceStats(ctx context.Context, siteID int64, 
 }
 
 type CountryStats struct {
-	Country  string
-	Visitors int
+	CountryCode string
+	Visitors    int
 }
 
 func (r *AnalyticsRepository) GetCountryStats(ctx context.Context, siteID int64, from, to time.Time, limit int) ([]CountryStats, error) {
@@ -530,13 +531,13 @@ func (r *AnalyticsRepository) GetCountryStats(ctx context.Context, siteID int64,
 	err := r.db.NewSelect().
 		TableExpr("sessions s").
 		Join("INNER JOIN clients c ON s.client_id = c.id").
-		ColumnExpr("COALESCE(NULLIF(c.country, ''), 'Unknown') as country").
+		ColumnExpr("COALESCE(NULLIF(c.country, ''), '-') as country_code").
 		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		Where("s.site_id = ?", siteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Group("c.country").
-		Order("visitors DESC").
+		GroupExpr("COALESCE(NULLIF(c.country, ''), '-')").
+		Order("visitors DESC", "country_code ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
 	if err != nil {
@@ -634,7 +635,7 @@ func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.Select
 	}
 	if len(filter.Country) > 0 {
 
-		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE country IN (?))", bun.List(normalizeCountryValues(filter.Country)))
+		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE COALESCE(NULLIF(country, ''), '-') IN (?))", bun.List(normalizeCountryCodes(filter.Country)))
 	}
 	if len(filter.EventTypes) > 0 {
 		hasPageView, hasPredefined := eventTypeFlags(filter.EventTypes)
@@ -677,7 +678,7 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.device IN (?))", bun.List(filter.Device))
 		}
 		if len(filter.Country) > 0 {
-			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.country IN (?))", bun.List(normalizeCountryValues(filter.Country)))
+			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE COALESCE(NULLIF(c.country, ''), '-') IN (?))", bun.List(normalizeCountryCodes(filter.Country)))
 		}
 		if len(filter.EventName) > 0 {
 			q = q.Where("e.session_id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.List(filter.EventName))
@@ -706,33 +707,22 @@ func applyEventNamePathFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.
 	return q
 }
 
-func normalizeCountryValues(values []string) []string {
-	normalized := make([]string, 0, len(values)+1)
-	seen := make(map[string]struct{}, len(values)+1)
-	hasUnknown := false
+func normalizeCountryCodes(values []string) []string {
+	normalized := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
 
 	for _, value := range values {
-		if value == "" {
-			continue
+		code := strings.ToUpper(strings.TrimSpace(value))
+		switch code {
+		case "", "UNKNOWN":
+			code = "-"
 		}
-		if value == "Unknown" {
-			hasUnknown = true
-			continue
-		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		normalized = append(normalized, value)
-	}
 
-	if hasUnknown {
-		if _, ok := seen[""]; !ok {
-			normalized = append(normalized, "")
+		if _, ok := seen[code]; ok {
+			continue
 		}
-		if _, ok := seen["Unknown"]; !ok {
-			normalized = append(normalized, "Unknown")
-		}
+		seen[code] = struct{}{}
+		normalized = append(normalized, code)
 	}
 
 	return normalized
@@ -952,14 +942,14 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilter(ctx context.Context, que
 	q := r.db.NewSelect().
 		TableExpr("sessions s").
 		Join("INNER JOIN clients c ON s.client_id = c.id").
-		ColumnExpr("COALESCE(NULLIF(c.country, ''), 'Unknown') as country").
+		ColumnExpr("COALESCE(NULLIF(c.country, ''), '-') as country_code").
 		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix)
 	q = applySessionFilters(q, query.Filter)
-	err := q.Group("c.country").
-		Order("visitors DESC", "country ASC").
+	err := q.GroupExpr("COALESCE(NULLIF(c.country, ''), '-')").
+		Order("visitors DESC", "country_code ASC").
 		Limit(query.Limit).
 		Scan(ctx, &stats)
 	if err != nil {
@@ -1119,14 +1109,14 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context
 	q := r.db.NewSelect().
 		TableExpr("sessions s").
 		Join("INNER JOIN clients c ON s.client_id = c.id").
-		ColumnExpr("COALESCE(NULLIF(c.country, ''), 'Unknown') as country").
+		ColumnExpr("COALESCE(NULLIF(c.country, ''), '-') as country_code").
 		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix)
 	q = applySessionFilters(q, query.Filter)
-	err := q.Group("c.country").
-		Order("visitors DESC", "country ASC").
+	err := q.GroupExpr("COALESCE(NULLIF(c.country, ''), '-')").
+		Order("visitors DESC", "country_code ASC").
 		Limit(query.Limit).
 		Offset(query.Offset).
 		Scan(ctx, &stats)
@@ -1137,7 +1127,7 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context
 	countQuery := r.db.NewSelect().
 		TableExpr("sessions s").
 		Join("INNER JOIN clients c ON s.client_id = c.id").
-		ColumnExpr("COUNT(DISTINCT COALESCE(NULLIF(c.country, ''), 'Unknown'))").
+		ColumnExpr("COUNT(DISTINCT COALESCE(NULLIF(c.country, ''), '-'))").
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix)
@@ -1155,7 +1145,7 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix)
 	countryCounts = applySessionFilters(countryCounts, query.Filter)
-	countryCounts = countryCounts.Group("c.country")
+	countryCounts = countryCounts.GroupExpr("COALESCE(NULLIF(c.country, ''), '-')")
 
 	err = r.db.NewSelect().
 		TableExpr("(?) as country_counts", countryCounts).

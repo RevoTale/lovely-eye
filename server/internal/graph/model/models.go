@@ -53,9 +53,14 @@ type DeviceStats struct {
 	Visitors int    `json:"visitors"`
 }
 
+type Country struct {
+	Code      string  `json:"code"`
+	NameCache *string `json:"-"`
+}
+
 type CountryStats struct {
-	Country  string `json:"country"`
-	Visitors int    `json:"visitors"`
+	Country  *Country `json:"country"`
+	Visitors int      `json:"visitors"`
 }
 
 type DailyStats struct {

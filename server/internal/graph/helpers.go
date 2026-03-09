@@ -2,6 +2,7 @@ package graph
 
 import (
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/lovely-eye/server/internal/graph/model"
@@ -187,6 +188,15 @@ func convertToGraphQLGeoIPStatus(status services.GeoIPStatus) *model.GeoIPStatus
 		LastError: lastError,
 		UpdatedAt: status.UpdatedAt,
 	}
+}
+
+func newGraphQLCountry(code string, name string) *model.Country {
+	graphQLCountry := &model.Country{Code: code}
+	trimmedName := strings.TrimSpace(name)
+	if trimmedName != "" {
+		graphQLCountry.NameCache = &trimmedName
+	}
+	return graphQLCountry
 }
 
 func parseEventDefinitionIDs(values []string) []int64 {

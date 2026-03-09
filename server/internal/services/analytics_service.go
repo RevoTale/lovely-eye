@@ -22,20 +22,33 @@ import (
 
 type AnalyticsService struct {
 	analyticsRepo       *repository.AnalyticsRepository
+	countryService      countrySyncer
 	siteRepo            *repository.SiteRepository
 	eventDefinitionRepo *repository.EventDefinitionRepository
 	botDetector         *BotDetector
-	geoIPService        *GeoIPService
+	geoIPService        geoIPProvider
+}
+
+type geoIPProvider interface {
+	SetEnabled(enabled bool)
+	Status() GeoIPStatus
+	EnsureAvailable(ctx context.Context) error
+	Refresh(ctx context.Context) error
+	ResolveCountry(ipStr string) (Country, error)
+	ListCountries(search string) ([]GeoIPCountry, error)
+	Close() error
 }
 
 func NewAnalyticsService(
 	analyticsRepo *repository.AnalyticsRepository,
 	siteRepo *repository.SiteRepository,
 	eventDefinitionRepo *repository.EventDefinitionRepository,
-	geoIPService *GeoIPService,
+	geoIPService geoIPProvider,
+	countryService countrySyncer,
 ) *AnalyticsService {
 	return &AnalyticsService{
 		analyticsRepo:       analyticsRepo,
+		countryService:      countryService,
 		siteRepo:            siteRepo,
 		eventDefinitionRepo: eventDefinitionRepo,
 		botDetector:         NewBotDetector(),
@@ -420,6 +433,11 @@ func (s *AnalyticsService) SyncGeoIPRequirement(ctx context.Context) error {
 	if err := s.geoIPService.EnsureAvailable(ctx); err != nil {
 		return fmt.Errorf("ensure geoip available: %w", err)
 	}
+	if s.countryService != nil {
+		if err := s.countryService.SyncFromGeoIP(ctx); err != nil {
+			return fmt.Errorf("sync persisted countries: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -430,19 +448,17 @@ func (s *AnalyticsService) GeoIPStatus() GeoIPStatus {
 	return s.geoIPService.Status()
 }
 
-func (s *AnalyticsService) GeoIPCountries(search string) ([]GeoIPCountry, error) {
-	if s.geoIPService == nil {
-		return []GeoIPCountry{}, errors.New("country service is nil")
-	}
-	return s.geoIPService.ListCountries(search)
-}
-
 func (s *AnalyticsService) RefreshGeoIPDatabase(ctx context.Context) (GeoIPStatus, error) {
 	if s.geoIPService == nil {
 		return GeoIPStatus{State: geoIPStateDisabled}, nil
 	}
 	if err := s.geoIPService.Refresh(ctx); err != nil {
 		return s.geoIPService.Status(), fmt.Errorf("refresh geoip database: %w", err)
+	}
+	if s.countryService != nil {
+		if err := s.countryService.SyncFromGeoIP(ctx); err != nil {
+			return s.geoIPService.Status(), fmt.Errorf("sync persisted countries: %w", err)
+		}
 	}
 	return s.geoIPService.Status(), nil
 }

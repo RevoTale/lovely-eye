@@ -1,5 +1,8 @@
 
+import { useQuery } from '@apollo/client/react';
 import { Badge } from '@/components/ui';
+import { CountryFieldsFragmentDoc, CountriesByCodeDocument } from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 import { Link } from '@/router';
 import { normalizeFilterValue, removeFilterValue, updateFilterSearch } from '@/lib/filter-utils';
 
@@ -24,8 +27,30 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
   const devices = normalizeFilterValue(search.device);
   const pages = normalizeFilterValue(search.page);
   const countries = normalizeFilterValue(search.country);
+  const normalizedCountryCodes = Array.from(
+    new Set(
+      countries
+        .map((country) => country.trim().toUpperCase())
+        .filter((country) => country.length > EMPTY_COUNT)
+    )
+  );
   const eventNames = normalizeFilterValue(search.eventName);
   const eventPaths = normalizeFilterValue(search.eventPath);
+  const { data: countryLookupData } = useQuery(CountriesByCodeDocument, {
+    variables: {
+      codes: normalizedCountryCodes,
+      paging: {
+        limit: normalizedCountryCodes.length || 1,
+        offset: 0,
+      },
+    },
+    skip: normalizedCountryCodes.length === EMPTY_COUNT,
+  });
+  const lookedUpCountries = getFragmentData(
+    CountryFieldsFragmentDoc,
+    countryLookupData?.geoIPCountries ?? []
+  );
+  const countryNameLookup = new Map(lookedUpCountries.map((country) => [country.code, country.name] as const));
   const hasFilters =
     referrers.length > EMPTY_COUNT ||
     devices.length > EMPTY_COUNT ||
@@ -36,6 +61,11 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
   if (!hasFilters) {
     return null;
   }
+
+  const getCountryDisplayName = (country: string): string => {
+    const normalizedCountryCode = country.trim().toUpperCase();
+    return countryNameLookup.get(normalizedCountryCode) ?? country;
+  };
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -95,7 +125,7 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
           })}
         >
           <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Country: {country}</span>
+            <span className="text-xs">Country: {getCountryDisplayName(country)}</span>
             <span className="ml-1 text-xs">×</span>
           </Badge>
         </Link>

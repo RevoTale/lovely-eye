@@ -1,7 +1,8 @@
 
 import { Globe } from 'lucide-react';
 import { Badge, Progress } from '@/components/ui';
-import type { CountryStatsFieldsFragment } from '@/gql/graphql';
+import { CountryFieldsFragmentDoc, type CountryStatsFieldsFragment } from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 import { BoardCard, BoardCardSkeleton } from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
@@ -34,22 +35,25 @@ export const CountryCard = ({ countries, total, totalVisitors, page, pageSize, s
     >
       <div className="space-y-3">
         {countries.length > EMPTY_COUNT ? (
-          countries.map((countryStat, index) => {
+          countries.map((countryStat) => {
             const percentage =
               totalVisitors > EMPTY_COUNT
                 ? (countryStat.visitors / totalVisitors) * PERCENT_MULTIPLIER
                 : EMPTY_COUNT;
+            const country = getFragmentData(CountryFieldsFragmentDoc, countryStat.country);
+            const countryCode = country.code;
+            const countryName = country.name;
 
             return (
-              <div key={index}>
+              <div key={countryCode}>
                 <div className="flex items-center justify-between mb-1">
                   <FilterLink
                     siteId={siteId}
                     filterKey="country"
-                    value={countryStat.country}
+                    value={countryCode}
                     className="text-sm font-medium truncate max-w-[200px] hover:text-primary hover:underline cursor-pointer"
                   >
-                    {countryStat.country}
+                    {countryName}
                   </FilterLink>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{countryStat.visitors.toLocaleString()}</Badge>

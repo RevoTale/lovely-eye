@@ -145,18 +145,34 @@ func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStats) GetItems() 
 
 // DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats includes the requested fields of the GraphQL type CountryStats.
 type DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats struct {
-	Country  string `json:"country"`
-	Visitors int    `json:"visitors"`
+	Country  DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStatsCountry `json:"country"`
+	Visitors int                                                                                `json:"visitors"`
 }
 
 // GetCountry returns DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats.Country, and is useful for accessing the field via an interface.
-func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats) GetCountry() string {
+func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats) GetCountry() DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStatsCountry {
 	return v.Country
 }
 
 // GetVisitors returns DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats.Visitors, and is useful for accessing the field via an interface.
 func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStats) GetVisitors() int {
 	return v.Visitors
+}
+
+// DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStatsCountry includes the requested fields of the GraphQL type Country.
+type DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStatsCountry struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+// GetCode returns DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStatsCountry.Code, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStatsCountry) GetCode() string {
+	return v.Code
+}
+
+// GetName returns DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStatsCountry.Name, and is useful for accessing the field via an interface.
+func (v *DashboardDashboardDashboardStatsCountriesPagedCountryStatsItemsCountryStatsCountry) GetName() string {
+	return v.Name
 }
 
 // DashboardDashboardDashboardStatsDailyStats includes the requested fields of the GraphQL type DailyStats.
@@ -436,7 +452,7 @@ type FilterInput struct {
 	Device []string `json:"device"`
 	// Filter by page path
 	Page []string `json:"page"`
-	// Filter by country (stored country name)
+	// Filter by ISO country code
 	Country []string `json:"country"`
 	// Filter by event type (page view or predefined)
 	EventType []EventType `json:"eventType"`
@@ -963,7 +979,10 @@ query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput,
 			total
 			totalVisitors
 			items {
-				country
+				country {
+					code
+					name
+				}
 				visitors
 			}
 		}

@@ -51,7 +51,10 @@ query Dashboard(
       total
       totalVisitors
       items {
-        country
+        country {
+          code
+          name
+        }
         visitors
       }
     }

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -23,22 +22,13 @@ import (
 
 // NewExecutableSchema creates an ExecutableSchema from the ResolverRoot interface.
 func NewExecutableSchema(cfg Config) graphql.ExecutableSchema {
-	return &executableSchema{
-		schema:     cfg.Schema,
-		resolvers:  cfg.Resolvers,
-		directives: cfg.Directives,
-		complexity: cfg.Complexity,
-	}
+	return &executableSchema{SchemaData: cfg.Schema, Resolvers: cfg.Resolvers, Directives: cfg.Directives, ComplexityRoot: cfg.Complexity}
 }
 
-type Config struct {
-	Schema     *ast.Schema
-	Resolvers  ResolverRoot
-	Directives DirectiveRoot
-	Complexity ComplexityRoot
-}
+type Config = graphql.Config[ResolverRoot, DirectiveRoot, ComplexityRoot]
 
 type ResolverRoot interface {
+	Country() CountryResolver
 	DashboardStats() DashboardStatsResolver
 	Mutation() MutationResolver
 	Query() QueryResolver
@@ -61,6 +51,11 @@ type ComplexityRoot struct {
 	BrowserStats struct {
 		Browser  func(childComplexity int) int
 		Visitors func(childComplexity int) int
+	}
+
+	Country struct {
+		Code func(childComplexity int) int
+		Name func(childComplexity int) int
 	}
 
 	CountryStats struct {
@@ -134,11 +129,6 @@ type ComplexityRoot struct {
 		Total  func(childComplexity int) int
 	}
 
-	GeoIPCountry struct {
-		Code func(childComplexity int) int
-		Name func(childComplexity int) int
-	}
-
 	GeoIPStatus struct {
 		DbPath    func(childComplexity int) int
 		LastError func(childComplexity int) int
@@ -194,7 +184,7 @@ type ComplexityRoot struct {
 		EventCounts      func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) int
 		EventDefinitions func(childComplexity int, siteID string, paging model.PagingInput) int
 		Events           func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) int
-		GeoIPCountries   func(childComplexity int, search *string, paging model.PagingInput) int
+		GeoIPCountries   func(childComplexity int, search *string, codes []string, paging model.PagingInput) int
 		GeoIPStatus      func(childComplexity int) int
 		Me               func(childComplexity int) int
 		Realtime         func(childComplexity int, siteID string) int
@@ -241,6 +231,9 @@ type ComplexityRoot struct {
 	}
 }
 
+type CountryResolver interface {
+	Name(ctx context.Context, obj *model.Country) (string, error)
+}
 type DashboardStatsResolver interface {
 	TopPages(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedPageStats, error)
 	TopReferrers(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedReferrerStats, error)
@@ -269,7 +262,7 @@ type QueryResolver interface {
 	Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) (*model.DashboardStats, error)
 	Realtime(ctx context.Context, siteID string) (*model.RealtimeStats, error)
 	GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, error)
-	GeoIPCountries(ctx context.Context, search *string, paging model.PagingInput) ([]*model.GeoIPCountry, error)
+	GeoIPCountries(ctx context.Context, search *string, codes []string, paging model.PagingInput) ([]*model.Country, error)
 	Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) (*model.EventsResult, error)
 	EventCounts(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) ([]*model.EventCount, error)
 	EventDefinitions(ctx context.Context, siteID string, paging model.PagingInput) ([]*model.EventDefinition, error)
@@ -278,110 +271,118 @@ type RealtimeStatsResolver interface {
 	ActivePages(ctx context.Context, obj *model.RealtimeStats, paging model.PagingInput) ([]*model.ActivePageStats, error)
 }
 
-type executableSchema struct {
-	schema     *ast.Schema
-	resolvers  ResolverRoot
-	directives DirectiveRoot
-	complexity ComplexityRoot
-}
+type executableSchema graphql.ExecutableSchemaState[ResolverRoot, DirectiveRoot, ComplexityRoot]
 
 func (e *executableSchema) Schema() *ast.Schema {
-	if e.schema != nil {
-		return e.schema
+	if e.SchemaData != nil {
+		return e.SchemaData
 	}
 	return parsedSchema
 }
 
 func (e *executableSchema) Complexity(ctx context.Context, typeName, field string, childComplexity int, rawArgs map[string]any) (int, bool) {
-	ec := executionContext{nil, e, 0, 0, nil}
+	ec := newExecutionContext(nil, e, nil)
 	_ = ec
 	switch typeName + "." + field {
 
 	case "ActivePageStats.path":
-		if e.complexity.ActivePageStats.Path == nil {
+		if e.ComplexityRoot.ActivePageStats.Path == nil {
 			break
 		}
 
-		return e.complexity.ActivePageStats.Path(childComplexity), true
+		return e.ComplexityRoot.ActivePageStats.Path(childComplexity), true
 	case "ActivePageStats.visitors":
-		if e.complexity.ActivePageStats.Visitors == nil {
+		if e.ComplexityRoot.ActivePageStats.Visitors == nil {
 			break
 		}
 
-		return e.complexity.ActivePageStats.Visitors(childComplexity), true
+		return e.ComplexityRoot.ActivePageStats.Visitors(childComplexity), true
 
 	case "AuthPayload.user":
-		if e.complexity.AuthPayload.User == nil {
+		if e.ComplexityRoot.AuthPayload.User == nil {
 			break
 		}
 
-		return e.complexity.AuthPayload.User(childComplexity), true
+		return e.ComplexityRoot.AuthPayload.User(childComplexity), true
 
 	case "BrowserStats.browser":
-		if e.complexity.BrowserStats.Browser == nil {
+		if e.ComplexityRoot.BrowserStats.Browser == nil {
 			break
 		}
 
-		return e.complexity.BrowserStats.Browser(childComplexity), true
+		return e.ComplexityRoot.BrowserStats.Browser(childComplexity), true
 	case "BrowserStats.visitors":
-		if e.complexity.BrowserStats.Visitors == nil {
+		if e.ComplexityRoot.BrowserStats.Visitors == nil {
 			break
 		}
 
-		return e.complexity.BrowserStats.Visitors(childComplexity), true
+		return e.ComplexityRoot.BrowserStats.Visitors(childComplexity), true
+
+	case "Country.code":
+		if e.ComplexityRoot.Country.Code == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Country.Code(childComplexity), true
+	case "Country.name":
+		if e.ComplexityRoot.Country.Name == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Country.Name(childComplexity), true
 
 	case "CountryStats.country":
-		if e.complexity.CountryStats.Country == nil {
+		if e.ComplexityRoot.CountryStats.Country == nil {
 			break
 		}
 
-		return e.complexity.CountryStats.Country(childComplexity), true
+		return e.ComplexityRoot.CountryStats.Country(childComplexity), true
 	case "CountryStats.visitors":
-		if e.complexity.CountryStats.Visitors == nil {
+		if e.ComplexityRoot.CountryStats.Visitors == nil {
 			break
 		}
 
-		return e.complexity.CountryStats.Visitors(childComplexity), true
+		return e.ComplexityRoot.CountryStats.Visitors(childComplexity), true
 
 	case "DailyStats.date":
-		if e.complexity.DailyStats.Date == nil {
+		if e.ComplexityRoot.DailyStats.Date == nil {
 			break
 		}
 
-		return e.complexity.DailyStats.Date(childComplexity), true
+		return e.ComplexityRoot.DailyStats.Date(childComplexity), true
 	case "DailyStats.pageViews":
-		if e.complexity.DailyStats.PageViews == nil {
+		if e.ComplexityRoot.DailyStats.PageViews == nil {
 			break
 		}
 
-		return e.complexity.DailyStats.PageViews(childComplexity), true
+		return e.ComplexityRoot.DailyStats.PageViews(childComplexity), true
 	case "DailyStats.sessions":
-		if e.complexity.DailyStats.Sessions == nil {
+		if e.ComplexityRoot.DailyStats.Sessions == nil {
 			break
 		}
 
-		return e.complexity.DailyStats.Sessions(childComplexity), true
+		return e.ComplexityRoot.DailyStats.Sessions(childComplexity), true
 	case "DailyStats.visitors":
-		if e.complexity.DailyStats.Visitors == nil {
+		if e.ComplexityRoot.DailyStats.Visitors == nil {
 			break
 		}
 
-		return e.complexity.DailyStats.Visitors(childComplexity), true
+		return e.ComplexityRoot.DailyStats.Visitors(childComplexity), true
 
 	case "DashboardStats.avgDuration":
-		if e.complexity.DashboardStats.AvgDuration == nil {
+		if e.ComplexityRoot.DashboardStats.AvgDuration == nil {
 			break
 		}
 
-		return e.complexity.DashboardStats.AvgDuration(childComplexity), true
+		return e.ComplexityRoot.DashboardStats.AvgDuration(childComplexity), true
 	case "DashboardStats.bounceRate":
-		if e.complexity.DashboardStats.BounceRate == nil {
+		if e.ComplexityRoot.DashboardStats.BounceRate == nil {
 			break
 		}
 
-		return e.complexity.DashboardStats.BounceRate(childComplexity), true
+		return e.ComplexityRoot.DashboardStats.BounceRate(childComplexity), true
 	case "DashboardStats.browsers":
-		if e.complexity.DashboardStats.Browsers == nil {
+		if e.ComplexityRoot.DashboardStats.Browsers == nil {
 			break
 		}
 
@@ -390,9 +391,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.DashboardStats.Browsers(childComplexity, args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.DashboardStats.Browsers(childComplexity, args["paging"].(model.PagingInput)), true
 	case "DashboardStats.countries":
-		if e.complexity.DashboardStats.Countries == nil {
+		if e.ComplexityRoot.DashboardStats.Countries == nil {
 			break
 		}
 
@@ -401,9 +402,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.DashboardStats.Countries(childComplexity, args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.DashboardStats.Countries(childComplexity, args["paging"].(model.PagingInput)), true
 	case "DashboardStats.dailyStats":
-		if e.complexity.DashboardStats.DailyStats == nil {
+		if e.ComplexityRoot.DashboardStats.DailyStats == nil {
 			break
 		}
 
@@ -412,9 +413,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.DashboardStats.DailyStats(childComplexity, args["bucket"].(*model.TimeBucket), args["limit"].(*int), args["offset"].(*int)), true
+		return e.ComplexityRoot.DashboardStats.DailyStats(childComplexity, args["bucket"].(*model.TimeBucket), args["limit"].(*int), args["offset"].(*int)), true
 	case "DashboardStats.devices":
-		if e.complexity.DashboardStats.Devices == nil {
+		if e.ComplexityRoot.DashboardStats.Devices == nil {
 			break
 		}
 
@@ -423,21 +424,21 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.DashboardStats.Devices(childComplexity, args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.DashboardStats.Devices(childComplexity, args["paging"].(model.PagingInput)), true
 	case "DashboardStats.pageViews":
-		if e.complexity.DashboardStats.PageViews == nil {
+		if e.ComplexityRoot.DashboardStats.PageViews == nil {
 			break
 		}
 
-		return e.complexity.DashboardStats.PageViews(childComplexity), true
+		return e.ComplexityRoot.DashboardStats.PageViews(childComplexity), true
 	case "DashboardStats.sessions":
-		if e.complexity.DashboardStats.Sessions == nil {
+		if e.ComplexityRoot.DashboardStats.Sessions == nil {
 			break
 		}
 
-		return e.complexity.DashboardStats.Sessions(childComplexity), true
+		return e.ComplexityRoot.DashboardStats.Sessions(childComplexity), true
 	case "DashboardStats.topPages":
-		if e.complexity.DashboardStats.TopPages == nil {
+		if e.ComplexityRoot.DashboardStats.TopPages == nil {
 			break
 		}
 
@@ -446,9 +447,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.DashboardStats.TopPages(childComplexity, args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.DashboardStats.TopPages(childComplexity, args["paging"].(model.PagingInput)), true
 	case "DashboardStats.topReferrers":
-		if e.complexity.DashboardStats.TopReferrers == nil {
+		if e.ComplexityRoot.DashboardStats.TopReferrers == nil {
 			break
 		}
 
@@ -457,211 +458,198 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.DashboardStats.TopReferrers(childComplexity, args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.DashboardStats.TopReferrers(childComplexity, args["paging"].(model.PagingInput)), true
 	case "DashboardStats.visitors":
-		if e.complexity.DashboardStats.Visitors == nil {
+		if e.ComplexityRoot.DashboardStats.Visitors == nil {
 			break
 		}
 
-		return e.complexity.DashboardStats.Visitors(childComplexity), true
+		return e.ComplexityRoot.DashboardStats.Visitors(childComplexity), true
 
 	case "DeviceStats.device":
-		if e.complexity.DeviceStats.Device == nil {
+		if e.ComplexityRoot.DeviceStats.Device == nil {
 			break
 		}
 
-		return e.complexity.DeviceStats.Device(childComplexity), true
+		return e.ComplexityRoot.DeviceStats.Device(childComplexity), true
 	case "DeviceStats.visitors":
-		if e.complexity.DeviceStats.Visitors == nil {
+		if e.ComplexityRoot.DeviceStats.Visitors == nil {
 			break
 		}
 
-		return e.complexity.DeviceStats.Visitors(childComplexity), true
+		return e.ComplexityRoot.DeviceStats.Visitors(childComplexity), true
 
 	case "Event.createdAt":
-		if e.complexity.Event.CreatedAt == nil {
+		if e.ComplexityRoot.Event.CreatedAt == nil {
 			break
 		}
 
-		return e.complexity.Event.CreatedAt(childComplexity), true
+		return e.ComplexityRoot.Event.CreatedAt(childComplexity), true
 	case "Event.definition":
-		if e.complexity.Event.Definition == nil {
+		if e.ComplexityRoot.Event.Definition == nil {
 			break
 		}
 
-		return e.complexity.Event.Definition(childComplexity), true
+		return e.ComplexityRoot.Event.Definition(childComplexity), true
 	case "Event.id":
-		if e.complexity.Event.ID == nil {
+		if e.ComplexityRoot.Event.ID == nil {
 			break
 		}
 
-		return e.complexity.Event.ID(childComplexity), true
+		return e.ComplexityRoot.Event.ID(childComplexity), true
 	case "Event.name":
-		if e.complexity.Event.Name == nil {
+		if e.ComplexityRoot.Event.Name == nil {
 			break
 		}
 
-		return e.complexity.Event.Name(childComplexity), true
+		return e.ComplexityRoot.Event.Name(childComplexity), true
 	case "Event.path":
-		if e.complexity.Event.Path == nil {
+		if e.ComplexityRoot.Event.Path == nil {
 			break
 		}
 
-		return e.complexity.Event.Path(childComplexity), true
+		return e.ComplexityRoot.Event.Path(childComplexity), true
 	case "Event.properties":
-		if e.complexity.Event.Properties == nil {
+		if e.ComplexityRoot.Event.Properties == nil {
 			break
 		}
 
-		return e.complexity.Event.Properties(childComplexity), true
+		return e.ComplexityRoot.Event.Properties(childComplexity), true
 
 	case "EventCount.count":
-		if e.complexity.EventCount.Count == nil {
+		if e.ComplexityRoot.EventCount.Count == nil {
 			break
 		}
 
-		return e.complexity.EventCount.Count(childComplexity), true
+		return e.ComplexityRoot.EventCount.Count(childComplexity), true
 	case "EventCount.event":
-		if e.complexity.EventCount.Event == nil {
+		if e.ComplexityRoot.EventCount.Event == nil {
 			break
 		}
 
-		return e.complexity.EventCount.Event(childComplexity), true
+		return e.ComplexityRoot.EventCount.Event(childComplexity), true
 
 	case "EventDefinition.createdAt":
-		if e.complexity.EventDefinition.CreatedAt == nil {
+		if e.ComplexityRoot.EventDefinition.CreatedAt == nil {
 			break
 		}
 
-		return e.complexity.EventDefinition.CreatedAt(childComplexity), true
+		return e.ComplexityRoot.EventDefinition.CreatedAt(childComplexity), true
 	case "EventDefinition.fields":
-		if e.complexity.EventDefinition.Fields == nil {
+		if e.ComplexityRoot.EventDefinition.Fields == nil {
 			break
 		}
 
-		return e.complexity.EventDefinition.Fields(childComplexity), true
+		return e.ComplexityRoot.EventDefinition.Fields(childComplexity), true
 	case "EventDefinition.id":
-		if e.complexity.EventDefinition.ID == nil {
+		if e.ComplexityRoot.EventDefinition.ID == nil {
 			break
 		}
 
-		return e.complexity.EventDefinition.ID(childComplexity), true
+		return e.ComplexityRoot.EventDefinition.ID(childComplexity), true
 	case "EventDefinition.name":
-		if e.complexity.EventDefinition.Name == nil {
+		if e.ComplexityRoot.EventDefinition.Name == nil {
 			break
 		}
 
-		return e.complexity.EventDefinition.Name(childComplexity), true
+		return e.ComplexityRoot.EventDefinition.Name(childComplexity), true
 	case "EventDefinition.updatedAt":
-		if e.complexity.EventDefinition.UpdatedAt == nil {
+		if e.ComplexityRoot.EventDefinition.UpdatedAt == nil {
 			break
 		}
 
-		return e.complexity.EventDefinition.UpdatedAt(childComplexity), true
+		return e.ComplexityRoot.EventDefinition.UpdatedAt(childComplexity), true
 
 	case "EventDefinitionField.id":
-		if e.complexity.EventDefinitionField.ID == nil {
+		if e.ComplexityRoot.EventDefinitionField.ID == nil {
 			break
 		}
 
-		return e.complexity.EventDefinitionField.ID(childComplexity), true
+		return e.ComplexityRoot.EventDefinitionField.ID(childComplexity), true
 	case "EventDefinitionField.key":
-		if e.complexity.EventDefinitionField.Key == nil {
+		if e.ComplexityRoot.EventDefinitionField.Key == nil {
 			break
 		}
 
-		return e.complexity.EventDefinitionField.Key(childComplexity), true
+		return e.ComplexityRoot.EventDefinitionField.Key(childComplexity), true
 	case "EventDefinitionField.maxLength":
-		if e.complexity.EventDefinitionField.MaxLength == nil {
+		if e.ComplexityRoot.EventDefinitionField.MaxLength == nil {
 			break
 		}
 
-		return e.complexity.EventDefinitionField.MaxLength(childComplexity), true
+		return e.ComplexityRoot.EventDefinitionField.MaxLength(childComplexity), true
 	case "EventDefinitionField.required":
-		if e.complexity.EventDefinitionField.Required == nil {
+		if e.ComplexityRoot.EventDefinitionField.Required == nil {
 			break
 		}
 
-		return e.complexity.EventDefinitionField.Required(childComplexity), true
+		return e.ComplexityRoot.EventDefinitionField.Required(childComplexity), true
 	case "EventDefinitionField.type":
-		if e.complexity.EventDefinitionField.Type == nil {
+		if e.ComplexityRoot.EventDefinitionField.Type == nil {
 			break
 		}
 
-		return e.complexity.EventDefinitionField.Type(childComplexity), true
+		return e.ComplexityRoot.EventDefinitionField.Type(childComplexity), true
 
 	case "EventProperty.key":
-		if e.complexity.EventProperty.Key == nil {
+		if e.ComplexityRoot.EventProperty.Key == nil {
 			break
 		}
 
-		return e.complexity.EventProperty.Key(childComplexity), true
+		return e.ComplexityRoot.EventProperty.Key(childComplexity), true
 	case "EventProperty.value":
-		if e.complexity.EventProperty.Value == nil {
+		if e.ComplexityRoot.EventProperty.Value == nil {
 			break
 		}
 
-		return e.complexity.EventProperty.Value(childComplexity), true
+		return e.ComplexityRoot.EventProperty.Value(childComplexity), true
 
 	case "EventsResult.events":
-		if e.complexity.EventsResult.Events == nil {
+		if e.ComplexityRoot.EventsResult.Events == nil {
 			break
 		}
 
-		return e.complexity.EventsResult.Events(childComplexity), true
+		return e.ComplexityRoot.EventsResult.Events(childComplexity), true
 	case "EventsResult.total":
-		if e.complexity.EventsResult.Total == nil {
+		if e.ComplexityRoot.EventsResult.Total == nil {
 			break
 		}
 
-		return e.complexity.EventsResult.Total(childComplexity), true
-
-	case "GeoIPCountry.code":
-		if e.complexity.GeoIPCountry.Code == nil {
-			break
-		}
-
-		return e.complexity.GeoIPCountry.Code(childComplexity), true
-	case "GeoIPCountry.name":
-		if e.complexity.GeoIPCountry.Name == nil {
-			break
-		}
-
-		return e.complexity.GeoIPCountry.Name(childComplexity), true
+		return e.ComplexityRoot.EventsResult.Total(childComplexity), true
 
 	case "GeoIPStatus.dbPath":
-		if e.complexity.GeoIPStatus.DbPath == nil {
+		if e.ComplexityRoot.GeoIPStatus.DbPath == nil {
 			break
 		}
 
-		return e.complexity.GeoIPStatus.DbPath(childComplexity), true
+		return e.ComplexityRoot.GeoIPStatus.DbPath(childComplexity), true
 	case "GeoIPStatus.lastError":
-		if e.complexity.GeoIPStatus.LastError == nil {
+		if e.ComplexityRoot.GeoIPStatus.LastError == nil {
 			break
 		}
 
-		return e.complexity.GeoIPStatus.LastError(childComplexity), true
+		return e.ComplexityRoot.GeoIPStatus.LastError(childComplexity), true
 	case "GeoIPStatus.source":
-		if e.complexity.GeoIPStatus.Source == nil {
+		if e.ComplexityRoot.GeoIPStatus.Source == nil {
 			break
 		}
 
-		return e.complexity.GeoIPStatus.Source(childComplexity), true
+		return e.ComplexityRoot.GeoIPStatus.Source(childComplexity), true
 	case "GeoIPStatus.state":
-		if e.complexity.GeoIPStatus.State == nil {
+		if e.ComplexityRoot.GeoIPStatus.State == nil {
 			break
 		}
 
-		return e.complexity.GeoIPStatus.State(childComplexity), true
+		return e.ComplexityRoot.GeoIPStatus.State(childComplexity), true
 	case "GeoIPStatus.updatedAt":
-		if e.complexity.GeoIPStatus.UpdatedAt == nil {
+		if e.ComplexityRoot.GeoIPStatus.UpdatedAt == nil {
 			break
 		}
 
-		return e.complexity.GeoIPStatus.UpdatedAt(childComplexity), true
+		return e.ComplexityRoot.GeoIPStatus.UpdatedAt(childComplexity), true
 
 	case "Mutation.createSite":
-		if e.complexity.Mutation.CreateSite == nil {
+		if e.ComplexityRoot.Mutation.CreateSite == nil {
 			break
 		}
 
@@ -670,9 +658,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateSite(childComplexity, args["input"].(model.CreateSiteInput)), true
+		return e.ComplexityRoot.Mutation.CreateSite(childComplexity, args["input"].(model.CreateSiteInput)), true
 	case "Mutation.deleteEventDefinition":
-		if e.complexity.Mutation.DeleteEventDefinition == nil {
+		if e.ComplexityRoot.Mutation.DeleteEventDefinition == nil {
 			break
 		}
 
@@ -681,9 +669,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.DeleteEventDefinition(childComplexity, args["siteId"].(string), args["name"].(string)), true
+		return e.ComplexityRoot.Mutation.DeleteEventDefinition(childComplexity, args["siteId"].(string), args["name"].(string)), true
 	case "Mutation.deleteSite":
-		if e.complexity.Mutation.DeleteSite == nil {
+		if e.ComplexityRoot.Mutation.DeleteSite == nil {
 			break
 		}
 
@@ -692,9 +680,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.DeleteSite(childComplexity, args["id"].(string)), true
+		return e.ComplexityRoot.Mutation.DeleteSite(childComplexity, args["id"].(string)), true
 	case "Mutation.login":
-		if e.complexity.Mutation.Login == nil {
+		if e.ComplexityRoot.Mutation.Login == nil {
 			break
 		}
 
@@ -703,21 +691,21 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.Login(childComplexity, args["input"].(model.LoginInput)), true
+		return e.ComplexityRoot.Mutation.Login(childComplexity, args["input"].(model.LoginInput)), true
 	case "Mutation.logout":
-		if e.complexity.Mutation.Logout == nil {
+		if e.ComplexityRoot.Mutation.Logout == nil {
 			break
 		}
 
-		return e.complexity.Mutation.Logout(childComplexity), true
+		return e.ComplexityRoot.Mutation.Logout(childComplexity), true
 	case "Mutation.refreshGeoIPDatabase":
-		if e.complexity.Mutation.RefreshGeoIPDatabase == nil {
+		if e.ComplexityRoot.Mutation.RefreshGeoIPDatabase == nil {
 			break
 		}
 
-		return e.complexity.Mutation.RefreshGeoIPDatabase(childComplexity), true
+		return e.ComplexityRoot.Mutation.RefreshGeoIPDatabase(childComplexity), true
 	case "Mutation.refreshToken":
-		if e.complexity.Mutation.RefreshToken == nil {
+		if e.ComplexityRoot.Mutation.RefreshToken == nil {
 			break
 		}
 
@@ -726,9 +714,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RefreshToken(childComplexity, args["refreshToken"].(string)), true
+		return e.ComplexityRoot.Mutation.RefreshToken(childComplexity, args["refreshToken"].(string)), true
 	case "Mutation.regenerateSiteKey":
-		if e.complexity.Mutation.RegenerateSiteKey == nil {
+		if e.ComplexityRoot.Mutation.RegenerateSiteKey == nil {
 			break
 		}
 
@@ -737,9 +725,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.RegenerateSiteKey(childComplexity, args["id"].(string)), true
+		return e.ComplexityRoot.Mutation.RegenerateSiteKey(childComplexity, args["id"].(string)), true
 	case "Mutation.register":
-		if e.complexity.Mutation.Register == nil {
+		if e.ComplexityRoot.Mutation.Register == nil {
 			break
 		}
 
@@ -748,9 +736,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.Register(childComplexity, args["input"].(model.RegisterInput)), true
+		return e.ComplexityRoot.Mutation.Register(childComplexity, args["input"].(model.RegisterInput)), true
 	case "Mutation.updateSite":
-		if e.complexity.Mutation.UpdateSite == nil {
+		if e.ComplexityRoot.Mutation.UpdateSite == nil {
 			break
 		}
 
@@ -759,9 +747,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateSite(childComplexity, args["id"].(string), args["input"].(model.UpdateSiteInput)), true
+		return e.ComplexityRoot.Mutation.UpdateSite(childComplexity, args["id"].(string), args["input"].(model.UpdateSiteInput)), true
 	case "Mutation.upsertEventDefinition":
-		if e.complexity.Mutation.UpsertEventDefinition == nil {
+		if e.ComplexityRoot.Mutation.UpsertEventDefinition == nil {
 			break
 		}
 
@@ -770,93 +758,93 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpsertEventDefinition(childComplexity, args["siteId"].(string), args["input"].(model.EventDefinitionInput)), true
+		return e.ComplexityRoot.Mutation.UpsertEventDefinition(childComplexity, args["siteId"].(string), args["input"].(model.EventDefinitionInput)), true
 
 	case "PageStats.path":
-		if e.complexity.PageStats.Path == nil {
+		if e.ComplexityRoot.PageStats.Path == nil {
 			break
 		}
 
-		return e.complexity.PageStats.Path(childComplexity), true
+		return e.ComplexityRoot.PageStats.Path(childComplexity), true
 	case "PageStats.views":
-		if e.complexity.PageStats.Views == nil {
+		if e.ComplexityRoot.PageStats.Views == nil {
 			break
 		}
 
-		return e.complexity.PageStats.Views(childComplexity), true
+		return e.ComplexityRoot.PageStats.Views(childComplexity), true
 	case "PageStats.visitors":
-		if e.complexity.PageStats.Visitors == nil {
+		if e.ComplexityRoot.PageStats.Visitors == nil {
 			break
 		}
 
-		return e.complexity.PageStats.Visitors(childComplexity), true
+		return e.ComplexityRoot.PageStats.Visitors(childComplexity), true
 
 	case "PagedCountryStats.items":
-		if e.complexity.PagedCountryStats.Items == nil {
+		if e.ComplexityRoot.PagedCountryStats.Items == nil {
 			break
 		}
 
-		return e.complexity.PagedCountryStats.Items(childComplexity), true
+		return e.ComplexityRoot.PagedCountryStats.Items(childComplexity), true
 	case "PagedCountryStats.total":
-		if e.complexity.PagedCountryStats.Total == nil {
+		if e.ComplexityRoot.PagedCountryStats.Total == nil {
 			break
 		}
 
-		return e.complexity.PagedCountryStats.Total(childComplexity), true
+		return e.ComplexityRoot.PagedCountryStats.Total(childComplexity), true
 	case "PagedCountryStats.totalVisitors":
-		if e.complexity.PagedCountryStats.TotalVisitors == nil {
+		if e.ComplexityRoot.PagedCountryStats.TotalVisitors == nil {
 			break
 		}
 
-		return e.complexity.PagedCountryStats.TotalVisitors(childComplexity), true
+		return e.ComplexityRoot.PagedCountryStats.TotalVisitors(childComplexity), true
 
 	case "PagedDeviceStats.items":
-		if e.complexity.PagedDeviceStats.Items == nil {
+		if e.ComplexityRoot.PagedDeviceStats.Items == nil {
 			break
 		}
 
-		return e.complexity.PagedDeviceStats.Items(childComplexity), true
+		return e.ComplexityRoot.PagedDeviceStats.Items(childComplexity), true
 	case "PagedDeviceStats.total":
-		if e.complexity.PagedDeviceStats.Total == nil {
+		if e.ComplexityRoot.PagedDeviceStats.Total == nil {
 			break
 		}
 
-		return e.complexity.PagedDeviceStats.Total(childComplexity), true
+		return e.ComplexityRoot.PagedDeviceStats.Total(childComplexity), true
 	case "PagedDeviceStats.totalVisitors":
-		if e.complexity.PagedDeviceStats.TotalVisitors == nil {
+		if e.ComplexityRoot.PagedDeviceStats.TotalVisitors == nil {
 			break
 		}
 
-		return e.complexity.PagedDeviceStats.TotalVisitors(childComplexity), true
+		return e.ComplexityRoot.PagedDeviceStats.TotalVisitors(childComplexity), true
 
 	case "PagedPageStats.items":
-		if e.complexity.PagedPageStats.Items == nil {
+		if e.ComplexityRoot.PagedPageStats.Items == nil {
 			break
 		}
 
-		return e.complexity.PagedPageStats.Items(childComplexity), true
+		return e.ComplexityRoot.PagedPageStats.Items(childComplexity), true
 	case "PagedPageStats.total":
-		if e.complexity.PagedPageStats.Total == nil {
+		if e.ComplexityRoot.PagedPageStats.Total == nil {
 			break
 		}
 
-		return e.complexity.PagedPageStats.Total(childComplexity), true
+		return e.ComplexityRoot.PagedPageStats.Total(childComplexity), true
 
 	case "PagedReferrerStats.items":
-		if e.complexity.PagedReferrerStats.Items == nil {
+		if e.ComplexityRoot.PagedReferrerStats.Items == nil {
 			break
 		}
 
-		return e.complexity.PagedReferrerStats.Items(childComplexity), true
+		return e.ComplexityRoot.PagedReferrerStats.Items(childComplexity), true
 	case "PagedReferrerStats.total":
-		if e.complexity.PagedReferrerStats.Total == nil {
+		if e.ComplexityRoot.PagedReferrerStats.Total == nil {
 			break
 		}
 
-		return e.complexity.PagedReferrerStats.Total(childComplexity), true
+		return e.ComplexityRoot.PagedReferrerStats.Total(childComplexity), true
 
 	case "Query.dashboard":
-		if e.complexity.Query.Dashboard == nil {
+		if e.ComplexityRoot.Query.Dashboard == nil {
 			break
 		}
 
@@ -865,9 +853,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Dashboard(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput)), true
+		return e.ComplexityRoot.Query.Dashboard(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput)), true
 	case "Query.eventCounts":
-		if e.complexity.Query.EventCounts == nil {
+		if e.ComplexityRoot.Query.EventCounts == nil {
 			break
 		}
 
@@ -876,9 +864,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.EventCounts(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput), args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.Query.EventCounts(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput), args["paging"].(model.PagingInput)), true
 	case "Query.eventDefinitions":
-		if e.complexity.Query.EventDefinitions == nil {
+		if e.ComplexityRoot.Query.EventDefinitions == nil {
 			break
 		}
 
@@ -887,9 +875,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.EventDefinitions(childComplexity, args["siteId"].(string), args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.Query.EventDefinitions(childComplexity, args["siteId"].(string), args["paging"].(model.PagingInput)), true
 	case "Query.events":
-		if e.complexity.Query.Events == nil {
+		if e.ComplexityRoot.Query.Events == nil {
 			break
 		}
 
@@ -898,9 +886,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Events(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput), args["limit"].(*int), args["offset"].(*int)), true
+		return e.ComplexityRoot.Query.Events(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput), args["limit"].(*int), args["offset"].(*int)), true
 	case "Query.geoIPCountries":
-		if e.complexity.Query.GeoIPCountries == nil {
+		if e.ComplexityRoot.Query.GeoIPCountries == nil {
 			break
 		}
 
@@ -909,21 +897,22 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.GeoIPCountries(childComplexity, args["search"].(*string), args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.Query.GeoIPCountries(childComplexity, args["search"].(*string), args["codes"].([]string), args["paging"].(model.PagingInput)), true
 	case "Query.geoIPStatus":
-		if e.complexity.Query.GeoIPStatus == nil {
+		if e.ComplexityRoot.Query.GeoIPStatus == nil {
 			break
 		}
 
-		return e.complexity.Query.GeoIPStatus(childComplexity), true
+		return e.ComplexityRoot.Query.GeoIPStatus(childComplexity), true
+
 	case "Query.me":
-		if e.complexity.Query.Me == nil {
+		if e.ComplexityRoot.Query.Me == nil {
 			break
 		}
 
-		return e.complexity.Query.Me(childComplexity), true
+		return e.ComplexityRoot.Query.Me(childComplexity), true
 	case "Query.realtime":
-		if e.complexity.Query.Realtime == nil {
+		if e.ComplexityRoot.Query.Realtime == nil {
 			break
 		}
 
@@ -932,9 +921,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Realtime(childComplexity, args["siteId"].(string)), true
+		return e.ComplexityRoot.Query.Realtime(childComplexity, args["siteId"].(string)), true
 	case "Query.site":
-		if e.complexity.Query.Site == nil {
+		if e.ComplexityRoot.Query.Site == nil {
 			break
 		}
 
@@ -943,9 +932,9 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Site(childComplexity, args["id"].(string)), true
+		return e.ComplexityRoot.Query.Site(childComplexity, args["id"].(string)), true
 	case "Query.sites":
-		if e.complexity.Query.Sites == nil {
+		if e.ComplexityRoot.Query.Sites == nil {
 			break
 		}
 
@@ -954,10 +943,10 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.Sites(childComplexity, args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.Query.Sites(childComplexity, args["paging"].(model.PagingInput)), true
 
 	case "RealtimeStats.activePages":
-		if e.complexity.RealtimeStats.ActivePages == nil {
+		if e.ComplexityRoot.RealtimeStats.ActivePages == nil {
 			break
 		}
 
@@ -966,116 +955,116 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.RealtimeStats.ActivePages(childComplexity, args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.RealtimeStats.ActivePages(childComplexity, args["paging"].(model.PagingInput)), true
 	case "RealtimeStats.visitors":
-		if e.complexity.RealtimeStats.Visitors == nil {
+		if e.ComplexityRoot.RealtimeStats.Visitors == nil {
 			break
 		}
 
-		return e.complexity.RealtimeStats.Visitors(childComplexity), true
+		return e.ComplexityRoot.RealtimeStats.Visitors(childComplexity), true
 
 	case "ReferrerStats.referrer":
-		if e.complexity.ReferrerStats.Referrer == nil {
+		if e.ComplexityRoot.ReferrerStats.Referrer == nil {
 			break
 		}
 
-		return e.complexity.ReferrerStats.Referrer(childComplexity), true
+		return e.ComplexityRoot.ReferrerStats.Referrer(childComplexity), true
 	case "ReferrerStats.visitors":
-		if e.complexity.ReferrerStats.Visitors == nil {
+		if e.ComplexityRoot.ReferrerStats.Visitors == nil {
 			break
 		}
 
-		return e.complexity.ReferrerStats.Visitors(childComplexity), true
+		return e.ComplexityRoot.ReferrerStats.Visitors(childComplexity), true
 
 	case "Session.id":
-		if e.complexity.Session.ID == nil {
+		if e.ComplexityRoot.Session.ID == nil {
 			break
 		}
 
-		return e.complexity.Session.ID(childComplexity), true
+		return e.ComplexityRoot.Session.ID(childComplexity), true
 
 	case "Site.blockedCountries":
-		if e.complexity.Site.BlockedCountries == nil {
+		if e.ComplexityRoot.Site.BlockedCountries == nil {
 			break
 		}
 
-		return e.complexity.Site.BlockedCountries(childComplexity), true
+		return e.ComplexityRoot.Site.BlockedCountries(childComplexity), true
 	case "Site.blockedIPs":
-		if e.complexity.Site.BlockedIPs == nil {
+		if e.ComplexityRoot.Site.BlockedIPs == nil {
 			break
 		}
 
-		return e.complexity.Site.BlockedIPs(childComplexity), true
+		return e.ComplexityRoot.Site.BlockedIPs(childComplexity), true
 	case "Site.createdAt":
-		if e.complexity.Site.CreatedAt == nil {
+		if e.ComplexityRoot.Site.CreatedAt == nil {
 			break
 		}
 
-		return e.complexity.Site.CreatedAt(childComplexity), true
+		return e.ComplexityRoot.Site.CreatedAt(childComplexity), true
 	case "Site.domains":
-		if e.complexity.Site.Domains == nil {
+		if e.ComplexityRoot.Site.Domains == nil {
 			break
 		}
 
-		return e.complexity.Site.Domains(childComplexity), true
+		return e.ComplexityRoot.Site.Domains(childComplexity), true
 	case "Site.id":
-		if e.complexity.Site.ID == nil {
+		if e.ComplexityRoot.Site.ID == nil {
 			break
 		}
 
-		return e.complexity.Site.ID(childComplexity), true
+		return e.ComplexityRoot.Site.ID(childComplexity), true
 	case "Site.name":
-		if e.complexity.Site.Name == nil {
+		if e.ComplexityRoot.Site.Name == nil {
 			break
 		}
 
-		return e.complexity.Site.Name(childComplexity), true
+		return e.ComplexityRoot.Site.Name(childComplexity), true
 	case "Site.publicKey":
-		if e.complexity.Site.PublicKey == nil {
+		if e.ComplexityRoot.Site.PublicKey == nil {
 			break
 		}
 
-		return e.complexity.Site.PublicKey(childComplexity), true
+		return e.ComplexityRoot.Site.PublicKey(childComplexity), true
 	case "Site.trackCountry":
-		if e.complexity.Site.TrackCountry == nil {
+		if e.ComplexityRoot.Site.TrackCountry == nil {
 			break
 		}
 
-		return e.complexity.Site.TrackCountry(childComplexity), true
+		return e.ComplexityRoot.Site.TrackCountry(childComplexity), true
 
 	case "TokenPayload.accessToken":
-		if e.complexity.TokenPayload.AccessToken == nil {
+		if e.ComplexityRoot.TokenPayload.AccessToken == nil {
 			break
 		}
 
-		return e.complexity.TokenPayload.AccessToken(childComplexity), true
+		return e.ComplexityRoot.TokenPayload.AccessToken(childComplexity), true
 	case "TokenPayload.refreshToken":
-		if e.complexity.TokenPayload.RefreshToken == nil {
+		if e.ComplexityRoot.TokenPayload.RefreshToken == nil {
 			break
 		}
 
-		return e.complexity.TokenPayload.RefreshToken(childComplexity), true
+		return e.ComplexityRoot.TokenPayload.RefreshToken(childComplexity), true
 
 	case "User.createdAt":
-		if e.complexity.User.CreatedAt == nil {
+		if e.ComplexityRoot.User.CreatedAt == nil {
 			break
 		}
 
-		return e.complexity.User.CreatedAt(childComplexity), true
+		return e.ComplexityRoot.User.CreatedAt(childComplexity), true
 	case "User.id":
-		if e.complexity.User.ID == nil {
+		if e.ComplexityRoot.User.ID == nil {
 			break
 		}
 
-		return e.complexity.User.ID(childComplexity), true
+		return e.ComplexityRoot.User.ID(childComplexity), true
 	case "User.role":
-		if e.complexity.User.Role == nil {
+		if e.ComplexityRoot.User.Role == nil {
 			break
 		}
 
-		return e.complexity.User.Role(childComplexity), true
+		return e.ComplexityRoot.User.Role(childComplexity), true
 	case "User.sites":
-		if e.complexity.User.Sites == nil {
+		if e.ComplexityRoot.User.Sites == nil {
 			break
 		}
 
@@ -1084,13 +1073,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.User.Sites(childComplexity, args["paging"].(model.PagingInput)), true
+		return e.ComplexityRoot.User.Sites(childComplexity, args["paging"].(model.PagingInput)), true
 	case "User.username":
-		if e.complexity.User.Username == nil {
+		if e.ComplexityRoot.User.Username == nil {
 			break
 		}
 
-		return e.complexity.User.Username(childComplexity), true
+		return e.ComplexityRoot.User.Username(childComplexity), true
 
 	}
 	return 0, false
@@ -1098,7 +1087,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	opCtx := graphql.GetOperationContext(ctx)
-	ec := executionContext{opCtx, e, 0, 0, make(chan graphql.DeferredResult)}
+	ec := newExecutionContext(opCtx, e, make(chan graphql.DeferredResult))
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputCreateSiteInput,
 		ec.unmarshalInputDateRangeInput,
@@ -1122,9 +1111,9 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 				ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
 				data = ec._Query(ctx, opCtx.Operation.SelectionSet)
 			} else {
-				if atomic.LoadInt32(&ec.pendingDeferred) > 0 {
-					result := <-ec.deferredResults
-					atomic.AddInt32(&ec.pendingDeferred, -1)
+				if atomic.LoadInt32(&ec.PendingDeferred) > 0 {
+					result := <-ec.DeferredResults
+					atomic.AddInt32(&ec.PendingDeferred, -1)
 					data = result.Result
 					response.Path = result.Path
 					response.Label = result.Label
@@ -1136,8 +1125,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			var buf bytes.Buffer
 			data.MarshalGQL(&buf)
 			response.Data = buf.Bytes()
-			if atomic.LoadInt32(&ec.deferred) > 0 {
-				hasNext := atomic.LoadInt32(&ec.pendingDeferred) > 0
+			if atomic.LoadInt32(&ec.Deferred) > 0 {
+				hasNext := atomic.LoadInt32(&ec.PendingDeferred) > 0
 				response.HasNext = &hasNext
 			}
 
@@ -1165,44 +1154,22 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 }
 
 type executionContext struct {
-	*graphql.OperationContext
-	*executableSchema
-	deferred        int32
-	pendingDeferred int32
-	deferredResults chan graphql.DeferredResult
+	*graphql.ExecutionContextState[ResolverRoot, DirectiveRoot, ComplexityRoot]
 }
 
-func (ec *executionContext) processDeferredGroup(dg graphql.DeferredGroup) {
-	atomic.AddInt32(&ec.pendingDeferred, 1)
-	go func() {
-		ctx := graphql.WithFreshResponseContext(dg.Context)
-		dg.FieldSet.Dispatch(ctx)
-		ds := graphql.DeferredResult{
-			Path:   dg.Path,
-			Label:  dg.Label,
-			Result: dg.FieldSet,
-			Errors: graphql.GetErrors(ctx),
-		}
-		// null fields should bubble up
-		if dg.FieldSet.Invalids > 0 {
-			ds.Result = graphql.Null
-		}
-		ec.deferredResults <- ds
-	}()
-}
-
-func (ec *executionContext) introspectSchema() (*introspection.Schema, error) {
-	if ec.DisableIntrospection {
-		return nil, errors.New("introspection disabled")
+func newExecutionContext(
+	opCtx *graphql.OperationContext,
+	execSchema *executableSchema,
+	deferredResults chan graphql.DeferredResult,
+) executionContext {
+	return executionContext{
+		ExecutionContextState: graphql.NewExecutionContextState[ResolverRoot, DirectiveRoot, ComplexityRoot](
+			opCtx,
+			(*graphql.ExecutableSchemaState[ResolverRoot, DirectiveRoot, ComplexityRoot])(execSchema),
+			parsedSchema,
+			deferredResults,
+		),
 	}
-	return introspection.WrapSchema(ec.Schema()), nil
-}
-
-func (ec *executionContext) introspectType(name string) (*introspection.Type, error) {
-	if ec.DisableIntrospection {
-		return nil, errors.New("introspection disabled")
-	}
-	return introspection.WrapTypeFromDef(ec.Schema(), ec.Schema().Types[name]), nil
 }
 
 var sources = []*ast.Source{
@@ -1216,16 +1183,26 @@ var sources = []*ast.Source{
 
 type Site {
   id: ID!
-  """All tracked domains (includes primary)"""
+  """
+  All tracked domains (includes primary)
+  """
   domains: [String!]!
   name: String!
-  """Used in tracking script"""
+  """
+  Used in tracking script
+  """
   publicKey: String!
-  """Enable country tracking (requires GeoIP database)"""
+  """
+  Enable country tracking (requires GeoIP database)
+  """
   trackCountry: Boolean!
-  """IP addresses blocked from tracking"""
+  """
+  IP addresses blocked from tracking
+  """
   blockedIPs: [String!]!
-  """ISO country codes blocked from tracking"""
+  """
+  ISO country codes blocked from tracking
+  """
   blockedCountries: [String!]!
   createdAt: Time!
 }
@@ -1246,7 +1223,9 @@ type DashboardStats {
   pageViews: Int!
   sessions: Int!
   bounceRate: Float!
-  """Average session duration in seconds"""
+  """
+  Average session duration in seconds
+  """
   avgDuration: Float!
   topPages(paging: PagingInput!): PagedPageStats!
   topReferrers(paging: PagingInput!): PagedReferrerStats!
@@ -1277,8 +1256,13 @@ type DeviceStats {
   visitors: Int!
 }
 
+type Country {
+  code: String!
+  name: String!
+}
+
 type CountryStats {
-  country: String!
+  country: Country!
   visitors: Int!
 }
 
@@ -1326,9 +1310,13 @@ type Session {
 }
 
 type RealtimeStats {
-  """Visitors active in last 5 minutes"""
+  """
+  Visitors active in last 5 minutes
+  """
   visitors: Int!
-  """Active pages with visitor count"""
+  """
+  Active pages with visitor count
+  """
   activePages(paging: PagingInput!): [ActivePageStats!]!
 }
 
@@ -1340,14 +1328,11 @@ type GeoIPStatus {
   updatedAt: Time
 }
 
-type GeoIPCountry {
-  code: String!
-  name: String!
-}
-
 type ActivePageStats {
   path: String!
-  """Number of visitors currently viewing this page"""
+  """
+  Number of visitors currently viewing this page
+  """
   visitors: Int!
 }
 
@@ -1356,7 +1341,9 @@ type Event {
   name: String!
   path: String!
   definition: EventDefinition
-  """Key-value properties associated with the event"""
+  """
+  Key-value properties associated with the event
+  """
   properties: [EventProperty!]!
   createdAt: Time!
 }
@@ -1421,11 +1408,17 @@ input CreateSiteInput {
 input UpdateSiteInput {
   name: String!
   trackCountry: Boolean
-  """Full list of tracked domains (includes primary)"""
+  """
+  Full list of tracked domains (includes primary)
+  """
   domains: [String!]
-  """Full list of blocked IPs"""
+  """
+  Full list of blocked IPs
+  """
   blockedIPs: [String!]
-  """Full list of blocked country codes"""
+  """
+  Full list of blocked country codes
+  """
   blockedCountries: [String!]
 }
 
@@ -1435,21 +1428,37 @@ input DateRangeInput {
 }
 
 input FilterInput {
-  """Filter by specific referrer"""
+  """
+  Filter by specific referrer
+  """
   referrer: [String!]
-  """Filter by device type (desktop, mobile, tablet)"""
+  """
+  Filter by device type (desktop, mobile, tablet)
+  """
   device: [String!]
-  """Filter by page path"""
+  """
+  Filter by page path
+  """
   page: [String!]
-  """Filter by country (stored country name)"""
+  """
+  Filter by ISO country code
+  """
   country: [String!]
-  """Filter by event type (page view or predefined)"""
+  """
+  Filter by event type (page view or predefined)
+  """
   eventType: [EventType!]
-  """Filter by event name"""
+  """
+  Filter by event name
+  """
   eventName: [String!]
-  """Filter by event path"""
+  """
+  Filter by event path
+  """
   eventPath: [String!]
-  """Filter by event definition ID"""
+  """
+  Filter by event definition ID
+  """
   eventDefinitionId: [ID!]
 }
 
@@ -1474,27 +1483,52 @@ type Query {
   dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
   realtime(siteId: ID!): RealtimeStats!
   geoIPStatus: GeoIPStatus!
-  geoIPCountries(search: String, paging: PagingInput!): [GeoIPCountry!]!
-  """Get events for a site with pagination"""
-  events(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, limit: Int, offset: Int): EventsResult!
-  """Get event counts aggregated by event with the most recent occurrence"""
-  eventCounts(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput, paging: PagingInput!): [EventCount!]!
-  """Get event definitions for a site"""
+  geoIPCountries(search: String, codes: [String!], paging: PagingInput!): [Country!]!
+  """
+  Get events for a site with pagination
+  """
+  events(
+    siteId: ID!
+    dateRange: DateRangeInput
+    filter: FilterInput
+    limit: Int
+    offset: Int
+  ): EventsResult!
+  """
+  Get event counts aggregated by event with the most recent occurrence
+  """
+  eventCounts(
+    siteId: ID!
+    dateRange: DateRangeInput
+    filter: FilterInput
+    paging: PagingInput!
+  ): [EventCount!]!
+  """
+  Get event definitions for a site
+  """
   eventDefinitions(siteId: ID!, paging: PagingInput!): [EventDefinition!]!
 }
 
 type Mutation {
-  """First user becomes admin"""
+  """
+  First user becomes admin
+  """
   register(input: RegisterInput!): AuthPayload!
   login(input: LoginInput!): AuthPayload!
-  """Clears auth cookies"""
+  """
+  Clears auth cookies
+  """
   logout: Boolean!
   refreshToken(refreshToken: String!): TokenPayload!
   createSite(input: CreateSiteInput!): Site!
   updateSite(id: ID!, input: UpdateSiteInput!): Site!
-  """Deletes site and all analytics data"""
+  """
+  Deletes site and all analytics data
+  """
   deleteSite(id: ID!): Boolean!
-  """Invalidates old tracking scripts"""
+  """
+  Invalidates old tracking scripts
+  """
   regenerateSiteKey(id: ID!): Site!
   refreshGeoIPDatabase: GeoIPStatus!
   upsertEventDefinition(siteId: ID!, input: EventDefinitionInput!): EventDefinition!
@@ -1811,11 +1845,16 @@ func (ec *executionContext) field_Query_geoIPCountries_args(ctx context.Context,
 		return nil, err
 	}
 	args["search"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "codes", ec.unmarshalOString2ᚕstringᚄ)
 	if err != nil {
 		return nil, err
 	}
-	args["paging"] = arg1
+	args["codes"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "paging", ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput)
+	if err != nil {
+		return nil, err
+	}
+	args["paging"] = arg2
 	return args, nil
 }
 
@@ -2083,6 +2122,64 @@ func (ec *executionContext) fieldContext_BrowserStats_visitors(_ context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _Country_code(ctx context.Context, field graphql.CollectedField, obj *model.Country) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Country_code,
+		func(ctx context.Context) (any, error) {
+			return obj.Code, nil
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Country_code(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Country",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Country_name(ctx context.Context, field graphql.CollectedField, obj *model.Country) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Country_name,
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Country().Name(ctx, obj)
+		},
+		nil,
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Country_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Country",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _CountryStats_country(ctx context.Context, field graphql.CollectedField, obj *model.CountryStats) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -2093,7 +2190,7 @@ func (ec *executionContext) _CountryStats_country(ctx context.Context, field gra
 			return obj.Country, nil
 		},
 		nil,
-		ec.marshalNString2string,
+		ec.marshalNCountry2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐCountry,
 		true,
 		true,
 	)
@@ -2106,7 +2203,13 @@ func (ec *executionContext) fieldContext_CountryStats_country(_ context.Context,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			switch field.Name {
+			case "code":
+				return ec.fieldContext_Country_code(ctx, field)
+			case "name":
+				return ec.fieldContext_Country_name(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Country", field.Name)
 		},
 	}
 	return fc, nil
@@ -2410,7 +2513,7 @@ func (ec *executionContext) _DashboardStats_topPages(ctx context.Context, field 
 		ec.fieldContext_DashboardStats_topPages,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.DashboardStats().TopPages(ctx, obj, fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.DashboardStats().TopPages(ctx, obj, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNPagedPageStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagedPageStats,
@@ -2457,7 +2560,7 @@ func (ec *executionContext) _DashboardStats_topReferrers(ctx context.Context, fi
 		ec.fieldContext_DashboardStats_topReferrers,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.DashboardStats().TopReferrers(ctx, obj, fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.DashboardStats().TopReferrers(ctx, obj, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNPagedReferrerStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagedReferrerStats,
@@ -2504,7 +2607,7 @@ func (ec *executionContext) _DashboardStats_browsers(ctx context.Context, field 
 		ec.fieldContext_DashboardStats_browsers,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.DashboardStats().Browsers(ctx, obj, fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.DashboardStats().Browsers(ctx, obj, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNBrowserStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐBrowserStatsᚄ,
@@ -2551,7 +2654,7 @@ func (ec *executionContext) _DashboardStats_devices(ctx context.Context, field g
 		ec.fieldContext_DashboardStats_devices,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.DashboardStats().Devices(ctx, obj, fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.DashboardStats().Devices(ctx, obj, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNPagedDeviceStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagedDeviceStats,
@@ -2600,7 +2703,7 @@ func (ec *executionContext) _DashboardStats_countries(ctx context.Context, field
 		ec.fieldContext_DashboardStats_countries,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.DashboardStats().Countries(ctx, obj, fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.DashboardStats().Countries(ctx, obj, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNPagedCountryStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagedCountryStats,
@@ -2649,7 +2752,7 @@ func (ec *executionContext) _DashboardStats_dailyStats(ctx context.Context, fiel
 		ec.fieldContext_DashboardStats_dailyStats,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.DashboardStats().DailyStats(ctx, obj, fc.Args["bucket"].(*model.TimeBucket), fc.Args["limit"].(*int), fc.Args["offset"].(*int))
+			return ec.Resolvers.DashboardStats().DailyStats(ctx, obj, fc.Args["bucket"].(*model.TimeBucket), fc.Args["limit"].(*int), fc.Args["offset"].(*int))
 		},
 		nil,
 		ec.marshalNDailyStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDailyStatsᚄ,
@@ -3446,64 +3549,6 @@ func (ec *executionContext) fieldContext_EventsResult_total(_ context.Context, f
 	return fc, nil
 }
 
-func (ec *executionContext) _GeoIPCountry_code(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPCountry) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_GeoIPCountry_code,
-		func(ctx context.Context) (any, error) {
-			return obj.Code, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_GeoIPCountry_code(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "GeoIPCountry",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _GeoIPCountry_name(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPCountry) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_GeoIPCountry_name,
-		func(ctx context.Context) (any, error) {
-			return obj.Name, nil
-		},
-		nil,
-		ec.marshalNString2string,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_GeoIPCountry_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "GeoIPCountry",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _GeoIPStatus_state(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPStatus) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -3657,7 +3702,7 @@ func (ec *executionContext) _Mutation_register(ctx context.Context, field graphq
 		ec.fieldContext_Mutation_register,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().Register(ctx, fc.Args["input"].(model.RegisterInput))
+			return ec.Resolvers.Mutation().Register(ctx, fc.Args["input"].(model.RegisterInput))
 		},
 		nil,
 		ec.marshalNAuthPayload2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐAuthPayload,
@@ -3702,7 +3747,7 @@ func (ec *executionContext) _Mutation_login(ctx context.Context, field graphql.C
 		ec.fieldContext_Mutation_login,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().Login(ctx, fc.Args["input"].(model.LoginInput))
+			return ec.Resolvers.Mutation().Login(ctx, fc.Args["input"].(model.LoginInput))
 		},
 		nil,
 		ec.marshalNAuthPayload2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐAuthPayload,
@@ -3746,7 +3791,7 @@ func (ec *executionContext) _Mutation_logout(ctx context.Context, field graphql.
 		field,
 		ec.fieldContext_Mutation_logout,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Mutation().Logout(ctx)
+			return ec.Resolvers.Mutation().Logout(ctx)
 		},
 		nil,
 		ec.marshalNBoolean2bool,
@@ -3776,7 +3821,7 @@ func (ec *executionContext) _Mutation_refreshToken(ctx context.Context, field gr
 		ec.fieldContext_Mutation_refreshToken,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().RefreshToken(ctx, fc.Args["refreshToken"].(string))
+			return ec.Resolvers.Mutation().RefreshToken(ctx, fc.Args["refreshToken"].(string))
 		},
 		nil,
 		ec.marshalNTokenPayload2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐTokenPayload,
@@ -3823,7 +3868,7 @@ func (ec *executionContext) _Mutation_createSite(ctx context.Context, field grap
 		ec.fieldContext_Mutation_createSite,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().CreateSite(ctx, fc.Args["input"].(model.CreateSiteInput))
+			return ec.Resolvers.Mutation().CreateSite(ctx, fc.Args["input"].(model.CreateSiteInput))
 		},
 		nil,
 		ec.marshalNSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite,
@@ -3882,7 +3927,7 @@ func (ec *executionContext) _Mutation_updateSite(ctx context.Context, field grap
 		ec.fieldContext_Mutation_updateSite,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().UpdateSite(ctx, fc.Args["id"].(string), fc.Args["input"].(model.UpdateSiteInput))
+			return ec.Resolvers.Mutation().UpdateSite(ctx, fc.Args["id"].(string), fc.Args["input"].(model.UpdateSiteInput))
 		},
 		nil,
 		ec.marshalNSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite,
@@ -3941,7 +3986,7 @@ func (ec *executionContext) _Mutation_deleteSite(ctx context.Context, field grap
 		ec.fieldContext_Mutation_deleteSite,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().DeleteSite(ctx, fc.Args["id"].(string))
+			return ec.Resolvers.Mutation().DeleteSite(ctx, fc.Args["id"].(string))
 		},
 		nil,
 		ec.marshalNBoolean2bool,
@@ -3982,7 +4027,7 @@ func (ec *executionContext) _Mutation_regenerateSiteKey(ctx context.Context, fie
 		ec.fieldContext_Mutation_regenerateSiteKey,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().RegenerateSiteKey(ctx, fc.Args["id"].(string))
+			return ec.Resolvers.Mutation().RegenerateSiteKey(ctx, fc.Args["id"].(string))
 		},
 		nil,
 		ec.marshalNSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite,
@@ -4040,7 +4085,7 @@ func (ec *executionContext) _Mutation_refreshGeoIPDatabase(ctx context.Context, 
 		field,
 		ec.fieldContext_Mutation_refreshGeoIPDatabase,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Mutation().RefreshGeoIPDatabase(ctx)
+			return ec.Resolvers.Mutation().RefreshGeoIPDatabase(ctx)
 		},
 		nil,
 		ec.marshalNGeoIPStatus2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus,
@@ -4082,7 +4127,7 @@ func (ec *executionContext) _Mutation_upsertEventDefinition(ctx context.Context,
 		ec.fieldContext_Mutation_upsertEventDefinition,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().UpsertEventDefinition(ctx, fc.Args["siteId"].(string), fc.Args["input"].(model.EventDefinitionInput))
+			return ec.Resolvers.Mutation().UpsertEventDefinition(ctx, fc.Args["siteId"].(string), fc.Args["input"].(model.EventDefinitionInput))
 		},
 		nil,
 		ec.marshalNEventDefinition2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinition,
@@ -4135,7 +4180,7 @@ func (ec *executionContext) _Mutation_deleteEventDefinition(ctx context.Context,
 		ec.fieldContext_Mutation_deleteEventDefinition,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Mutation().DeleteEventDefinition(ctx, fc.Args["siteId"].(string), fc.Args["name"].(string))
+			return ec.Resolvers.Mutation().DeleteEventDefinition(ctx, fc.Args["siteId"].(string), fc.Args["name"].(string))
 		},
 		nil,
 		ec.marshalNBoolean2bool,
@@ -4578,7 +4623,7 @@ func (ec *executionContext) _Query_me(ctx context.Context, field graphql.Collect
 		field,
 		ec.fieldContext_Query_me,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().Me(ctx)
+			return ec.Resolvers.Query().Me(ctx)
 		},
 		nil,
 		ec.marshalOUser2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐUser,
@@ -4620,7 +4665,7 @@ func (ec *executionContext) _Query_sites(ctx context.Context, field graphql.Coll
 		ec.fieldContext_Query_sites,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Sites(ctx, fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.Query().Sites(ctx, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNSite2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSiteᚄ,
@@ -4679,7 +4724,7 @@ func (ec *executionContext) _Query_site(ctx context.Context, field graphql.Colle
 		ec.fieldContext_Query_site,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Site(ctx, fc.Args["id"].(string))
+			return ec.Resolvers.Query().Site(ctx, fc.Args["id"].(string))
 		},
 		nil,
 		ec.marshalOSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite,
@@ -4738,7 +4783,7 @@ func (ec *executionContext) _Query_dashboard(ctx context.Context, field graphql.
 		ec.fieldContext_Query_dashboard,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Dashboard(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput))
+			return ec.Resolvers.Query().Dashboard(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput))
 		},
 		nil,
 		ec.marshalNDashboardStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDashboardStats,
@@ -4803,7 +4848,7 @@ func (ec *executionContext) _Query_realtime(ctx context.Context, field graphql.C
 		ec.fieldContext_Query_realtime,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Realtime(ctx, fc.Args["siteId"].(string))
+			return ec.Resolvers.Query().Realtime(ctx, fc.Args["siteId"].(string))
 		},
 		nil,
 		ec.marshalNRealtimeStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐRealtimeStats,
@@ -4849,7 +4894,7 @@ func (ec *executionContext) _Query_geoIPStatus(ctx context.Context, field graphq
 		field,
 		ec.fieldContext_Query_geoIPStatus,
 		func(ctx context.Context) (any, error) {
-			return ec.resolvers.Query().GeoIPStatus(ctx)
+			return ec.Resolvers.Query().GeoIPStatus(ctx)
 		},
 		nil,
 		ec.marshalNGeoIPStatus2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus,
@@ -4891,10 +4936,10 @@ func (ec *executionContext) _Query_geoIPCountries(ctx context.Context, field gra
 		ec.fieldContext_Query_geoIPCountries,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().GeoIPCountries(ctx, fc.Args["search"].(*string), fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.Query().GeoIPCountries(ctx, fc.Args["search"].(*string), fc.Args["codes"].([]string), fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
-		ec.marshalNGeoIPCountry2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPCountryᚄ,
+		ec.marshalNCountry2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐCountryᚄ,
 		true,
 		true,
 	)
@@ -4909,11 +4954,11 @@ func (ec *executionContext) fieldContext_Query_geoIPCountries(ctx context.Contex
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "code":
-				return ec.fieldContext_GeoIPCountry_code(ctx, field)
+				return ec.fieldContext_Country_code(ctx, field)
 			case "name":
-				return ec.fieldContext_GeoIPCountry_name(ctx, field)
+				return ec.fieldContext_Country_name(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type GeoIPCountry", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type Country", field.Name)
 		},
 	}
 	defer func() {
@@ -4938,7 +4983,7 @@ func (ec *executionContext) _Query_events(ctx context.Context, field graphql.Col
 		ec.fieldContext_Query_events,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().Events(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["limit"].(*int), fc.Args["offset"].(*int))
+			return ec.Resolvers.Query().Events(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["limit"].(*int), fc.Args["offset"].(*int))
 		},
 		nil,
 		ec.marshalNEventsResult2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventsResult,
@@ -4985,7 +5030,7 @@ func (ec *executionContext) _Query_eventCounts(ctx context.Context, field graphq
 		ec.fieldContext_Query_eventCounts,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().EventCounts(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.Query().EventCounts(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNEventCount2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCountᚄ,
@@ -5032,7 +5077,7 @@ func (ec *executionContext) _Query_eventDefinitions(ctx context.Context, field g
 		ec.fieldContext_Query_eventDefinitions,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Query().EventDefinitions(ctx, fc.Args["siteId"].(string), fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.Query().EventDefinitions(ctx, fc.Args["siteId"].(string), fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNEventDefinition2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinitionᚄ,
@@ -5085,7 +5130,7 @@ func (ec *executionContext) _Query___type(ctx context.Context, field graphql.Col
 		ec.fieldContext_Query___type,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.introspectType(fc.Args["name"].(string))
+			return ec.IntrospectType(fc.Args["name"].(string))
 		},
 		nil,
 		ec.marshalO__Type2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType,
@@ -5149,7 +5194,7 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 		field,
 		ec.fieldContext_Query___schema,
 		func(ctx context.Context) (any, error) {
-			return ec.introspectSchema()
+			return ec.IntrospectSchema()
 		},
 		nil,
 		ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema,
@@ -5222,7 +5267,7 @@ func (ec *executionContext) _RealtimeStats_activePages(ctx context.Context, fiel
 		ec.fieldContext_RealtimeStats_activePages,
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.RealtimeStats().ActivePages(ctx, obj, fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.RealtimeStats().ActivePages(ctx, obj, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		ec.marshalNActivePageStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐActivePageStatsᚄ,
@@ -7288,7 +7333,6 @@ func (ec *executionContext) unmarshalInputCreateSiteInput(ctx context.Context, o
 			it.Name = data
 		}
 	}
-
 	return it, nil
 }
 
@@ -7322,7 +7366,6 @@ func (ec *executionContext) unmarshalInputDateRangeInput(ctx context.Context, ob
 			it.To = data
 		}
 	}
-
 	return it, nil
 }
 
@@ -7370,7 +7413,6 @@ func (ec *executionContext) unmarshalInputEventDefinitionFieldInput(ctx context.
 			it.MaxLength = data
 		}
 	}
-
 	return it, nil
 }
 
@@ -7404,7 +7446,6 @@ func (ec *executionContext) unmarshalInputEventDefinitionInput(ctx context.Conte
 			it.Fields = data
 		}
 	}
-
 	return it, nil
 }
 
@@ -7452,7 +7493,7 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 			it.Country = data
 		case "eventType":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eventType"))
-			data, err := ec.unmarshalOEventType2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventTypeᚄ(ctx, v)
+			data, err := ec.unmarshalOEventType2ᚕgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventTypeᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -7480,7 +7521,6 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 			it.EventDefinitionID = data
 		}
 	}
-
 	return it, nil
 }
 
@@ -7514,7 +7554,6 @@ func (ec *executionContext) unmarshalInputLoginInput(ctx context.Context, obj an
 			it.Password = data
 		}
 	}
-
 	return it, nil
 }
 
@@ -7548,7 +7587,6 @@ func (ec *executionContext) unmarshalInputPagingInput(ctx context.Context, obj a
 			it.Offset = data
 		}
 	}
-
 	return it, nil
 }
 
@@ -7582,7 +7620,6 @@ func (ec *executionContext) unmarshalInputRegisterInput(ctx context.Context, obj
 			it.Password = data
 		}
 	}
-
 	return it, nil
 }
 
@@ -7637,7 +7674,6 @@ func (ec *executionContext) unmarshalInputUpdateSiteInput(ctx context.Context, o
 			it.BlockedCountries = data
 		}
 	}
-
 	return it, nil
 }
 
@@ -7679,10 +7715,10 @@ func (ec *executionContext) _ActivePageStats(ctx context.Context, sel ast.Select
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -7718,10 +7754,10 @@ func (ec *executionContext) _AuthPayload(ctx context.Context, sel ast.SelectionS
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -7762,10 +7798,85 @@ func (ec *executionContext) _BrowserStats(ctx context.Context, sel ast.Selection
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var countryImplementors = []string{"Country"}
+
+func (ec *executionContext) _Country(ctx context.Context, sel ast.SelectionSet, obj *model.Country) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, countryImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Country")
+		case "code":
+			out.Values[i] = ec._Country_code(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "name":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Country_name(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -7806,10 +7917,10 @@ func (ec *executionContext) _CountryStats(ctx context.Context, sel ast.Selection
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -7860,10 +7971,10 @@ func (ec *executionContext) _DailyStats(ctx context.Context, sel ast.SelectionSe
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8135,10 +8246,10 @@ func (ec *executionContext) _DashboardStats(ctx context.Context, sel ast.Selecti
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8179,10 +8290,10 @@ func (ec *executionContext) _DeviceStats(ctx context.Context, sel ast.SelectionS
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8240,10 +8351,10 @@ func (ec *executionContext) _Event(ctx context.Context, sel ast.SelectionSet, ob
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8284,10 +8395,10 @@ func (ec *executionContext) _EventCount(ctx context.Context, sel ast.SelectionSe
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8343,10 +8454,10 @@ func (ec *executionContext) _EventDefinition(ctx context.Context, sel ast.Select
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8402,10 +8513,10 @@ func (ec *executionContext) _EventDefinitionField(ctx context.Context, sel ast.S
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8446,10 +8557,10 @@ func (ec *executionContext) _EventProperty(ctx context.Context, sel ast.Selectio
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8490,54 +8601,10 @@ func (ec *executionContext) _EventsResult(ctx context.Context, sel ast.Selection
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var geoIPCountryImplementors = []string{"GeoIPCountry"}
-
-func (ec *executionContext) _GeoIPCountry(ctx context.Context, sel ast.SelectionSet, obj *model.GeoIPCountry) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, geoIPCountryImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("GeoIPCountry")
-		case "code":
-			out.Values[i] = ec._GeoIPCountry_code(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "name":
-			out.Values[i] = ec._GeoIPCountry_name(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8584,10 +8651,10 @@ func (ec *executionContext) _GeoIPStatus(ctx context.Context, sel ast.SelectionS
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8703,10 +8770,10 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8752,10 +8819,10 @@ func (ec *executionContext) _PageStats(ctx context.Context, sel ast.SelectionSet
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8801,10 +8868,10 @@ func (ec *executionContext) _PagedCountryStats(ctx context.Context, sel ast.Sele
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8850,10 +8917,10 @@ func (ec *executionContext) _PagedDeviceStats(ctx context.Context, sel ast.Selec
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8894,10 +8961,10 @@ func (ec *executionContext) _PagedPageStats(ctx context.Context, sel ast.Selecti
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -8938,10 +9005,10 @@ func (ec *executionContext) _PagedReferrerStats(ctx context.Context, sel ast.Sel
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9202,10 +9269,10 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9277,10 +9344,10 @@ func (ec *executionContext) _RealtimeStats(ctx context.Context, sel ast.Selectio
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9321,10 +9388,10 @@ func (ec *executionContext) _ReferrerStats(ctx context.Context, sel ast.Selectio
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9360,10 +9427,10 @@ func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, 
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9434,10 +9501,10 @@ func (ec *executionContext) _Site(ctx context.Context, sel ast.SelectionSet, obj
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9478,10 +9545,10 @@ func (ec *executionContext) _TokenPayload(ctx context.Context, sel ast.Selection
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9534,10 +9601,10 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9590,10 +9657,10 @@ func (ec *executionContext) ___Directive(ctx context.Context, sel ast.SelectionS
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9638,10 +9705,10 @@ func (ec *executionContext) ___EnumValue(ctx context.Context, sel ast.SelectionS
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9696,10 +9763,10 @@ func (ec *executionContext) ___Field(ctx context.Context, sel ast.SelectionSet, 
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9751,10 +9818,10 @@ func (ec *executionContext) ___InputValue(ctx context.Context, sel ast.Selection
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9806,10 +9873,10 @@ func (ec *executionContext) ___Schema(ctx context.Context, sel ast.SelectionSet,
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9865,10 +9932,10 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 		return graphql.Null
 	}
 
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
 
 	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
 			Label:    label,
 			Path:     graphql.GetPath(ctx),
 			FieldSet: dfs,
@@ -9884,39 +9951,11 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 // region    ***************************** type.gotpl *****************************
 
 func (ec *executionContext) marshalNActivePageStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐActivePageStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ActivePageStats) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNActivePageStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐActivePageStats(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNActivePageStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐActivePageStats(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -9968,39 +10007,11 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 }
 
 func (ec *executionContext) marshalNBrowserStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐBrowserStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.BrowserStats) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNBrowserStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐBrowserStats(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNBrowserStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐBrowserStats(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10021,40 +10032,38 @@ func (ec *executionContext) marshalNBrowserStats2ᚖgithubᚗcomᚋlovelyᚑeye�
 	return ec._BrowserStats(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNCountryStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐCountryStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CountryStats) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNCountryStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐCountryStats(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
+func (ec *executionContext) marshalNCountry2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐCountryᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Country) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNCountry2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐCountry(ctx, sel, v[i])
+	})
 
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
 	}
-	wg.Wait()
+
+	return ret
+}
+
+func (ec *executionContext) marshalNCountry2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐCountry(ctx context.Context, sel ast.SelectionSet, v *model.Country) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._Country(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNCountryStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐCountryStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.CountryStats) graphql.Marshaler {
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNCountryStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐCountryStats(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10081,39 +10090,11 @@ func (ec *executionContext) unmarshalNCreateSiteInput2githubᚗcomᚋlovelyᚑey
 }
 
 func (ec *executionContext) marshalNDailyStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDailyStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.DailyStats) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNDailyStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDailyStats(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDailyStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDailyStats(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10149,39 +10130,11 @@ func (ec *executionContext) marshalNDashboardStats2ᚖgithubᚗcomᚋlovelyᚑey
 }
 
 func (ec *executionContext) marshalNDeviceStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDeviceStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.DeviceStats) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNDeviceStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDeviceStats(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNDeviceStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐDeviceStats(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10203,39 +10156,11 @@ func (ec *executionContext) marshalNDeviceStats2ᚖgithubᚗcomᚋlovelyᚑeye�
 }
 
 func (ec *executionContext) marshalNEvent2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Event) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNEvent2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEvent(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNEvent2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEvent(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10257,39 +10182,11 @@ func (ec *executionContext) marshalNEvent2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserve
 }
 
 func (ec *executionContext) marshalNEventCount2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCountᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.EventCount) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNEventCount2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCount(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNEventCount2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCount(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10315,39 +10212,11 @@ func (ec *executionContext) marshalNEventDefinition2githubᚗcomᚋlovelyᚑeye�
 }
 
 func (ec *executionContext) marshalNEventDefinition2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinitionᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.EventDefinition) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNEventDefinition2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinition(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNEventDefinition2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinition(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10369,39 +10238,11 @@ func (ec *executionContext) marshalNEventDefinition2ᚖgithubᚗcomᚋlovelyᚑe
 }
 
 func (ec *executionContext) marshalNEventDefinitionField2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinitionFieldᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.EventDefinitionField) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNEventDefinitionField2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinitionField(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNEventDefinitionField2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinitionField(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10464,57 +10305,12 @@ func (ec *executionContext) marshalNEventFieldType2githubᚗcomᚋlovelyᚑeye�
 	return res
 }
 
-func (ec *executionContext) unmarshalNEventType2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventType(ctx context.Context, v any) (model.EventType, error) {
-	tmp, err := graphql.UnmarshalString(v)
-	res := model.EventType(tmp)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNEventType2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventType(ctx context.Context, sel ast.SelectionSet, v model.EventType) graphql.Marshaler {
-	_ = sel
-	res := graphql.MarshalString(string(v))
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
 func (ec *executionContext) marshalNEventProperty2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventPropertyᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.EventProperty) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNEventProperty2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventProperty(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNEventProperty2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventProperty(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10533,6 +10329,23 @@ func (ec *executionContext) marshalNEventProperty2ᚖgithubᚗcomᚋlovelyᚑeye
 		return graphql.Null
 	}
 	return ec._EventProperty(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNEventType2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventType(ctx context.Context, v any) (model.EventType, error) {
+	tmp, err := graphql.UnmarshalString(v)
+	res := model.EventType(tmp)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNEventType2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventType(ctx context.Context, sel ast.SelectionSet, v model.EventType) graphql.Marshaler {
+	_ = sel
+	res := graphql.MarshalString(string(v))
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
 }
 
 func (ec *executionContext) marshalNEventsResult2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventsResult(ctx context.Context, sel ast.SelectionSet, v model.EventsResult) graphql.Marshaler {
@@ -10563,60 +10376,6 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 		}
 	}
 	return graphql.WrapContextMarshaler(ctx, res)
-}
-
-func (ec *executionContext) marshalNGeoIPCountry2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPCountryᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.GeoIPCountry) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNGeoIPCountry2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPCountry(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNGeoIPCountry2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPCountry(ctx context.Context, sel ast.SelectionSet, v *model.GeoIPCountry) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._GeoIPCountry(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNGeoIPStatus2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus(ctx context.Context, sel ast.SelectionSet, v model.GeoIPStatus) graphql.Marshaler {
@@ -10671,39 +10430,11 @@ func (ec *executionContext) unmarshalNLoginInput2githubᚗcomᚋlovelyᚑeyeᚋs
 }
 
 func (ec *executionContext) marshalNPageStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPageStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PageStats) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNPageStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPageStats(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNPageStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPageStats(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10800,39 +10531,11 @@ func (ec *executionContext) marshalNRealtimeStats2ᚖgithubᚗcomᚋlovelyᚑeye
 }
 
 func (ec *executionContext) marshalNReferrerStats2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐReferrerStatsᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.ReferrerStats) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNReferrerStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐReferrerStats(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNReferrerStats2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐReferrerStats(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -10863,39 +10566,11 @@ func (ec *executionContext) marshalNSite2githubᚗcomᚋlovelyᚑeyeᚋserverᚋ
 }
 
 func (ec *executionContext) marshalNSite2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSiteᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Site) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -11012,39 +10687,11 @@ func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlge
 }
 
 func (ec *executionContext) marshalN__Directive2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirectiveᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.Directive) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -11087,39 +10734,11 @@ func (ec *executionContext) unmarshalN__DirectiveLocation2ᚕstringᚄ(ctx conte
 }
 
 func (ec *executionContext) marshalN__DirectiveLocation2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__DirectiveLocation2string(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__DirectiveLocation2string(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -11143,39 +10762,11 @@ func (ec *executionContext) marshalN__InputValue2githubᚗcomᚋ99designsᚋgqlg
 }
 
 func (ec *executionContext) marshalN__InputValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐInputValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.InputValue) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__InputValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐInputValue(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__InputValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐInputValue(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -11191,39 +10782,11 @@ func (ec *executionContext) marshalN__Type2githubᚗcomᚋ99designsᚋgqlgenᚋg
 }
 
 func (ec *executionContext) marshalN__Type2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.Type) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__Type2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__Type2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -11305,6 +10868,43 @@ func (ec *executionContext) marshalOEventDefinition2ᚖgithubᚗcomᚋlovelyᚑe
 	return ec._EventDefinition(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalOEventType2ᚕgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventTypeᚄ(ctx context.Context, v any) ([]model.EventType, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]model.EventType, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNEventType2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventType(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOEventType2ᚕgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []model.EventType) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNEventType2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventType(ctx, sel, v[i])
+	})
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalOFilterInput2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐFilterInput(ctx context.Context, v any) (*model.FilterInput, error) {
 	if v == nil {
 		return nil, nil
@@ -11371,39 +10971,11 @@ func (ec *executionContext) marshalOSite2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋser
 	if v == nil {
 		return graphql.Null
 	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalNSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -11419,24 +10991,6 @@ func (ec *executionContext) marshalOSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserver
 		return graphql.Null
 	}
 	return ec._Site(ctx, sel, v)
-}
-
-func (ec *executionContext) unmarshalOEventType2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventTypeᚄ(ctx context.Context, v any) ([]model.EventType, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]model.EventType, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNEventType2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventType(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
 }
 
 func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
@@ -11538,39 +11092,11 @@ func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgq
 	if v == nil {
 		return graphql.Null
 	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__EnumValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValue(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__EnumValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValue(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -11585,39 +11111,11 @@ func (ec *executionContext) marshalO__Field2ᚕgithubᚗcomᚋ99designsᚋgqlgen
 	if v == nil {
 		return graphql.Null
 	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__Field2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐField(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__Field2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐField(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -11632,39 +11130,11 @@ func (ec *executionContext) marshalO__InputValue2ᚕgithubᚗcomᚋ99designsᚋg
 	if v == nil {
 		return graphql.Null
 	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__InputValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐInputValue(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__InputValue2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐInputValue(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
@@ -11686,39 +11156,11 @@ func (ec *executionContext) marshalO__Type2ᚕgithubᚗcomᚋ99designsᚋgqlgen�
 	if v == nil {
 		return graphql.Null
 	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalN__Type2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
+	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
+		fc := graphql.GetFieldContext(ctx)
+		fc.Result = &v[i]
+		return ec.marshalN__Type2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐType(ctx, sel, v[i])
+	})
 
 	for _, e := range ret {
 		if e == graphql.Null {
