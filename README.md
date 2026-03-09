@@ -7,7 +7,7 @@ Self-hosted web analytics with a Go backend and React dashboard. Built for low-r
 
 ## Features
 
-- **Privacy-first**: no analytics cookies, daily visitor ID rotation with a keyed server-side visitor ID
+- **Privacy-first**: no analytics cookies, keyed server-side visitor identity with UTC-day-skipped rotation
 - **Bot filtering**: excludes crawlers, scrapers, monitoring bots.
 - **Lightweight**: runtime consumes around ~15MB of RAM on AMD processor.
 - **SQLite and PostgreSQL** supported.
@@ -146,7 +146,7 @@ After you started your containers:
 
 Country tracking downloads the GeoIP database on demand when at least one site enables it. If the download fails, the dashboard will show the error in site settings.
 
-Analytics visitor identity is server-generated, rotates daily in UTC, and is derived from a keyed hash of site ID, truncated IP prefix, browser family, and device class. Country tracking is kept separate from visitor identity. The dedicated analytics identity secret helps reduce the impact of database-only leaks, because visitor IDs cannot be recomputed from stored analytics data alone.
+Analytics visitor identity is server-generated and derived from a keyed hash of site ID, truncated IP prefix, browser family, and device class. The hash is computed per UTC day, but the server reuses the same client across `today` and `yesterday`; if only yesterday matches, that row is rewritten to today's hash. Country tracking stays separate from visitor identity, sessions still expire after 30 minutes of inactivity, and the dedicated analytics identity secret helps reduce the impact of database-only leaks because visitor IDs cannot be recomputed from stored analytics data alone.
 
 ## Custom Events
 

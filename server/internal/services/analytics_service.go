@@ -21,6 +21,7 @@ import (
 	"github.com/lovely-eye/server/internal/repository"
 	"github.com/lovely-eye/server/pkg/validation"
 	"github.com/mileusna/useragent"
+	"github.com/uptrace/bun"
 	"golang.org/x/crypto/hkdf"
 )
 
@@ -32,6 +33,7 @@ type AnalyticsService struct {
 	botDetector         *BotDetector
 	geoIPService        geoIPProvider
 	identitySecret      []byte
+	now                 func() time.Time
 }
 
 type geoIPProvider interface {
@@ -60,6 +62,7 @@ func NewAnalyticsService(
 		botDetector:         NewBotDetector(),
 		geoIPService:        geoIPService,
 		identitySecret:      []byte(identitySecret),
+		now:                 time.Now,
 	}
 }
 
@@ -90,7 +93,6 @@ type EventInput struct {
 }
 
 func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInput) error {
-
 	if s.botDetector.IsBot(input.UserAgent) {
 		return nil
 	}
@@ -111,24 +113,13 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 	browser := normalizeBrowser(ua)
 	os := normalizeOS(ua)
 	screenSize := categorizeScreenSize(input.ScreenWidth)
-	now := time.Now()
+	now := s.now()
 	nowUnix := now.Unix()
-
-	// Generate a keyed, daily visitor identifier from truncated network and coarse device signals.
-	visitorHash := s.generateVisitorID(site.ID, input.IP, browser, device, now)
 
 	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
 		country = s.resolveCountryBestEffort(input.IP)
 	}
-
-	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.ISOCode)
-	if err != nil {
-		return fmt.Errorf("find or create client: %w", err)
-	}
-
-	sessionTimeout := now.Add(-30 * time.Minute)
-	session, err := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
 	isDurationOnly := input.Duration > 0 &&
 		input.ScreenWidth == 0 &&
 		input.Referrer == "" &&
@@ -136,106 +127,101 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		input.UTMMedium == "" &&
 		input.UTMCampaign == ""
 
-	if err != nil || session == nil {
+	if err := s.analyticsRepo.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		client, err := s.resolveClientWithRotation(ctx, tx, site.ID, input.IP, device, browser, os, screenSize, country.ISOCode, now)
+		if err != nil {
+			return fmt.Errorf("resolve client with rotation: %w", err)
+		}
+
+		session, err := s.analyticsRepo.GetActiveSessionTx(ctx, tx, site.ID, client.ID, now.Add(-30*time.Minute).Unix())
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("get active session: %w", err)
+		}
+		if errors.Is(err, sql.ErrNoRows) {
+			session = nil
+		}
+
+		if session == nil {
+			if isDurationOnly {
+				return nil
+			}
+
+			session = &models.Session{
+				SiteID:        site.ID,
+				ClientID:      client.ID,
+				EnterTime:     nowUnix,
+				EnterHour:     nowUnix / 3600,
+				EnterDay:      nowUnix / 86400,
+				EnterPath:     input.Path,
+				ExitTime:      nowUnix,
+				ExitHour:      nowUnix / 3600,
+				ExitDay:       nowUnix / 86400,
+				ExitPath:      input.Path,
+				Referrer:      input.Referrer,
+				UTMSource:     input.UTMSource,
+				UTMMedium:     input.UTMMedium,
+				UTMCampaign:   input.UTMCampaign,
+				Duration:      0,
+				PageViewCount: 1,
+			}
+			if err := s.analyticsRepo.CreateSessionTx(ctx, tx, session); err != nil {
+				return fmt.Errorf("create session: %w", err)
+			}
+		} else {
+			if isDurationOnly {
+				session.ExitTime = nowUnix
+				session.ExitHour = nowUnix / 3600
+				session.ExitDay = nowUnix / 86400
+				if input.Path != "" {
+					session.ExitPath = input.Path
+				}
+				session.Duration = int(nowUnix - session.EnterTime)
+				if err := s.analyticsRepo.UpdateSessionTx(ctx, tx, session); err != nil {
+					return fmt.Errorf("update duration-only session: %w", err)
+				}
+				return nil
+			}
+
+			recentEvent, err := s.analyticsRepo.GetRecentPageViewEventTx(ctx, tx, session.ID, input.Path, nowUnix-10)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("get recent pageview event: %w", err)
+			}
+			if err == nil && recentEvent != nil {
+				return nil
+			}
+
+			session.ExitTime = nowUnix
+			session.ExitHour = nowUnix / 3600
+			session.ExitDay = nowUnix / 86400
+			session.ExitPath = input.Path
+			session.Duration = int(nowUnix - session.EnterTime)
+			session.PageViewCount++
+			if err := s.analyticsRepo.UpdateSessionTx(ctx, tx, session); err != nil {
+				return fmt.Errorf("update session: %w", err)
+			}
+		}
+
 		if isDurationOnly {
 			return nil
 		}
 
-		session = &models.Session{
-			SiteID:        site.ID,
-			ClientID:      client.ID,
-			EnterTime:     nowUnix,
-			EnterHour:     nowUnix / 3600,
-			EnterDay:      nowUnix / 86400,
-			EnterPath:     input.Path,
-			ExitTime:      nowUnix,
-			ExitHour:      nowUnix / 3600,
-			ExitDay:       nowUnix / 86400,
-			ExitPath:      input.Path,
-			Referrer:      input.Referrer,
-			UTMSource:     input.UTMSource,
-			UTMMedium:     input.UTMMedium,
-			UTMCampaign:   input.UTMCampaign,
-			Duration:      0,
-			PageViewCount: 1,
+		event := &models.Event{
+			SessionID:    session.ID,
+			Time:         nowUnix,
+			Hour:         nowUnix / 3600,
+			Day:          nowUnix / 86400,
+			Path:         input.Path,
+			DefinitionID: nil,
 		}
-		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
-			return fmt.Errorf("create session: %w", err)
+		if err := s.analyticsRepo.CreateEventTx(ctx, tx, event); err != nil {
+			return fmt.Errorf("create event: %w", err)
 		}
-	} else {
-
-		session.ExitTime = nowUnix
-		session.ExitHour = nowUnix / 3600
-		session.ExitDay = nowUnix / 86400
-		session.ExitPath = input.Path
-		session.Duration = int(nowUnix - session.EnterTime)
-		if !isDurationOnly {
-			session.PageViewCount++
-		}
-		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
-			return fmt.Errorf("update session: %w", err)
-		}
-	}
-
-	if isDurationOnly {
 		return nil
+	}); err != nil {
+		return fmt.Errorf("collect page view transaction: %w", err)
 	}
 
-	// Deduplicate page views: check if same session viewed same page in last 10 seconds
-	// This prevents duplicate counts from double-clicks, SPA route changes, or script reloads
-	recentEvent, _ := s.getRecentPageViewEvent(ctx, session.ID, input.Path, nowUnix-10)
-	if recentEvent != nil {
-		// Same page view within 10 seconds - ignore to prevent duplicates
-		return nil
-	}
-
-	event := &models.Event{
-		SessionID:    session.ID,
-		Time:         nowUnix,
-		Hour:         nowUnix / 3600,
-		Day:          nowUnix / 86400,
-		Path:         input.Path,
-		DefinitionID: nil,
-	}
-
-	if err := s.analyticsRepo.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("create event: %w", err)
-	}
 	return nil
-}
-
-// findOrCreateClient finds an existing client by hash or creates a new one
-func (s *AnalyticsService) findOrCreateClient(
-	ctx context.Context,
-	siteID int64,
-	hash string,
-	device models.ClientDevice,
-	browser models.ClientBrowser,
-	os models.ClientOS,
-	screenSize models.ClientScreenSize,
-	country string,
-) (*models.Client, error) {
-	client, err := s.analyticsRepo.FindOrCreateClient(ctx, siteID, hash, device, browser, os, screenSize, country)
-	if err != nil {
-		return nil, fmt.Errorf("find or create client: %w", err)
-	}
-	return client, nil
-}
-
-func (s *AnalyticsService) getActiveSession(ctx context.Context, siteID, clientID int64, since time.Time) (*models.Session, error) {
-	session, err := s.analyticsRepo.GetActiveSession(ctx, siteID, clientID, since.Unix())
-	if err != nil {
-		return nil, fmt.Errorf("get active session: %w", err)
-	}
-	return session, nil
-}
-
-func (s *AnalyticsService) getRecentPageViewEvent(ctx context.Context, sessionID int64, path string, since int64) (*models.Event, error) {
-	event, err := s.analyticsRepo.GetRecentPageViewEvent(ctx, sessionID, path, since)
-	if err != nil {
-		return nil, fmt.Errorf("get recent pageview event: %w", err)
-	}
-	return event, nil
 }
 
 func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) error {
@@ -280,79 +266,81 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 	browser := normalizeBrowser(ua)
 	os := normalizeOS(ua)
 	screenSize := models.ClientScreenSizeUnknown
-	now := time.Now()
+	now := s.now()
 	nowUnix := now.Unix()
-
-	visitorHash := s.generateVisitorID(site.ID, input.IP, browser, device, now)
 
 	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
 		country = s.resolveCountryBestEffort(input.IP)
 	}
-
-	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.ISOCode)
-	if err != nil {
-		return fmt.Errorf("find or create client: %w", err)
-	}
-
-	sessionTimeout := now.Add(-30 * time.Minute)
-	session, _ := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
-
-	if session == nil {
-
-		entryPath := input.Path
-		if entryPath == "" {
-			entryPath = "/"
+	if err := s.analyticsRepo.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		client, err := s.resolveClientWithRotation(ctx, tx, site.ID, input.IP, device, browser, os, screenSize, country.ISOCode, now)
+		if err != nil {
+			return fmt.Errorf("resolve client with rotation: %w", err)
 		}
-		session = &models.Session{
-			SiteID:        site.ID,
-			ClientID:      client.ID,
-			EnterTime:     nowUnix,
-			EnterHour:     nowUnix / 3600,
-			EnterDay:      nowUnix / 86400,
-			EnterPath:     entryPath,
-			ExitTime:      nowUnix,
-			ExitHour:      nowUnix / 3600,
-			ExitDay:       nowUnix / 86400,
-			ExitPath:      entryPath,
-			Referrer:      "",
-			UTMSource:     "",
-			UTMMedium:     "",
-			UTMCampaign:   "",
-			Duration:      0,
-			PageViewCount: 0,
-		}
-		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
-			return fmt.Errorf("create session: %w", err)
-		}
-	} else {
 
-		session.ExitTime = nowUnix
-		session.ExitHour = nowUnix / 3600
-		session.ExitDay = nowUnix / 86400
-		if input.Path != "" {
-			session.ExitPath = input.Path
+		session, err := s.analyticsRepo.GetActiveSessionTx(ctx, tx, site.ID, client.ID, now.Add(-30*time.Minute).Unix())
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("get active session: %w", err)
 		}
-		session.Duration = int(nowUnix - session.EnterTime)
-		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
-			return fmt.Errorf("update session: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			session = nil
 		}
-	}
 
-	event := &models.Event{
-		SessionID:    session.ID,
-		Time:         nowUnix,
-		Hour:         nowUnix / 3600,
-		Day:          nowUnix / 86400,
-		Path:         input.Path,
-		DefinitionID: &definition.ID,
-	}
+		if session == nil {
+			entryPath := input.Path
+			if entryPath == "" {
+				entryPath = "/"
+			}
+			session = &models.Session{
+				SiteID:        site.ID,
+				ClientID:      client.ID,
+				EnterTime:     nowUnix,
+				EnterHour:     nowUnix / 3600,
+				EnterDay:      nowUnix / 86400,
+				EnterPath:     entryPath,
+				ExitTime:      nowUnix,
+				ExitHour:      nowUnix / 3600,
+				ExitDay:       nowUnix / 86400,
+				ExitPath:      entryPath,
+				Referrer:      "",
+				UTMSource:     "",
+				UTMMedium:     "",
+				UTMCampaign:   "",
+				Duration:      0,
+				PageViewCount: 0,
+			}
+			if err := s.analyticsRepo.CreateSessionTx(ctx, tx, session); err != nil {
+				return fmt.Errorf("create session: %w", err)
+			}
+		} else {
+			session.ExitTime = nowUnix
+			session.ExitHour = nowUnix / 3600
+			session.ExitDay = nowUnix / 86400
+			if input.Path != "" {
+				session.ExitPath = input.Path
+			}
+			session.Duration = int(nowUnix - session.EnterTime)
+			if err := s.analyticsRepo.UpdateSessionTx(ctx, tx, session); err != nil {
+				return fmt.Errorf("update session: %w", err)
+			}
+		}
 
-	if err := s.analyticsRepo.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("create event: %w", err)
-	}
+		event := &models.Event{
+			SessionID:    session.ID,
+			Time:         nowUnix,
+			Hour:         nowUnix / 3600,
+			Day:          nowUnix / 86400,
+			Path:         input.Path,
+			DefinitionID: &definition.ID,
+		}
+		if err := s.analyticsRepo.CreateEventTx(ctx, tx, event); err != nil {
+			return fmt.Errorf("create event: %w", err)
+		}
 
-	if sanitizedProps != "" {
+		if sanitizedProps == "" {
+			return nil
+		}
 
 		var propsMap map[string]string
 		if err := json.Unmarshal([]byte(sanitizedProps), &propsMap); err != nil {
@@ -377,12 +365,12 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 				Value:   value,
 			})
 		}
-
-		if len(eventDataList) > 0 {
-			if err := s.analyticsRepo.CreateEventDataBatch(ctx, eventDataList); err != nil {
-				return fmt.Errorf("create event data batch: %w", err)
-			}
+		if err := s.analyticsRepo.CreateEventDataBatchTx(ctx, tx, eventDataList); err != nil {
+			return fmt.Errorf("create event data batch: %w", err)
 		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("collect event transaction: %w", err)
 	}
 
 	return nil
@@ -650,7 +638,9 @@ func (s *AnalyticsService) GetEventCounts(ctx context.Context, query AnalyticsQu
 
 const unknownVisitorIPPrefix = "unknown"
 
-// generateVisitorID creates a site-scoped, daily visitor identifier from coarse signals.
+// generateVisitorID creates the site-scoped daily UTC hash used by the
+// UTC-day-skipped client rotation helper. Client reuse compares today's and
+// yesterday's hash to preserve continuity across adjacent UTC days only.
 func (s *AnalyticsService) generateVisitorID(
 	siteID int64,
 	ip string,

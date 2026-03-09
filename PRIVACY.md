@@ -14,7 +14,7 @@ Lovely Eye is self-hosted analytics. The site owner is the data controller. This
 
 ## Visitor Identifiers
 
-We derive a daily-rotating visitor identifier on the server. It is based on a keyed hash of site ID, truncated IP prefix, browser family, and device class. It changes every UTC day and is not a persistent identifier. This keyed approach helps reduce the impact of database-only leaks because the stored analytics rows do not include enough information to recompute the identifier on their own.
+We derive a keyed visitor identifier on the server from site ID, truncated IP prefix, browser family, and device class. The hash is computed per UTC day, but the server reuses the same client across `today` and `yesterday`; if only yesterday matches, that row is rewritten to today's hash. A new client is created only after a UTC day was skipped, so the identifier is still short-lived and not persistent. This keyed approach helps reduce the impact of database-only leaks because the stored analytics rows do not include enough information to recompute the identifier on their own.
 
 ## IP Addresses Under GDPR
 

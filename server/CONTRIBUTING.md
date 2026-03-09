@@ -29,8 +29,11 @@
 
 ## Analytics identity
 
-- Visitor identity is server-generated and rotates daily in UTC
+- Visitor identity is server-generated and uses UTC-day-skipped rotation
 - Identity is derived from a keyed hash of: site ID, truncated IP prefix (`/24` for IPv4, `/64` for IPv6), browser family, and device class
+- The server checks today's and yesterday's hash; if only yesterday matches, it rewrites that client row to today's hash
+- A new client is created only after a full UTC day was skipped
+- Sessions still use 30-minute inactivity
 - Country tracking stays separate from visitor identity and is only used for reporting when enabled
 - Set `ANALYTICS_IDENTITY_SECRET` to control the identity key explicitly
 - If `ANALYTICS_IDENTITY_SECRET` is unset, the server falls back to `JWT_SECRET`

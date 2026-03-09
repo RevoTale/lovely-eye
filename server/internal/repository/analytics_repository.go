@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -48,6 +50,13 @@ func NewAnalyticsRepository(db *bun.DB) *AnalyticsRepository {
 	return &AnalyticsRepository{db: db}
 }
 
+func (r *AnalyticsRepository) RunInTx(ctx context.Context, fn func(ctx context.Context, tx bun.Tx) error) error {
+	if err := r.db.RunInTx(ctx, nil, fn); err != nil {
+		return fmt.Errorf("run analytics transaction: %w", err)
+	}
+	return nil
+}
+
 func (r *AnalyticsRepository) FindOrCreateClient(
 	ctx context.Context,
 	siteID int64,
@@ -90,6 +99,58 @@ func (r *AnalyticsRepository) FindOrCreateClient(
 	return client, nil
 }
 
+func (r *AnalyticsRepository) FindClientByHashesTx(ctx context.Context, tx bun.IDB, siteID int64, todayHash, yesterdayHash string) (*models.Client, error) {
+	client := new(models.Client)
+	err := tx.NewSelect().
+		Model(client).
+		Where("site_id = ?", siteID).
+		Where("(hash = ? OR hash = ?)", todayHash, yesterdayHash).
+		OrderExpr("CASE WHEN hash = ? THEN 0 ELSE 1 END", todayHash).
+		Order("id DESC").
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("find client by hashes: %w", err)
+	}
+	return client, nil
+}
+
+func (r *AnalyticsRepository) FindClientByHashTx(ctx context.Context, tx bun.IDB, siteID int64, hash string) (*models.Client, error) {
+	client := new(models.Client)
+	err := tx.NewSelect().
+		Model(client).
+		Where("site_id = ?", siteID).
+		Where("hash = ?", hash).
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("find client by hash: %w", err)
+	}
+	return client, nil
+}
+
+func (r *AnalyticsRepository) CreateClientTx(ctx context.Context, tx bun.IDB, client *models.Client) error {
+	_, err := tx.NewInsert().Model(client).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("create client: %w", err)
+	}
+	return nil
+}
+
+func (r *AnalyticsRepository) UpdateClientTx(ctx context.Context, tx bun.IDB, client *models.Client) error {
+	_, err := tx.NewUpdate().Model(client).WherePK().Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("update client: %w", err)
+	}
+	return nil
+}
+
 func (r *AnalyticsRepository) GetActiveSession(ctx context.Context, siteID, clientID int64, sinceUnix int64) (*models.Session, error) {
 	session := new(models.Session)
 	err := r.db.NewSelect().
@@ -102,6 +163,25 @@ func (r *AnalyticsRepository) GetActiveSession(ctx context.Context, siteID, clie
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active session: %w", err)
+	}
+	return session, nil
+}
+
+func (r *AnalyticsRepository) GetActiveSessionTx(ctx context.Context, tx bun.IDB, siteID, clientID int64, sinceUnix int64) (*models.Session, error) {
+	session := new(models.Session)
+	err := tx.NewSelect().
+		Model(session).
+		Where("site_id = ?", siteID).
+		Where("client_id = ?", clientID).
+		Where("exit_time > ?", sinceUnix).
+		Order("exit_time DESC").
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("get active session: %w", err)
 	}
 	return session, nil
 }
@@ -123,10 +203,38 @@ func (r *AnalyticsRepository) GetRecentPageViewEvent(ctx context.Context, sessio
 	return event, nil
 }
 
+func (r *AnalyticsRepository) GetRecentPageViewEventTx(ctx context.Context, tx bun.IDB, sessionID int64, path string, since int64) (*models.Event, error) {
+	event := new(models.Event)
+	err := tx.NewSelect().
+		Model(event).
+		Where("session_id = ?", sessionID).
+		Where("path = ?", path).
+		Where("definition_id IS NULL").
+		Where("time > ?", since).
+		Order("time DESC").
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("get recent page view event: %w", err)
+	}
+	return event, nil
+}
+
 func (r *AnalyticsRepository) CreateSession(ctx context.Context, session *models.Session) error {
 	_, err := r.db.NewInsert().Model(session).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
+	}
+	return nil
+}
+
+func (r *AnalyticsRepository) CreateSessionTx(ctx context.Context, tx bun.IDB, session *models.Session) error {
+	_, err := tx.NewInsert().Model(session).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("create session: %w", err)
 	}
 	return nil
 }
@@ -140,6 +248,18 @@ func (r *AnalyticsRepository) GetSession(ctx context.Context, id int64) (*models
 	return session, nil
 }
 
+func (r *AnalyticsRepository) GetSessionTx(ctx context.Context, tx bun.IDB, id int64) (*models.Session, error) {
+	session := new(models.Session)
+	err := tx.NewSelect().Model(session).Where("id = ?", id).Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("get session: %w", err)
+	}
+	return session, nil
+}
+
 func (r *AnalyticsRepository) UpdateSession(ctx context.Context, session *models.Session) error {
 	_, err := r.db.NewUpdate().Model(session).WherePK().Exec(ctx)
 	if err != nil {
@@ -148,10 +268,26 @@ func (r *AnalyticsRepository) UpdateSession(ctx context.Context, session *models
 	return nil
 }
 
+func (r *AnalyticsRepository) UpdateSessionTx(ctx context.Context, tx bun.IDB, session *models.Session) error {
+	_, err := tx.NewUpdate().Model(session).WherePK().Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("update session: %w", err)
+	}
+	return nil
+}
+
 func (r *AnalyticsRepository) CreateEvent(ctx context.Context, event *models.Event) error {
 	_, err := r.db.NewInsert().Model(event).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create event: %w", err)
+	}
+	return nil
+}
+
+func (r *AnalyticsRepository) CreateEventTx(ctx context.Context, tx bun.IDB, event *models.Event) error {
+	_, err := tx.NewInsert().Model(event).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("create event: %w", err)
 	}
 	return nil
 }
@@ -217,6 +353,17 @@ func (r *AnalyticsRepository) CreateEventDataBatch(ctx context.Context, eventDat
 	_, err := r.db.NewInsert().Model(&eventDataList).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create event data batch: %w", err)
+	}
+	return nil
+}
+
+func (r *AnalyticsRepository) CreateEventDataBatchTx(ctx context.Context, tx bun.IDB, eventDataList []*models.EventData) error {
+	if len(eventDataList) == 0 {
+		return nil
+	}
+	_, err := tx.NewInsert().Model(&eventDataList).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("create event data batch: %w", err)
 	}
 	return nil
 }
@@ -491,7 +638,7 @@ func (r *AnalyticsRepository) GetBrowserStats(ctx context.Context, siteID int64,
 		Where("s.site_id = ?", siteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-			Where("c.browser != ?", models.ClientBrowserUnknown).
+		Where("c.browser != ?", models.ClientBrowserUnknown).
 		Group("c.browser").
 		Order("visitors DESC").
 		Limit(limit).
@@ -524,7 +671,7 @@ func (r *AnalyticsRepository) GetDeviceStats(ctx context.Context, siteID int64, 
 		Where("s.site_id = ?", siteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-			Where("c.device != ?", models.ClientDeviceUnknown).
+		Where("c.device != ?", models.ClientDeviceUnknown).
 		Group("c.device").
 		Order("visitors DESC").
 		Limit(limit).
@@ -933,7 +1080,7 @@ func (r *AnalyticsRepository) GetBrowserStatsWithFilter(ctx context.Context, que
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-			Where("c.browser != ?", models.ClientBrowserUnknown)
+		Where("c.browser != ?", models.ClientBrowserUnknown)
 	q = applySessionFilters(q, query.Filter)
 	q = q.Group("c.browser").
 		Order("visitors DESC", "c.browser ASC")
@@ -962,7 +1109,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilter(ctx context.Context, quer
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-			Where("c.device != ?", models.ClientDeviceUnknown)
+		Where("c.device != ?", models.ClientDeviceUnknown)
 	q = applySessionFilters(q, query.Filter)
 	err := q.Group("c.device").
 		Order("visitors DESC", "c.device ASC").
@@ -1093,7 +1240,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-			Where("c.device != ?", models.ClientDeviceUnknown)
+		Where("c.device != ?", models.ClientDeviceUnknown)
 	q = applySessionFilters(q, query.Filter)
 	err := q.Group("c.device").
 		Order("visitors DESC", "c.device ASC").
@@ -1111,7 +1258,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-			Where("c.device != ?", models.ClientDeviceUnknown)
+		Where("c.device != ?", models.ClientDeviceUnknown)
 	countQuery = applySessionFilters(countQuery, query.Filter)
 	err = countQuery.Scan(ctx, &total)
 	if err != nil {
@@ -1125,7 +1272,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-			Where("c.device != ?", models.ClientDeviceUnknown)
+		Where("c.device != ?", models.ClientDeviceUnknown)
 	deviceCounts = applySessionFilters(deviceCounts, query.Filter)
 	deviceCounts = deviceCounts.Group("c.device")
 
@@ -1153,7 +1300,7 @@ func (r *AnalyticsRepository) GetOperatingSystemStatsWithFilterPaged(ctx context
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-			Where("c.os != ?", models.ClientOSUnknown)
+		Where("c.os != ?", models.ClientOSUnknown)
 	q = applySessionFilters(q, query.Filter)
 	err := q.Group("c.os").
 		Order("visitors DESC", "c.os ASC").
@@ -1171,7 +1318,7 @@ func (r *AnalyticsRepository) GetOperatingSystemStatsWithFilterPaged(ctx context
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-			Where("c.os != ?", models.ClientOSUnknown)
+		Where("c.os != ?", models.ClientOSUnknown)
 	countQuery = applySessionFilters(countQuery, query.Filter)
 	err = countQuery.Scan(ctx, &total)
 	if err != nil {
@@ -1185,7 +1332,7 @@ func (r *AnalyticsRepository) GetOperatingSystemStatsWithFilterPaged(ctx context
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-			Where("c.os != ?", models.ClientOSUnknown)
+		Where("c.os != ?", models.ClientOSUnknown)
 	osCounts = applySessionFilters(osCounts, query.Filter)
 	osCounts = osCounts.Group("c.os")
 

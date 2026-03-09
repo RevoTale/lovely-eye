@@ -14,4 +14,4 @@ Modules:
 - `./models` - Domain models with [Bun](https://github.com/uptrace/bun) annotations. Defines User, Site, Client, Session, Event, and event definition entities.
 - `./repository` - Data access layer. Provides CRUD operations for all models using [Bun ORM](https://github.com/uptrace/bun).
 - `./server` - Application bootstrap and HTTP server setup. Wires all dependencies and configures routes.
-- `./services` - Business logic layer. Contains SiteService and AnalyticsService with domain operations, including pseudonymous visitor identity and session handling.
+- `./services` - Business logic layer. Contains SiteService and AnalyticsService with domain operations, including pseudonymous visitor identity with UTC-day-skipped rotation and 30-minute session handling.

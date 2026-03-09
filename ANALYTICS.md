@@ -8,9 +8,11 @@ Server-generated visitor ID computed from minimized request signals:
 - Hash algorithm: truncated HMAC-SHA-256
 - Key derivation: site-scoped, daily key derived from a server secret
 - Inputs: internal site ID, truncated IP prefix, browser family, device class
-- Daily rotation: visitor ID changes every UTC day
+- UTC-day-skipped rotation: the server checks today's and yesterday's hash
+- Adjacent-day reuse: if only yesterday matches, the same client row is rewritten to today's hash
+- New client only after a full UTC day was skipped
 - No client-side storage or cookies
-- Same visitor receives consistent ID throughout the day
+- Same visitor receives a consistent ID within the day and across an adjacent UTC midnight
 - Country is not part of the visitor ID
 - The server secret helps reduce the impact of database-only leaks by making visitor IDs harder to recompute outside the app
 
@@ -28,6 +30,7 @@ Filters non-human traffic:
 Prevents duplicate counting:
 - 10-second deduplication window per visitor per page
 - Filters double-clicks, script reloads, same-path SPA updates within 10s
+- Duplicate hits are ignored before page-view counters or session exit metrics change
 - Ensures accurate page view metrics
 
 ## Query Parameters
@@ -56,7 +59,7 @@ Tracks browsing sessions:
 ## Privacy
 
 - No client-side cookies or persistent identifiers
-- Visitor IDs rotate daily
+- Visitor IDs use UTC-day-skipped rotation
 - Visitor IDs are derived server-side from minimized signals
 - Site-scoped keying prevents reuse across sites
 - Keyed visitor IDs reduce the value of database-only leaks

@@ -62,4 +62,4 @@ Separate directories needed because SQLite and PostgreSQL use different syntax (
 - `DB_DRIVER` - `sqlite` (default) or `postgres`
 - `DB_DSN` - Connection string
 - `JWT_SECRET` - Optional. If unset, the app generates one at startup. Set it explicitly in production because dashboard sessions will not survive restarts.
-- `ANALYTICS_IDENTITY_SECRET` - Optional. Falls back to `JWT_SECRET`. Set it explicitly in production if visitor identity should remain stable across restarts without sharing the auth secret. It also reduces the impact of database-only leaks by making visitor IDs harder to recompute.
+- `ANALYTICS_IDENTITY_SECRET` - Optional. Falls back to `JWT_SECRET`. Set it explicitly in production if visitor identity should remain stable across restarts without sharing the auth secret. Analytics uses it for the daily UTC hashes behind UTC-day-skipped rotation, and it also reduces the impact of database-only leaks by making visitor IDs harder to recompute.
