@@ -110,7 +110,7 @@ func (r *dashboardStatsResolver) Browsers(ctx context.Context, obj *model.Dashbo
 	items := make([]*model.BrowserStats, 0, len(stats))
 	for _, stat := range stats {
 		items = append(items, &model.BrowserStats{
-			Browser:  stat.Browser,
+			Browser:  stat.Browser.String(),
 			Visitors: stat.Visitors,
 		})
 	}
@@ -136,7 +136,7 @@ func (r *dashboardStatsResolver) Devices(ctx context.Context, obj *model.Dashboa
 	items := make([]*model.DeviceStats, 0, len(stats))
 	for _, stat := range stats {
 		items = append(items, &model.DeviceStats{
-			Device:   stat.Device,
+			Device:   stat.Device.String(),
 			Visitors: stat.Visitors,
 		})
 	}
@@ -167,7 +167,7 @@ func (r *dashboardStatsResolver) OperatingSystems(ctx context.Context, obj *mode
 	items := make([]*model.OperatingSystemStats, 0, len(stats))
 	for _, stat := range stats {
 		items = append(items, &model.OperatingSystemStats{
-			OS:       stat.OS,
+			OS:       stat.OS.String(),
 			Visitors: stat.Visitors,
 		})
 	}

@@ -81,9 +81,9 @@ func createTestClient(t *testing.T, db *bun.DB, siteID int64, hash string, devic
 	client := &models.Client{
 		SiteID:  siteID,
 		Hash:    hash,
-		Device:  device,
-		Browser: browser,
-		OS:      os,
+		Device:  models.ClientDeviceFromLegacyLabel(device),
+		Browser: models.ClientBrowserFromLegacyLabel(browser),
+		OS:      models.ClientOSFromLegacyLabel(os),
 	}
 	if _, err := db.NewInsert().Model(client).Exec(ctx); err != nil {
 		t.Fatalf("failed to insert client: %v", err)

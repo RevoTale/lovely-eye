@@ -45,9 +45,9 @@ func TestDashboardCountryNamesAreResolvedLazily(t *testing.T) {
 			SiteID:  siteID,
 			Hash:    "hash-" + strconv.Itoa(index),
 			Country: countryCode,
-			Device:  "desktop",
-			Browser: "Chrome",
-			OS:      "Linux",
+			Device:  models.ClientDeviceDesktop,
+			Browser: models.ClientBrowserChrome,
+			OS:      models.ClientOSLinux,
 		}
 		_, err = ts.DB.NewInsert().Model(dbClient).Exec(ctx)
 		require.NoError(t, err)

@@ -57,14 +57,14 @@ func TestAnalyticsService_GenerateVisitorID(t *testing.T) {
 	service := NewAnalyticsService(nil, nil, nil, nil, nil, testAnalyticsIdentitySecret)
 	now := time.Date(2026, 3, 9, 10, 30, 0, 0, time.UTC)
 
-	base := service.generateVisitorID(42, "203.0.113.42", "Chrome", "desktop", now)
+	base := service.generateVisitorID(42, "203.0.113.42", models.ClientBrowserChrome, models.ClientDeviceDesktop, now)
 
-	require.Equal(t, base, service.generateVisitorID(42, "203.0.113.200", "Chrome", "desktop", now))
-	require.NotEqual(t, base, service.generateVisitorID(42, "203.0.114.42", "Chrome", "desktop", now))
-	require.NotEqual(t, base, service.generateVisitorID(42, "203.0.113.42", "Safari", "desktop", now))
-	require.NotEqual(t, base, service.generateVisitorID(42, "203.0.113.42", "Chrome", "mobile", now))
-	require.NotEqual(t, base, service.generateVisitorID(84, "203.0.113.42", "Chrome", "desktop", now))
-	require.NotEqual(t, base, service.generateVisitorID(42, "203.0.113.42", "Chrome", "desktop", now.Add(24*time.Hour)))
+	require.Equal(t, base, service.generateVisitorID(42, "203.0.113.200", models.ClientBrowserChrome, models.ClientDeviceDesktop, now))
+	require.NotEqual(t, base, service.generateVisitorID(42, "203.0.114.42", models.ClientBrowserChrome, models.ClientDeviceDesktop, now))
+	require.NotEqual(t, base, service.generateVisitorID(42, "203.0.113.42", models.ClientBrowserSafari, models.ClientDeviceDesktop, now))
+	require.NotEqual(t, base, service.generateVisitorID(42, "203.0.113.42", models.ClientBrowserChrome, models.ClientDeviceMobile, now))
+	require.NotEqual(t, base, service.generateVisitorID(84, "203.0.113.42", models.ClientBrowserChrome, models.ClientDeviceDesktop, now))
+	require.NotEqual(t, base, service.generateVisitorID(42, "203.0.113.42", models.ClientBrowserChrome, models.ClientDeviceDesktop, now.Add(24*time.Hour)))
 }
 
 func TestAnalyticsService_CollectPageView_CountryTrackingDoesNotChangeIdentity(t *testing.T) {

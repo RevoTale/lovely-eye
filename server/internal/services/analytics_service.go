@@ -205,7 +205,16 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 }
 
 // findOrCreateClient finds an existing client by hash or creates a new one
-func (s *AnalyticsService) findOrCreateClient(ctx context.Context, siteID int64, hash, device, browser, os, screenSize, country string) (*models.Client, error) {
+func (s *AnalyticsService) findOrCreateClient(
+	ctx context.Context,
+	siteID int64,
+	hash string,
+	device models.ClientDevice,
+	browser models.ClientBrowser,
+	os models.ClientOS,
+	screenSize models.ClientScreenSize,
+	country string,
+) (*models.Client, error) {
 	client, err := s.analyticsRepo.FindOrCreateClient(ctx, siteID, hash, device, browser, os, screenSize, country)
 	if err != nil {
 		return nil, fmt.Errorf("find or create client: %w", err)
@@ -270,7 +279,7 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 	device := categorizeDevice(ua)
 	browser := normalizeBrowser(ua)
 	os := normalizeOS(ua)
-	screenSize := ""
+	screenSize := models.ClientScreenSizeUnknown
 	now := time.Now()
 	nowUnix := now.Unix()
 
@@ -642,11 +651,17 @@ func (s *AnalyticsService) GetEventCounts(ctx context.Context, query AnalyticsQu
 const unknownVisitorIPPrefix = "unknown"
 
 // generateVisitorID creates a site-scoped, daily visitor identifier from coarse signals.
-func (s *AnalyticsService) generateVisitorID(siteID int64, ip, browser, device string, now time.Time) string {
+func (s *AnalyticsService) generateVisitorID(
+	siteID int64,
+	ip string,
+	browser models.ClientBrowser,
+	device models.ClientDevice,
+	now time.Time,
+) string {
 	dateBucket := now.UTC().Format("2006-01-02")
 	key := s.deriveVisitorIdentityKey(siteID, dateBucket)
 	ipPrefix := truncateVisitorIPPrefix(ip)
-	data := fmt.Sprintf("%d|%s|%s|%s", siteID, ipPrefix, browser, device)
+	data := fmt.Sprintf("%d|%s|%s|%s", siteID, ipPrefix, browser.String(), device.String())
 
 	mac := hmac.New(sha256.New, key)
 	_, _ = mac.Write([]byte(data))
@@ -768,7 +783,7 @@ func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionF
 	return string(bytes), true, nil
 }
 
-func categorizeDevice(ua useragent.UserAgent) string {
+func categorizeDevice(ua useragent.UserAgent) models.ClientDevice {
 	uaString := strings.ToLower(ua.String)
 
 	switch {
@@ -778,7 +793,7 @@ func categorizeDevice(ua useragent.UserAgent) string {
 		strings.Contains(uaString, "wear os"),
 		strings.Contains(uaString, "smartwatch"),
 		strings.Contains(uaString, "galaxy watch"):
-		return "watch"
+		return models.ClientDeviceWatch
 	case strings.Contains(uaString, "smart-tv"),
 		strings.Contains(uaString, "smarttv"),
 		strings.Contains(uaString, "android tv"),
@@ -792,195 +807,161 @@ func categorizeDevice(ua useragent.UserAgent) string {
 		strings.Contains(uaString, "viera"),
 		strings.Contains(uaString, "netcast"),
 		strings.Contains(uaString, "tv;"):
-		return "smart-tv"
+		return models.ClientDeviceSmartTV
 	case strings.Contains(uaString, "playstation"),
 		strings.Contains(uaString, "xbox"),
 		strings.Contains(uaString, "nintendo switch"):
-		return "console"
+		return models.ClientDeviceConsole
 	}
 
 	if ua.Tablet {
-		return "tablet"
+		return models.ClientDeviceTablet
 	}
 	if ua.Mobile {
-		return "mobile"
+		return models.ClientDeviceMobile
 	}
 	if ua.Desktop {
-		return "desktop"
+		return models.ClientDeviceDesktop
 	}
 
 	if strings.Contains(uaString, "ipad") || strings.Contains(uaString, "tablet") {
-		return "tablet"
+		return models.ClientDeviceTablet
 	}
 	if strings.Contains(uaString, "iphone") || strings.Contains(uaString, "ipod") {
-		return "mobile"
+		return models.ClientDeviceMobile
 	}
 	if strings.Contains(uaString, "android") {
 		if strings.Contains(uaString, "mobile") {
-			return "mobile"
+			return models.ClientDeviceMobile
 		}
-		return "tablet"
+		return models.ClientDeviceTablet
 	}
 	if strings.Contains(uaString, "windows") ||
 		strings.Contains(uaString, "macintosh") ||
 		strings.Contains(uaString, "linux") ||
 		strings.Contains(uaString, "cros") {
-		return "desktop"
+		return models.ClientDeviceDesktop
 	}
 
-	return "desktop"
+	return models.ClientDeviceDesktop
 }
 
-func normalizeBrowser(ua useragent.UserAgent) string {
+func normalizeBrowser(ua useragent.UserAgent) models.ClientBrowser {
 	uaString := strings.ToLower(ua.String)
 
 	switch {
 	case strings.Contains(uaString, "playstation"):
-		return "PlayStation Browser"
+		return models.ClientBrowserPlayStation
 	case strings.Contains(uaString, "xbox"):
-		return "Xbox Browser"
+		return models.ClientBrowserXbox
 	case strings.Contains(uaString, "fb_iab"),
 		strings.Contains(uaString, "fban"),
 		strings.Contains(uaString, "fbav"):
-		return "Facebook In-App Browser"
+		return models.ClientBrowserFacebookInApp
 	case strings.Contains(uaString, "instagram"):
-		return "Instagram In-App Browser"
+		return models.ClientBrowserInstagramInApp
 	case strings.Contains(uaString, "edg/"),
 		strings.Contains(uaString, "edgios"),
 		ua.IsEdge():
-		return "Edge"
+		return models.ClientBrowserEdge
 	case strings.Contains(uaString, "samsungbrowser"):
-		return "Samsung Internet"
+		return models.ClientBrowserSamsungInternet
 	case strings.Contains(uaString, "opr/"),
 		strings.Contains(uaString, "opera mini"),
 		strings.Contains(uaString, "opera mobi"),
 		ua.IsOpera(),
 		ua.IsOperaMini():
-		return "Opera"
+		return models.ClientBrowserOpera
 	case strings.Contains(uaString, "vivaldi"):
-		return "Vivaldi"
+		return models.ClientBrowserVivaldi
 	case strings.Contains(uaString, "yabrowser"),
 		strings.Contains(uaString, "yowser"):
-		return "Yandex Browser"
+		return models.ClientBrowserYandex
 	case strings.Contains(uaString, "duckduckgo"):
-		return "DuckDuckGo"
+		return models.ClientBrowserDuckDuckGo
 	case strings.Contains(uaString, "ucbrowser"),
 		strings.Contains(uaString, "ucweb"):
-		return "UC Browser"
+		return models.ClientBrowserUCBrowser
 	case strings.Contains(uaString, "miuibrowser"):
-		return "MIUI Browser"
+		return models.ClientBrowserMIUI
 	case strings.Contains(uaString, "msie"),
 		strings.Contains(uaString, "trident"),
 		ua.IsInternetExplorer():
-		return "Internet Explorer"
+		return models.ClientBrowserInternetExplorer
 	case strings.Contains(uaString, "wv"),
 		strings.Contains(uaString, "webview"):
-		return "Android WebView"
+		return models.ClientBrowserAndroidWebView
 	case strings.Contains(uaString, "crios"),
 		strings.Contains(uaString, "chrome"),
 		ua.IsChrome():
-		return "Chrome"
+		return models.ClientBrowserChrome
 	case strings.Contains(uaString, "fxios"),
 		strings.Contains(uaString, "firefox"),
 		ua.IsFirefox():
-		return "Firefox"
+		return models.ClientBrowserFirefox
 	case strings.Contains(uaString, "safari"),
 		(strings.Contains(uaString, "applewebkit") &&
 			(strings.Contains(uaString, "iphone") || strings.Contains(uaString, "ipad") || strings.Contains(uaString, "macintosh"))),
 		ua.IsSafari():
-		return "Safari"
+		return models.ClientBrowserSafari
 	}
 
 	name := strings.TrimSpace(ua.Name)
 	if name == "" {
-		return "Other"
+		return models.ClientBrowserOther
 	}
 
-	switch strings.ToLower(name) {
-	case "chrome mobile ios", "chrome mobile":
-		return "Chrome"
-	case "mobile safari":
-		return "Safari"
-	case "edge mobile":
-		return "Edge"
-	case "firefox mobile":
-		return "Firefox"
-	case "opera mobi":
-		return "Opera"
-	default:
-		return name
+	if browser, ok := models.ClientBrowserFromLabel(name); ok {
+		return browser
 	}
+	return models.ClientBrowserFromLegacyLabel(name)
 }
 
-func normalizeOS(ua useragent.UserAgent) string {
+func normalizeOS(ua useragent.UserAgent) models.ClientOS {
 	uaString := strings.ToLower(ua.String)
 
 	switch {
 	case strings.Contains(uaString, "wear os"):
-		return "Wear OS"
+		return models.ClientOSWearOS
 	case strings.Contains(uaString, "watchos"),
 		strings.Contains(uaString, "watch os"),
 		strings.Contains(uaString, "apple watch"):
-		return "watchOS"
+		return models.ClientOSWatchOS
 	case strings.Contains(uaString, "playstation"):
-		return "PlayStation OS"
+		return models.ClientOSPlayStation
 	case strings.Contains(uaString, "xbox"):
-		return "Xbox OS"
+		return models.ClientOSXbox
 	case strings.Contains(uaString, "ipad"):
-		return "iPadOS"
+		return models.ClientOSIPadOS
 	case strings.Contains(uaString, "iphone"),
 		strings.Contains(uaString, "ipod"),
 		ua.IsIOS():
-		return "iOS"
+		return models.ClientOSIOS
 	case strings.Contains(uaString, "android"):
-		return "Android"
+		return models.ClientOSAndroid
 	case strings.Contains(uaString, "cros"),
 		ua.IsChromeOS():
-		return "ChromeOS"
+		return models.ClientOSChromeOS
 	case strings.Contains(uaString, "windows"),
 		ua.IsWindows():
-		return "Windows"
+		return models.ClientOSWindows
 	case strings.Contains(uaString, "mac os"),
 		strings.Contains(uaString, "macintosh"),
 		ua.IsMacOS():
-		return "macOS"
+		return models.ClientOSMacOS
 	case strings.Contains(uaString, "linux"),
 		ua.IsLinux():
-		return "Linux"
+		return models.ClientOSLinux
 	}
 
-	os := strings.TrimSpace(ua.OS)
-	switch strings.ToLower(os) {
-	case "":
-		return "Other"
-	case "watch os", "watchos":
-		return "watchOS"
-	case "wear os":
-		return "Wear OS"
-	case "mac os x", "os x":
-		return "macOS"
-	case "chrome os":
-		return "ChromeOS"
-	default:
+	if os, ok := models.ClientOSFromLabel(strings.TrimSpace(ua.OS)); ok {
 		return os
 	}
+	return models.ClientOSFromLegacyLabel(strings.TrimSpace(ua.OS))
 }
 
-func categorizeScreenSize(width int) string {
-	switch {
-	case width > 0 && width < 320:
-		return "watch"
-	case width < 576:
-		return "xs"
-	case width < 768:
-		return "sm"
-	case width < 992:
-		return "md"
-	case width < 1200:
-		return "lg"
-	default:
-		return "xl"
-	}
+func categorizeScreenSize(width int) models.ClientScreenSize {
+	return models.ClientScreenSizeFromWidth(width)
 }
 
 func IsAllowedDomain(origin, referer string, domains []*models.SiteDomain) bool {

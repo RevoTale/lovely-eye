@@ -48,7 +48,16 @@ func NewAnalyticsRepository(db *bun.DB) *AnalyticsRepository {
 	return &AnalyticsRepository{db: db}
 }
 
-func (r *AnalyticsRepository) FindOrCreateClient(ctx context.Context, siteID int64, hash, device, browser, os, screenSize, country string) (*models.Client, error) {
+func (r *AnalyticsRepository) FindOrCreateClient(
+	ctx context.Context,
+	siteID int64,
+	hash string,
+	device models.ClientDevice,
+	browser models.ClientBrowser,
+	os models.ClientOS,
+	screenSize models.ClientScreenSize,
+	country string,
+) (*models.Client, error) {
 	// Try to find existing client by hash
 	client := new(models.Client)
 	err := r.db.NewSelect().
@@ -466,7 +475,7 @@ func (r *AnalyticsRepository) GetTopReferrers(ctx context.Context, siteID int64,
 }
 
 type BrowserStats struct {
-	Browser  string
+	Browser  models.ClientBrowser
 	Visitors int
 }
 
@@ -482,7 +491,7 @@ func (r *AnalyticsRepository) GetBrowserStats(ctx context.Context, siteID int64,
 		Where("s.site_id = ?", siteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.browser != ''").
+			Where("c.browser != ?", models.ClientBrowserUnknown).
 		Group("c.browser").
 		Order("visitors DESC").
 		Limit(limit).
@@ -494,12 +503,12 @@ func (r *AnalyticsRepository) GetBrowserStats(ctx context.Context, siteID int64,
 }
 
 type DeviceStats struct {
-	Device   string
+	Device   models.ClientDevice
 	Visitors int
 }
 
 type OperatingSystemStats struct {
-	OS       string
+	OS       models.ClientOS
 	Visitors int
 }
 
@@ -515,7 +524,7 @@ func (r *AnalyticsRepository) GetDeviceStats(ctx context.Context, siteID int64, 
 		Where("s.site_id = ?", siteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.device != ''").
+			Where("c.device != ?", models.ClientDeviceUnknown).
 		Group("c.device").
 		Order("visitors DESC").
 		Limit(limit).
@@ -628,23 +637,38 @@ func eventTypeFlags(eventTypes []EventType) (bool, bool) {
 	return hasPageView, hasPredefined
 }
 
+func uint8FilterValues[T ~uint8](values []T) []uint8 {
+	if len(values) == 0 {
+		return nil
+	}
+
+	translated := make([]uint8, 0, len(values))
+	for _, value := range values {
+		translated = append(translated, uint8(value))
+	}
+	return translated
+}
+
+func applyEnumFilter[T ~uint8](q *bun.SelectQuery, rawValues []string, parse func([]string) []T, clause string) *bun.SelectQuery {
+	if len(rawValues) == 0 {
+		return q
+	}
+
+	translated := parse(rawValues)
+	if len(translated) == 0 {
+		return q.Where("1 = 0")
+	}
+	return q.Where(clause, bun.List(uint8FilterValues(translated)))
+}
+
 func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQuery {
 	if len(filter.Referrer) > 0 {
 
 		q = q.Where("s.referrer IN (?)", bun.List(filter.Referrer))
 	}
-	if len(filter.Browser) > 0 {
-
-		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE browser IN (?))", bun.List(filter.Browser))
-	}
-	if len(filter.Device) > 0 {
-
-		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE device IN (?))", bun.List(filter.Device))
-	}
-	if len(filter.OS) > 0 {
-
-		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE os IN (?))", bun.List(filter.OS))
-	}
+	q = applyEnumFilter(q, filter.Browser, models.ParseClientBrowserFilters, "s.client_id IN (SELECT id FROM clients WHERE browser IN (?))")
+	q = applyEnumFilter(q, filter.Device, models.ParseClientDeviceFilters, "s.client_id IN (SELECT id FROM clients WHERE device IN (?))")
+	q = applyEnumFilter(q, filter.OS, models.ParseClientOSFilters, "s.client_id IN (SELECT id FROM clients WHERE os IN (?))")
 	if len(filter.Page) > 0 {
 		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NULL AND path IN (?))", bun.List(filter.Page))
 	}
@@ -689,15 +713,9 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 		if len(filter.Referrer) > 0 {
 			q = q.Where("e.session_id IN (SELECT id FROM sessions WHERE referrer IN (?))", bun.List(filter.Referrer))
 		}
-		if len(filter.Browser) > 0 {
-			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.browser IN (?))", bun.List(filter.Browser))
-		}
-		if len(filter.Device) > 0 {
-			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.device IN (?))", bun.List(filter.Device))
-		}
-		if len(filter.OS) > 0 {
-			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.os IN (?))", bun.List(filter.OS))
-		}
+		q = applyEnumFilter(q, filter.Browser, models.ParseClientBrowserFilters, "e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.browser IN (?))")
+		q = applyEnumFilter(q, filter.Device, models.ParseClientDeviceFilters, "e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.device IN (?))")
+		q = applyEnumFilter(q, filter.OS, models.ParseClientOSFilters, "e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.os IN (?))")
 		if len(filter.Country) > 0 {
 			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE COALESCE(NULLIF(c.country, ''), '-') IN (?))", bun.List(normalizeCountryCodes(filter.Country)))
 		}
@@ -915,7 +933,7 @@ func (r *AnalyticsRepository) GetBrowserStatsWithFilter(ctx context.Context, que
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.browser != ''")
+			Where("c.browser != ?", models.ClientBrowserUnknown)
 	q = applySessionFilters(q, query.Filter)
 	q = q.Group("c.browser").
 		Order("visitors DESC", "c.browser ASC")
@@ -944,7 +962,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilter(ctx context.Context, quer
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.device != ''")
+			Where("c.device != ?", models.ClientDeviceUnknown)
 	q = applySessionFilters(q, query.Filter)
 	err := q.Group("c.device").
 		Order("visitors DESC", "c.device ASC").
@@ -1075,7 +1093,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.device != ''")
+			Where("c.device != ?", models.ClientDeviceUnknown)
 	q = applySessionFilters(q, query.Filter)
 	err := q.Group("c.device").
 		Order("visitors DESC", "c.device ASC").
@@ -1093,7 +1111,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.device != ''")
+			Where("c.device != ?", models.ClientDeviceUnknown)
 	countQuery = applySessionFilters(countQuery, query.Filter)
 	err = countQuery.Scan(ctx, &total)
 	if err != nil {
@@ -1107,7 +1125,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.device != ''")
+			Where("c.device != ?", models.ClientDeviceUnknown)
 	deviceCounts = applySessionFilters(deviceCounts, query.Filter)
 	deviceCounts = deviceCounts.Group("c.device")
 
@@ -1135,7 +1153,7 @@ func (r *AnalyticsRepository) GetOperatingSystemStatsWithFilterPaged(ctx context
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.os != ''")
+			Where("c.os != ?", models.ClientOSUnknown)
 	q = applySessionFilters(q, query.Filter)
 	err := q.Group("c.os").
 		Order("visitors DESC", "c.os ASC").
@@ -1153,7 +1171,7 @@ func (r *AnalyticsRepository) GetOperatingSystemStatsWithFilterPaged(ctx context
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.os != ''")
+			Where("c.os != ?", models.ClientOSUnknown)
 	countQuery = applySessionFilters(countQuery, query.Filter)
 	err = countQuery.Scan(ctx, &total)
 	if err != nil {
@@ -1167,7 +1185,7 @@ func (r *AnalyticsRepository) GetOperatingSystemStatsWithFilterPaged(ctx context
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.os != ''")
+			Where("c.os != ?", models.ClientOSUnknown)
 	osCounts = applySessionFilters(osCounts, query.Filter)
 	osCounts = osCounts.Group("c.os")
 

@@ -93,19 +93,19 @@ func TestUserAgentParsing(t *testing.T) {
 			os := normalizeOS(ua)
 			device := categorizeDevice(ua)
 
-			if browser != tt.expectedBrowser {
-				t.Errorf("Expected browser %s, got %s for UA: %s", tt.expectedBrowser, browser, tt.userAgent)
-			}
+				if browser.String() != tt.expectedBrowser {
+					t.Errorf("Expected browser %s, got %s for UA: %s", tt.expectedBrowser, browser.String(), tt.userAgent)
+				}
 
-			if os != tt.expectedOS {
-				t.Errorf("Expected OS %s, got %s for UA: %s", tt.expectedOS, os, tt.userAgent)
-			}
+				if os.String() != tt.expectedOS {
+					t.Errorf("Expected OS %s, got %s for UA: %s", tt.expectedOS, os.String(), tt.userAgent)
+				}
 
-			if device != tt.expectedDevice {
-				t.Errorf("Expected device %s, got %s for UA: %s", tt.expectedDevice, device, tt.userAgent)
-			}
-		})
-	}
+				if device.String() != tt.expectedDevice {
+					t.Errorf("Expected device %s, got %s for UA: %s", tt.expectedDevice, device.String(), tt.userAgent)
+				}
+			})
+		}
 }
 
 func TestCategorizeScreenSize(t *testing.T) {
@@ -133,11 +133,11 @@ func TestCategorizeScreenSize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := categorizeScreenSize(tt.width); got != tt.expected {
-				t.Errorf("Expected screen size %s, got %s for width %d", tt.expected, got, tt.width)
-			}
-		})
-	}
+				if got := categorizeScreenSize(tt.width); got.String() != tt.expected {
+					t.Errorf("Expected screen size %s, got %s for width %d", tt.expected, got.String(), tt.width)
+				}
+			})
+		}
 }
 
 func TestBotDetection(t *testing.T) {

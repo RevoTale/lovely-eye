@@ -297,10 +297,41 @@ func seedData(ctx context.Context, db *bun.DB, siteID int64, defs []*models.Even
 			SiteID:     siteID,
 			Hash:       hash,
 			Country:    pickString(rng, []string{"US", "GB", "DE", "FR", "CA", "NL"}),
-			Device:     pickString(rng, []string{"desktop", "mobile", "tablet", "smart-tv", "console", "watch"}),
-			Browser:    pickString(rng, []string{"Chrome", "Safari", "Firefox", "Edge", "Opera", "Samsung Internet", "Android WebView"}),
-			OS:         pickString(rng, []string{"Windows", "macOS", "Linux", "ChromeOS", "iOS", "iPadOS", "Android", "watchOS", "Wear OS"}),
-			ScreenSize: pickString(rng, []string{"watch", "1920x1080", "1366x768", "390x844", "1440x900"}),
+			Device: pickEnum(rng, []models.ClientDevice{
+				models.ClientDeviceDesktop,
+				models.ClientDeviceMobile,
+				models.ClientDeviceTablet,
+				models.ClientDeviceSmartTV,
+				models.ClientDeviceConsole,
+				models.ClientDeviceWatch,
+			}),
+			Browser: pickEnum(rng, []models.ClientBrowser{
+				models.ClientBrowserChrome,
+				models.ClientBrowserSafari,
+				models.ClientBrowserFirefox,
+				models.ClientBrowserEdge,
+				models.ClientBrowserOpera,
+				models.ClientBrowserSamsungInternet,
+				models.ClientBrowserAndroidWebView,
+			}),
+			OS: pickEnum(rng, []models.ClientOS{
+				models.ClientOSWindows,
+				models.ClientOSMacOS,
+				models.ClientOSLinux,
+				models.ClientOSChromeOS,
+				models.ClientOSIOS,
+				models.ClientOSIPadOS,
+				models.ClientOSAndroid,
+				models.ClientOSWatchOS,
+				models.ClientOSWearOS,
+			}),
+			ScreenSize: pickEnum(rng, []models.ClientScreenSize{
+				models.ClientScreenSizeWatch,
+				models.ClientScreenSizeXS,
+				models.ClientScreenSizeSM,
+				models.ClientScreenSizeLG,
+				models.ClientScreenSizeXL,
+			}),
 		}
 
 		if _, err := db.NewInsert().Model(client).Exec(ctx); err != nil {
@@ -502,6 +533,14 @@ func randRange(rng *mathrand.Rand, min, max int) int {
 func pickString(rng *mathrand.Rand, values []string) string {
 	if len(values) == 0 {
 		return ""
+	}
+	return values[rng.Intn(len(values))]
+}
+
+func pickEnum[T any](rng *mathrand.Rand, values []T) T {
+	var zero T
+	if len(values) == 0 {
+		return zero
 	}
 	return values[rng.Intn(len(values))]
 }
