@@ -1,26 +1,26 @@
 module github.com/lovely-eye/server
 
-go 1.25
+go 1.26.0
 
 require (
-	ariga.io/atlas v1.0.0
+	ariga.io/atlas v1.1.0
 	ariga.io/atlas-provider-bun v0.0.3
-	github.com/99designs/gqlgen v0.17.86
+	github.com/99designs/gqlgen v0.17.88
 	github.com/Khan/genqlient v0.8.1
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/mileusna/useragent v1.3.5
 	github.com/oschwald/geoip2-golang/v2 v2.1.0
 	github.com/oschwald/maxminddb-golang/v2 v2.1.1
 	github.com/stretchr/testify v1.11.1
-	github.com/uptrace/bun v1.2.16
-	github.com/uptrace/bun/dialect/pgdialect v1.2.16
-	github.com/uptrace/bun/dialect/sqlitedialect v1.2.16
-	github.com/uptrace/bun/driver/pgdriver v1.2.16
-	github.com/uptrace/bun/extra/bundebug v1.2.16
-	github.com/urfave/cli/v3 v3.6.2
-	github.com/vektah/gqlparser/v2 v2.5.31
-	golang.org/x/crypto v0.47.0
-	modernc.org/sqlite v1.44.3
+	github.com/uptrace/bun v1.2.18
+	github.com/uptrace/bun/dialect/pgdialect v1.2.18
+	github.com/uptrace/bun/dialect/sqlitedialect v1.2.18
+	github.com/uptrace/bun/driver/pgdriver v1.2.18
+	github.com/uptrace/bun/extra/bundebug v1.2.18
+	github.com/urfave/cli/v3 v3.7.0
+	github.com/vektah/gqlparser/v2 v2.5.32
+	golang.org/x/crypto v0.48.0
+	modernc.org/sqlite v1.46.1
 )
 
 require (
@@ -45,25 +45,24 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/sosodev/duration v1.3.1 // indirect
+	github.com/sosodev/duration v1.4.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
-	github.com/uptrace/bun/dialect/mssqldialect v1.2.16 // indirect
-	github.com/uptrace/bun/dialect/mysqldialect v1.2.16 // indirect
-	github.com/uptrace/bun/dialect/oracledialect v1.2.16 // indirect
+	github.com/uptrace/bun/dialect/mssqldialect v1.2.18 // indirect
+	github.com/uptrace/bun/dialect/mysqldialect v1.2.18 // indirect
+	github.com/uptrace/bun/dialect/oracledialect v1.2.18 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	go.opentelemetry.io/otel v1.39.0 // indirect
-	go.opentelemetry.io/otel/trace v1.39.0 // indirect
-	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
-	golang.org/x/mod v0.32.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
+	go.opentelemetry.io/otel v1.42.0 // indirect
+	go.opentelemetry.io/otel/trace v1.42.0 // indirect
+	golang.org/x/mod v0.33.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/tools v0.42.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	mellium.im/sasl v0.3.2 // indirect
-	modernc.org/libc v1.67.6 // indirect
+	modernc.org/libc v1.69.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )

@@ -6,6 +6,7 @@ query Dashboard(
   $referrersPaging: PagingInput!
   $browsersPaging: PagingInput!
   $devicesPaging: PagingInput!
+  $osPaging: PagingInput!
   $countriesPaging: PagingInput!
 ) {
   dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
@@ -70,8 +71,15 @@ fragment DeviceStatsFields on DeviceStats {
   visitors
 }
 
+fragment OperatingSystemStatsFields on OperatingSystemStats {
+  os
+  visitors
+}
+
 fragment CountryStatsFields on CountryStats {
-  country
+  country {
+    ...CountryFields
+  }
   visitors
 }
 
@@ -146,6 +154,13 @@ fragment DashboardStatsFields on DashboardStats {
     totalVisitors
     items {
       ...DeviceStatsFields
+    }
+  }
+  operatingSystems(paging: $osPaging) {
+    total
+    totalVisitors
+    items {
+      ...OperatingSystemStatsFields
     }
   }
   countries(paging: $countriesPaging) {

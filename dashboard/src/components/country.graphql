@@ -1,0 +1,10 @@
+fragment CountryFields on Country {
+  code
+  name
+}
+
+query CountriesByCode($codes: [String!], $paging: PagingInput!) {
+  geoIPCountries(codes: $codes, paging: $paging) {
+    ...CountryFields
+  }
+}

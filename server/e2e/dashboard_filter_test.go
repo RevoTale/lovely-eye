@@ -50,21 +50,22 @@ func TestDashboardFiltering(t *testing.T) {
 		referrer    string
 		userAgent   string
 		screenWidth int
+		ip          string
 	}{
 
-		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", 1920},
-		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", 1920},
+		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", 1920, "203.0.113.10"},
+		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", 1920, "198.51.100.20"},
 
-		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", 375},
-		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", 375},
+		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", 375, "192.0.2.30"},
+		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", 375, "198.18.0.40"},
 
-		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", 1440},
-		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", 1440},
+		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", 1440, "198.18.1.50"},
+		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", 1440, "198.19.0.60"},
 
-		{"/home", "https://twitter.com", "Mozilla/5.0 (Android 13; Mobile) Chrome/119.0", 412},
+		{"/home", "https://twitter.com", "Mozilla/5.0 (Android 13; Mobile) Chrome/119.0", 412, "198.19.1.70"},
 	}
 
-	for i, data := range testData {
+	for _, data := range testData {
 		payload := map[string]interface{}{
 			"site_key":     siteKey,
 			"path":         data.path,
@@ -76,9 +77,9 @@ func TestDashboardFiltering(t *testing.T) {
 		req, _ := http.NewRequest("POST", ts.httpServer.URL+"/api/collect", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Origin", "https://filter-test.com")
-		// Append index to user agent to create different visitor IDs
-		// This simulates different visitors to avoid deduplication
-		req.Header.Set("User-Agent", data.userAgent+" TestVisitor/"+string(rune('A'+i)))
+		req.Header.Set("User-Agent", data.userAgent)
+		// Keep repeated page views in separate visitor buckets under the coarser identity rules.
+		req.Header.Set("X-Forwarded-For", data.ip)
 
 		resp, err := ts.httpServer.Client().Do(req)
 		require.NoError(t, err)
@@ -90,7 +91,7 @@ func TestDashboardFiltering(t *testing.T) {
 	}
 
 	t.Run("no filter shows all data", func(t *testing.T) {
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, 7, resp.Dashboard.PageViews)
@@ -106,7 +107,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Referrer: []string{googleReferrer},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, 2, resp.Dashboard.PageViews, "should only count Google referrer page views")
@@ -125,7 +126,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Device: []string{mobileDevice},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, 3, resp.Dashboard.PageViews, "should only count mobile page views")
@@ -142,13 +143,44 @@ func TestDashboardFiltering(t *testing.T) {
 		require.True(t, foundAbout, "should find /about page in mobile traffic")
 	})
 
+	t.Run("filter by browser", func(t *testing.T) {
+		filter := &operations.FilterInput{
+			Browser: []string{"Chrome"},
+		}
+
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		require.NoError(t, err)
+
+		require.Equal(t, 3, resp.Dashboard.PageViews, "should only count Chrome page views")
+		require.Len(t, resp.Dashboard.TopPages.Items, 1, "should only show the page visited from Chrome")
+		require.Equal(t, "/home", resp.Dashboard.TopPages.Items[0].Path)
+		require.Len(t, resp.Dashboard.Browsers, 1, "should only show Chrome in the browser breakdown")
+		require.Equal(t, "Chrome", resp.Dashboard.Browsers[0].Browser)
+	})
+
+	t.Run("filter by operating system", func(t *testing.T) {
+		filter := &operations.FilterInput{
+			Os: []string{"iOS"},
+		}
+
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		require.NoError(t, err)
+
+		require.Equal(t, 2, resp.Dashboard.PageViews, "should only count iOS page views")
+		require.Len(t, resp.Dashboard.OperatingSystems.Items, 1, "should only show iOS in the OS breakdown")
+		require.Equal(t, "iOS", resp.Dashboard.OperatingSystems.Items[0].Os)
+		require.Equal(t, 2, resp.Dashboard.OperatingSystems.Items[0].Visitors)
+		require.Len(t, resp.Dashboard.Devices.Items, 1, "should keep the device breakdown filtered to iOS traffic")
+		require.Equal(t, "mobile", resp.Dashboard.Devices.Items[0].Device)
+	})
+
 	t.Run("filter by page", func(t *testing.T) {
 		homePage := "/home"
 		filter := &operations.FilterInput{
 			Page: []string{homePage},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, 3, resp.Dashboard.PageViews, "should only count /home page views")
@@ -167,7 +199,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Device:   []string{mobileDevice},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, 2, resp.Dashboard.PageViews, "should only count Facebook mobile page views")
@@ -185,7 +217,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Device: []string{desktopDevice},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, 2, resp.Dashboard.PageViews, "should only count desktop views of /home")
@@ -200,7 +232,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Referrer: []string{nonExistentReferrer},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, 0, resp.Dashboard.PageViews)
@@ -216,7 +248,7 @@ func TestDashboardFiltering(t *testing.T) {
 			Referrer: []string{directReferrer},
 		}
 
-		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 
 		require.Equal(t, 2, resp.Dashboard.PageViews, "should count direct traffic page views")

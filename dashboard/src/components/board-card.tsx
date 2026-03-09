@@ -1,6 +1,8 @@
-
-import { Card, CardContent, CardHeader, CardTitle, Skeleton } from '@/components/ui';
+import type { ElementType, FunctionComponent, ReactNode } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
+import DashboardCardState from '@/components/dashboard-card-state';
 import { PaginationControls } from '@/components/pagination-controls';
+import type { DashboardLoadState } from '@/lib/dashboard-load-state';
 
 interface PaginationProps {
   page: number;
@@ -12,29 +14,36 @@ interface PaginationProps {
 
 interface BoardCardProps {
   title: string;
-  icon: React.ElementType;
-  headerRight?: React.ReactNode;
-  children: React.ReactNode;
+  icon: ElementType;
+  children: ReactNode;
+  skeleton: ReactNode;
+  state?: DashboardLoadState;
+  headerRight?: ReactNode;
   pagination?: PaginationProps;
+  overlayLabel?: string;
+  contentClassName?: string;
 }
 
-export const BoardCard = ({
+const BoardCard: FunctionComponent<BoardCardProps> = ({
   title,
   icon: Icon,
-  headerRight,
   children,
+  skeleton,
+  state = 'ready',
+  headerRight,
   pagination,
-}: BoardCardProps): React.ReactNode => {
+  overlayLabel,
+  contentClassName,
+}) => {
+  const showPagination = pagination !== undefined && pagination.total > pagination.pageSize;
   const paginationAlign = pagination?.align ?? 'start';
-  const hasHeaderRight = headerRight !== null && headerRight !== undefined;
-  const hasPagination = pagination !== undefined;
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="transition-shadow hover:shadow-md">
       <CardHeader>
-        <CardTitle className={`flex items-center ${hasHeaderRight ? 'justify-between' : 'gap-2'}`}>
+        <CardTitle className={`flex items-center ${headerRight !== undefined ? 'justify-between' : 'gap-2'}`}>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <Icon className="h-4 w-4 text-primary" />
             </div>
             {title}
@@ -43,46 +52,26 @@ export const BoardCard = ({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {children}
-        {hasPagination && pagination.total > pagination.pageSize ? (
-          <div className={`mt-4 flex ${paginationAlign === 'center' ? 'justify-center' : 'justify-start'}`}>
-            <PaginationControls
-              page={pagination.page}
-              pageSize={pagination.pageSize}
-              total={pagination.total}
-              onPageChange={pagination.onPageChange}
-            />
-          </div>
-        ) : null}
+        <DashboardCardState state={state} skeleton={skeleton} className={contentClassName} overlayLabel={overlayLabel}>
+          <>
+            {children}
+            {pagination !== undefined ? (
+              <div className={`mt-4 flex min-h-9 ${paginationAlign === 'center' ? 'justify-center' : 'justify-start'}`}>
+                {showPagination ? (
+                  <PaginationControls
+                    page={pagination.page}
+                    pageSize={pagination.pageSize}
+                    total={pagination.total}
+                    onPageChange={pagination.onPageChange}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </>
+        </DashboardCardState>
       </CardContent>
     </Card>
   );
-}
+};
 
-const SKELETON_ITEMS_COUNT = 5;
-
-export const BoardCardSkeleton = ({ title, icon: Icon }: { title: string; icon: React.ElementType }): React.ReactNode => (
-  <Card className="hover:shadow-md transition-shadow">
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Icon className="h-4 w-4 text-primary" />
-        </div>
-        {title}
-      </CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-3">
-        {Array.from({ length: SKELETON_ITEMS_COUNT }, (_, i) => (
-          <div key={i}>
-            <div className="flex items-center justify-between mb-1">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-5 w-12" />
-            </div>
-            <Skeleton className="h-2 w-full" />
-          </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-)
+export default BoardCard;

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import {
   ChartDataDocument,
@@ -10,20 +10,10 @@ import {
   type TimeBucket,
 } from '@/gql/graphql';
 import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
+import type { DashboardLoadState } from '@/lib/dashboard-load-state';
+import { BATCH_SIZE, buildChartVariables, calculateExpectedCount, calculateProgress } from '@/lib/chart-loader-utils';
 
-const BATCH_SIZE = 10;
-const INITIAL_OFFSET = 0;
 const EMPTY_COUNT = 0;
-const MINUTES_PER_HOUR = 60;
-const SECONDS_PER_MINUTE = 60;
-const MS_IN_SECOND = 1000;
-const HOURS_PER_DAY = 24;
-const MS_IN_HOUR = MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_IN_SECOND;
-const MS_IN_DAY = HOURS_PER_DAY * MS_IN_HOUR;
-const COUNT_OFFSET = 1;
-const PROGRESS_UNKNOWN = 50;
-const PROGRESS_COMPLETE = 100;
-const PROGRESS_MIN = 0;
 
 interface UseChartDataLoaderParams {
   siteId: string;
@@ -34,116 +24,61 @@ interface UseChartDataLoaderParams {
 
 interface ChartDataLoaderResult {
   loadedData: DailyStatsFieldsFragment[];
-  loading: boolean;
+  state: DashboardLoadState;
   loadingMore: boolean;
   progress: number | null;
   expectedCount: number | null;
-  hasMore: boolean;
 }
 
 export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseChartDataLoaderParams): ChartDataLoaderResult {
   const [loadedData, setLoadedData] = useState<DailyStatsFieldsFragment[]>([]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-
-  const filterKey = useMemo(
-    () => JSON.stringify({ siteId, dateRange, filter, bucket }),
-    [siteId, dateRange, filter, bucket]
-  );
-
+  const [resolvedKey, setResolvedKey] = useState('');
+  const requestKey = useMemo(() => JSON.stringify({ siteId, dateRange, filter, bucket }), [siteId, dateRange, filter, bucket]);
   const bucketValue: TimeBucket = bucket === 'daily' ? 'DAILY' : 'HOURLY';
-
-  const variables = useMemo(() => ({
-    siteId,
-    dateRange: dateRange === null ? null : { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() },
-    filter: filter === null ? null : {
-      referrer: filter.referrer ?? null,
-      device: filter.device ?? null,
-      page: filter.page ?? null,
-      country: filter.country ?? null,
-      eventType: filter.eventType ?? null,
-      eventDefinitionId: filter.eventDefinitionId ?? null,
-      eventName: filter.eventName ?? null,
-      eventPath: filter.eventPath ?? null,
-    },
-    bucket: bucketValue,
-    limit: BATCH_SIZE,
-    offset: INITIAL_OFFSET,
-  }), [siteId, dateRange, filter, bucketValue]);
-
-  const { data, loading, fetchMore } = useQuery<ChartDataQuery, ChartDataQueryVariables>(ChartDataDocument, {
+  const variables = useMemo(() => buildChartVariables(siteId, dateRange, filter, bucketValue), [siteId, dateRange, filter, bucketValue]);
+  const query = useQuery<ChartDataQuery, ChartDataQueryVariables>(ChartDataDocument, {
     variables,
+    fetchPolicy: 'cache-and-network',
     notifyOnNetworkStatusChange: true,
   });
 
   useEffect(() => {
-    setLoadedData([]);
-    setIsLoadingMore(false);
-    setHasMore(true);
-  }, [filterKey]);
-
-  useEffect(() => {
-    if (data === undefined) return;
-    const { dashboard: { dailyStats } } = data;
-    const fragmentStats: Array<FragmentType<typeof DailyStatsFieldsFragmentDoc>> = dailyStats;
-    const initialData = getFragmentData(DailyStatsFieldsFragmentDoc, fragmentStats);
+    if (query.data === undefined) return;
+    const dailyStats = query.data.dashboard.dailyStats as Array<FragmentType<typeof DailyStatsFieldsFragmentDoc>>;
+    const initialData = getFragmentData(DailyStatsFieldsFragmentDoc, dailyStats);
     setLoadedData(initialData);
+    setResolvedKey(requestKey);
     setHasMore(initialData.length === BATCH_SIZE);
-  }, [data]);
+    setIsLoadingMore(false);
+  }, [query.data, requestKey]);
 
   const loadNextBatch = useCallback(async () => {
-    if (data === undefined) return;
-    const { dashboard: { dailyStats } } = data;
-    if (isLoadingMore || loading || !hasMore) return;
-    if (dailyStats.length < BATCH_SIZE) return;
-
+    if (query.data === undefined || query.loading || isLoadingMore || !hasMore || resolvedKey !== requestKey) return;
+    if (query.data.dashboard.dailyStats.length < BATCH_SIZE) return;
     setIsLoadingMore(true);
     try {
-      const result = await fetchMore({
-        variables: {
-          offset: loadedData.length,
-        },
-      });
-
-      const { data: resultData } = result;
-      if (resultData === undefined) return;
-      const { dashboard: { dailyStats: newData } } = resultData;
-      const fragmentBatch: Array<FragmentType<typeof DailyStatsFieldsFragmentDoc>> = newData;
-      const nextBatch = getFragmentData(DailyStatsFieldsFragmentDoc, fragmentBatch);
-      if (nextBatch.length > EMPTY_COUNT) {
-        setLoadedData(prev => [...prev, ...nextBatch]);
-      }
+      const result = await query.fetchMore({ variables: { offset: loadedData.length } });
+      if (result.data === undefined) return;
+      const nextBatch = getFragmentData(DailyStatsFieldsFragmentDoc, result.data.dashboard.dailyStats as Array<FragmentType<typeof DailyStatsFieldsFragmentDoc>>);
+      if (nextBatch.length > EMPTY_COUNT) setLoadedData((prev) => [...prev, ...nextBatch]);
       setHasMore(nextBatch.length === BATCH_SIZE);
     } catch {
-      // Silently handle batch loading errors
+      setHasMore(false);
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoadingMore, loading, data, fetchMore, loadedData.length, hasMore]);
+  }, [hasMore, isLoadingMore, loadedData.length, query, requestKey, resolvedKey]);
 
   useEffect(() => {
-    if (!loading && !isLoadingMore && hasMore && loadedData.length > EMPTY_COUNT && loadedData.length % BATCH_SIZE === EMPTY_COUNT) {
-      void loadNextBatch();
-    }
-  }, [loading, isLoadingMore, loadedData.length, loadNextBatch, hasMore]);
+    if (resolvedKey !== requestKey || query.loading || isLoadingMore || !hasMore) return;
+    if (loadedData.length > EMPTY_COUNT && loadedData.length % BATCH_SIZE === EMPTY_COUNT) void loadNextBatch();
+  }, [hasMore, isLoadingMore, loadNextBatch, loadedData.length, query.loading, requestKey, resolvedKey]);
 
-  const expectedCount = useMemo(() => {
-    if (dateRange === null) return null;
-    const fromMs = dateRange.from.getTime();
-    const toMs = dateRange.to.getTime();
-    if (Number.isNaN(fromMs) || Number.isNaN(toMs) || toMs < fromMs) return null;
-    const bucketMs = bucket === 'hourly' ? MS_IN_HOUR : MS_IN_DAY;
-    return Math.floor((toMs - fromMs) / bucketMs) + COUNT_OFFSET;
-  }, [dateRange, bucket]);
+  const expectedCount = useMemo(() => calculateExpectedCount(dateRange, bucket), [dateRange, bucket]);
+  const progress = useMemo(() => calculateProgress(expectedCount, hasMore, loadedData.length), [expectedCount, hasMore, loadedData.length]);
+  const state: DashboardLoadState = query.loading && loadedData.length === EMPTY_COUNT ? 'initial' : query.loading ? 'refreshing' : 'ready';
 
-  const progress = useMemo(() => {
-    if (expectedCount === null) {
-      return hasMore ? PROGRESS_UNKNOWN : loadedData.length > EMPTY_COUNT ? PROGRESS_COMPLETE : null;
-    }
-    if (expectedCount <= EMPTY_COUNT) return null;
-    const percent = Math.min(PROGRESS_COMPLETE, Math.max(PROGRESS_MIN, Math.round((loadedData.length / expectedCount) * PROGRESS_COMPLETE)));
-    return percent;
-  }, [expectedCount, hasMore, loadedData.length]);
-
-  return { loadedData, loading, loadingMore: isLoadingMore, progress, expectedCount, hasMore };
+  return { loadedData, state, loadingMore: isLoadingMore, progress, expectedCount };
 }

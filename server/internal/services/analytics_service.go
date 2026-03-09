@@ -2,44 +2,67 @@ package services
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
 
 	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/repository"
-	"github.com/lovely-eye/server/pkg/utils"
+	"github.com/lovely-eye/server/pkg/validation"
 	"github.com/mileusna/useragent"
+	"github.com/uptrace/bun"
+	"golang.org/x/crypto/hkdf"
 )
 
 type AnalyticsService struct {
 	analyticsRepo       *repository.AnalyticsRepository
+	countryService      countrySyncer
 	siteRepo            *repository.SiteRepository
 	eventDefinitionRepo *repository.EventDefinitionRepository
 	botDetector         *BotDetector
-	geoIPService        *GeoIPService
+	geoIPService        geoIPProvider
+	identitySecret      []byte
+	now                 func() time.Time
+}
+
+type geoIPProvider interface {
+	SetEnabled(enabled bool)
+	Status() GeoIPStatus
+	EnsureAvailable(ctx context.Context) error
+	Refresh(ctx context.Context) error
+	ResolveCountry(ipStr string) (Country, error)
+	ListCountries(search string) ([]GeoIPCountry, error)
+	Close() error
 }
 
 func NewAnalyticsService(
 	analyticsRepo *repository.AnalyticsRepository,
 	siteRepo *repository.SiteRepository,
 	eventDefinitionRepo *repository.EventDefinitionRepository,
-	geoIPService *GeoIPService,
+	geoIPService geoIPProvider,
+	countryService countrySyncer,
+	identitySecret string,
 ) *AnalyticsService {
 	return &AnalyticsService{
 		analyticsRepo:       analyticsRepo,
+		countryService:      countryService,
 		siteRepo:            siteRepo,
 		eventDefinitionRepo: eventDefinitionRepo,
 		botDetector:         NewBotDetector(),
 		geoIPService:        geoIPService,
+		identitySecret:      []byte(identitySecret),
+		now:                 time.Now,
 	}
 }
 
@@ -70,7 +93,6 @@ type EventInput struct {
 }
 
 func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInput) error {
-
 	if s.botDetector.IsBot(input.UserAgent) {
 		return nil
 	}
@@ -86,40 +108,18 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		return nil
 	}
 
-	// Generate anonymous visitor ID (SHA-256 hash) with daily salt rotation for privacy
-	visitorHash := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
-
 	ua := useragent.Parse(input.UserAgent)
 	device := categorizeDevice(ua)
-	browser := ua.Name
-	if browser == "" {
-		browser = "Other"
-	}
-	os := ua.OS
-	if os == "" {
-		os = "Other"
-	}
+	browser := normalizeBrowser(ua)
+	os := normalizeOS(ua)
 	screenSize := categorizeScreenSize(input.ScreenWidth)
+	now := s.now()
+	nowUnix := now.Unix()
 
 	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
-		country, err = s.geoIPService.ResolveCountry(input.IP)
-		if err != nil {
-			err = fmt.Errorf("get country for ip %s: %w", input.IP, err)
-			slog.Error("country resolve failed", "err", err)
-		}
+		country = s.resolveCountryBestEffort(input.IP)
 	}
-
-	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.ISOCode)
-	if err != nil {
-		return fmt.Errorf("find or create client: %w", err)
-	}
-
-	now := time.Now()
-	nowUnix := now.Unix()
-
-	sessionTimeout := now.Add(-30 * time.Minute)
-	session, err := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
 	isDurationOnly := input.Duration > 0 &&
 		input.ScreenWidth == 0 &&
 		input.Referrer == "" &&
@@ -127,97 +127,101 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		input.UTMMedium == "" &&
 		input.UTMCampaign == ""
 
-	if err != nil || session == nil {
+	if err := s.analyticsRepo.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		client, err := s.resolveClientWithRotation(ctx, tx, site.ID, input.IP, device, browser, os, screenSize, country.ISOCode, now)
+		if err != nil {
+			return fmt.Errorf("resolve client with rotation: %w", err)
+		}
+
+		session, err := s.analyticsRepo.GetActiveSessionTx(ctx, tx, site.ID, client.ID, now.Add(-30*time.Minute).Unix())
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("get active session: %w", err)
+		}
+		if errors.Is(err, sql.ErrNoRows) {
+			session = nil
+		}
+
+		if session == nil {
+			if isDurationOnly {
+				return nil
+			}
+
+			session = &models.Session{
+				SiteID:        site.ID,
+				ClientID:      client.ID,
+				EnterTime:     nowUnix,
+				EnterHour:     nowUnix / 3600,
+				EnterDay:      nowUnix / 86400,
+				EnterPath:     input.Path,
+				ExitTime:      nowUnix,
+				ExitHour:      nowUnix / 3600,
+				ExitDay:       nowUnix / 86400,
+				ExitPath:      input.Path,
+				Referrer:      input.Referrer,
+				UTMSource:     input.UTMSource,
+				UTMMedium:     input.UTMMedium,
+				UTMCampaign:   input.UTMCampaign,
+				Duration:      0,
+				PageViewCount: 1,
+			}
+			if err := s.analyticsRepo.CreateSessionTx(ctx, tx, session); err != nil {
+				return fmt.Errorf("create session: %w", err)
+			}
+		} else {
+			if isDurationOnly {
+				session.ExitTime = nowUnix
+				session.ExitHour = nowUnix / 3600
+				session.ExitDay = nowUnix / 86400
+				if input.Path != "" {
+					session.ExitPath = input.Path
+				}
+				session.Duration = int(nowUnix - session.EnterTime)
+				if err := s.analyticsRepo.UpdateSessionTx(ctx, tx, session); err != nil {
+					return fmt.Errorf("update duration-only session: %w", err)
+				}
+				return nil
+			}
+
+			recentEvent, err := s.analyticsRepo.GetRecentPageViewEventTx(ctx, tx, session.ID, input.Path, nowUnix-10)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("get recent pageview event: %w", err)
+			}
+			if err == nil && recentEvent != nil {
+				return nil
+			}
+
+			session.ExitTime = nowUnix
+			session.ExitHour = nowUnix / 3600
+			session.ExitDay = nowUnix / 86400
+			session.ExitPath = input.Path
+			session.Duration = int(nowUnix - session.EnterTime)
+			session.PageViewCount++
+			if err := s.analyticsRepo.UpdateSessionTx(ctx, tx, session); err != nil {
+				return fmt.Errorf("update session: %w", err)
+			}
+		}
+
 		if isDurationOnly {
 			return nil
 		}
 
-		session = &models.Session{
-			SiteID:        site.ID,
-			ClientID:      client.ID,
-			EnterTime:     nowUnix,
-			EnterHour:     nowUnix / 3600,
-			EnterDay:      nowUnix / 86400,
-			EnterPath:     input.Path,
-			ExitTime:      nowUnix,
-			ExitHour:      nowUnix / 3600,
-			ExitDay:       nowUnix / 86400,
-			ExitPath:      input.Path,
-			Referrer:      input.Referrer,
-			UTMSource:     input.UTMSource,
-			UTMMedium:     input.UTMMedium,
-			UTMCampaign:   input.UTMCampaign,
-			Duration:      0,
-			PageViewCount: 1,
+		event := &models.Event{
+			SessionID:    session.ID,
+			Time:         nowUnix,
+			Hour:         nowUnix / 3600,
+			Day:          nowUnix / 86400,
+			Path:         input.Path,
+			DefinitionID: nil,
 		}
-		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
-			return fmt.Errorf("create session: %w", err)
+		if err := s.analyticsRepo.CreateEventTx(ctx, tx, event); err != nil {
+			return fmt.Errorf("create event: %w", err)
 		}
-	} else {
-
-		session.ExitTime = nowUnix
-		session.ExitHour = nowUnix / 3600
-		session.ExitDay = nowUnix / 86400
-		session.ExitPath = input.Path
-		session.Duration = int(nowUnix - session.EnterTime)
-		if !isDurationOnly {
-			session.PageViewCount++
-		}
-		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
-			return fmt.Errorf("update session: %w", err)
-		}
-	}
-
-	if isDurationOnly {
 		return nil
+	}); err != nil {
+		return fmt.Errorf("collect page view transaction: %w", err)
 	}
 
-	// Deduplicate page views: check if same session viewed same page in last 10 seconds
-	// This prevents duplicate counts from double-clicks, SPA route changes, or script reloads
-	recentEvent, _ := s.getRecentPageViewEvent(ctx, session.ID, input.Path, nowUnix-10)
-	if recentEvent != nil {
-		// Same page view within 10 seconds - ignore to prevent duplicates
-		return nil
-	}
-
-	event := &models.Event{
-		SessionID:    session.ID,
-		Time:         nowUnix,
-		Hour:         nowUnix / 3600,
-		Day:          nowUnix / 86400,
-		Path:         input.Path,
-		DefinitionID: nil,
-	}
-
-	if err := s.analyticsRepo.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("create event: %w", err)
-	}
 	return nil
-}
-
-// findOrCreateClient finds an existing client by hash or creates a new one
-func (s *AnalyticsService) findOrCreateClient(ctx context.Context, siteID int64, hash, device, browser, os, screenSize, country string) (*models.Client, error) {
-	client, err := s.analyticsRepo.FindOrCreateClient(ctx, siteID, hash, device, browser, os, screenSize, country)
-	if err != nil {
-		return nil, fmt.Errorf("find or create client: %w", err)
-	}
-	return client, nil
-}
-
-func (s *AnalyticsService) getActiveSession(ctx context.Context, siteID, clientID int64, since time.Time) (*models.Session, error) {
-	session, err := s.analyticsRepo.GetActiveSession(ctx, siteID, clientID, since.Unix())
-	if err != nil {
-		return nil, fmt.Errorf("get active session: %w", err)
-	}
-	return session, nil
-}
-
-func (s *AnalyticsService) getRecentPageViewEvent(ctx context.Context, sessionID int64, path string, since int64) (*models.Event, error) {
-	event, err := s.analyticsRepo.GetRecentPageViewEvent(ctx, sessionID, path, since)
-	if err != nil {
-		return nil, fmt.Errorf("get recent pageview event: %w", err)
-	}
-	return event, nil
 }
 
 func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) error {
@@ -257,96 +261,86 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		return nil
 	}
 
-	// Generate anonymous visitor ID (SHA-256 hash)
-	visitorHash := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
-
 	ua := useragent.Parse(input.UserAgent)
 	device := categorizeDevice(ua)
-	browser := ua.Name
-	if browser == "" {
-		browser = "Other"
-	}
-	os := ua.OS
-	if os == "" {
-		os = "Other"
-	}
-	screenSize := ""
+	browser := normalizeBrowser(ua)
+	os := normalizeOS(ua)
+	screenSize := models.ClientScreenSizeUnknown
+	now := s.now()
+	nowUnix := now.Unix()
 
 	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
-		country, err = s.geoIPService.ResolveCountry(input.IP)
+		country = s.resolveCountryBestEffort(input.IP)
+	}
+	if err := s.analyticsRepo.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
+		client, err := s.resolveClientWithRotation(ctx, tx, site.ID, input.IP, device, browser, os, screenSize, country.ISOCode, now)
 		if err != nil {
-			err = fmt.Errorf("get country for ip %s: %w", input.IP, err)
-			slog.Error("country resolve failed", "err", err)
+			return fmt.Errorf("resolve client with rotation: %w", err)
 		}
-	}
 
-	client, err := s.findOrCreateClient(ctx, site.ID, visitorHash, device, browser, os, screenSize, country.ISOCode)
-	if err != nil {
-		return fmt.Errorf("find or create client: %w", err)
-	}
-
-	now := time.Now()
-	nowUnix := now.Unix()
-
-	sessionTimeout := now.Add(-30 * time.Minute)
-	session, _ := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
-
-	if session == nil {
-
-		entryPath := input.Path
-		if entryPath == "" {
-			entryPath = "/"
+		session, err := s.analyticsRepo.GetActiveSessionTx(ctx, tx, site.ID, client.ID, now.Add(-30*time.Minute).Unix())
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("get active session: %w", err)
 		}
-		session = &models.Session{
-			SiteID:        site.ID,
-			ClientID:      client.ID,
-			EnterTime:     nowUnix,
-			EnterHour:     nowUnix / 3600,
-			EnterDay:      nowUnix / 86400,
-			EnterPath:     entryPath,
-			ExitTime:      nowUnix,
-			ExitHour:      nowUnix / 3600,
-			ExitDay:       nowUnix / 86400,
-			ExitPath:      entryPath,
-			Referrer:      "",
-			UTMSource:     "",
-			UTMMedium:     "",
-			UTMCampaign:   "",
-			Duration:      0,
-			PageViewCount: 0,
+		if errors.Is(err, sql.ErrNoRows) {
+			session = nil
 		}
-		if err := s.analyticsRepo.CreateSession(ctx, session); err != nil {
-			return fmt.Errorf("create session: %w", err)
+
+		if session == nil {
+			entryPath := input.Path
+			if entryPath == "" {
+				entryPath = "/"
+			}
+			session = &models.Session{
+				SiteID:        site.ID,
+				ClientID:      client.ID,
+				EnterTime:     nowUnix,
+				EnterHour:     nowUnix / 3600,
+				EnterDay:      nowUnix / 86400,
+				EnterPath:     entryPath,
+				ExitTime:      nowUnix,
+				ExitHour:      nowUnix / 3600,
+				ExitDay:       nowUnix / 86400,
+				ExitPath:      entryPath,
+				Referrer:      "",
+				UTMSource:     "",
+				UTMMedium:     "",
+				UTMCampaign:   "",
+				Duration:      0,
+				PageViewCount: 0,
+			}
+			if err := s.analyticsRepo.CreateSessionTx(ctx, tx, session); err != nil {
+				return fmt.Errorf("create session: %w", err)
+			}
+		} else {
+			session.ExitTime = nowUnix
+			session.ExitHour = nowUnix / 3600
+			session.ExitDay = nowUnix / 86400
+			if input.Path != "" {
+				session.ExitPath = input.Path
+			}
+			session.Duration = int(nowUnix - session.EnterTime)
+			if err := s.analyticsRepo.UpdateSessionTx(ctx, tx, session); err != nil {
+				return fmt.Errorf("update session: %w", err)
+			}
 		}
-	} else {
 
-		session.ExitTime = nowUnix
-		session.ExitHour = nowUnix / 3600
-		session.ExitDay = nowUnix / 86400
-		if input.Path != "" {
-			session.ExitPath = input.Path
+		event := &models.Event{
+			SessionID:    session.ID,
+			Time:         nowUnix,
+			Hour:         nowUnix / 3600,
+			Day:          nowUnix / 86400,
+			Path:         input.Path,
+			DefinitionID: &definition.ID,
 		}
-		session.Duration = int(nowUnix - session.EnterTime)
-		if err := s.analyticsRepo.UpdateSession(ctx, session); err != nil {
-			return fmt.Errorf("update session: %w", err)
+		if err := s.analyticsRepo.CreateEventTx(ctx, tx, event); err != nil {
+			return fmt.Errorf("create event: %w", err)
 		}
-	}
 
-	event := &models.Event{
-		SessionID:    session.ID,
-		Time:         nowUnix,
-		Hour:         nowUnix / 3600,
-		Day:          nowUnix / 86400,
-		Path:         input.Path,
-		DefinitionID: &definition.ID,
-	}
-
-	if err := s.analyticsRepo.CreateEvent(ctx, event); err != nil {
-		return fmt.Errorf("create event: %w", err)
-	}
-
-	if sanitizedProps != "" {
+		if sanitizedProps == "" {
+			return nil
+		}
 
 		var propsMap map[string]string
 		if err := json.Unmarshal([]byte(sanitizedProps), &propsMap); err != nil {
@@ -371,12 +365,12 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 				Value:   value,
 			})
 		}
-
-		if len(eventDataList) > 0 {
-			if err := s.analyticsRepo.CreateEventDataBatch(ctx, eventDataList); err != nil {
-				return fmt.Errorf("create event data batch: %w", err)
-			}
+		if err := s.analyticsRepo.CreateEventDataBatchTx(ctx, tx, eventDataList); err != nil {
+			return fmt.Errorf("create event data batch: %w", err)
 		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("collect event transaction: %w", err)
 	}
 
 	return nil
@@ -428,6 +422,11 @@ func (s *AnalyticsService) SyncGeoIPRequirement(ctx context.Context) error {
 	if err := s.geoIPService.EnsureAvailable(ctx); err != nil {
 		return fmt.Errorf("ensure geoip available: %w", err)
 	}
+	if s.countryService != nil {
+		if err := s.countryService.SyncFromGeoIP(ctx); err != nil {
+			return fmt.Errorf("sync persisted countries: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -438,21 +437,29 @@ func (s *AnalyticsService) GeoIPStatus() GeoIPStatus {
 	return s.geoIPService.Status()
 }
 
-func (s *AnalyticsService) GeoIPCountries(search string) ([]GeoIPCountry, error) {
-	if s.geoIPService == nil {
-		return []GeoIPCountry{}, errors.New("country service is nil")
-	}
-	return s.geoIPService.ListCountries(search)
-}
-
 func (s *AnalyticsService) RefreshGeoIPDatabase(ctx context.Context) (GeoIPStatus, error) {
 	if s.geoIPService == nil {
 		return GeoIPStatus{State: geoIPStateDisabled}, nil
 	}
-	if err := s.geoIPService.EnsureAvailable(ctx); err != nil {
-		return s.geoIPService.Status(), fmt.Errorf("ensure geoip available: %w", err)
+	if err := s.geoIPService.Refresh(ctx); err != nil {
+		return s.geoIPService.Status(), fmt.Errorf("refresh geoip database: %w", err)
+	}
+	if s.countryService != nil {
+		if err := s.countryService.SyncFromGeoIP(ctx); err != nil {
+			return s.geoIPService.Status(), fmt.Errorf("sync persisted countries: %w", err)
+		}
 	}
 	return s.geoIPService.Status(), nil
+}
+
+func (s *AnalyticsService) Close() error {
+	if s.geoIPService == nil {
+		return nil
+	}
+	if err := s.geoIPService.Close(); err != nil {
+		return fmt.Errorf("close geoip service: %w", err)
+	}
+	return nil
 }
 
 func (s *AnalyticsService) GetDashboardOverviewWithFilter(ctx context.Context, query AnalyticsQuery) (*DashboardOverview, error) {
@@ -491,6 +498,14 @@ func (s *AnalyticsService) GetDeviceStatsWithFilterPaged(ctx context.Context, qu
 	stats, total, totalVisitors, err := s.analyticsRepo.GetDeviceStatsWithFilterPaged(ctx, query)
 	if err != nil {
 		return nil, 0, 0, fmt.Errorf("get device stats with filter paged: %w", err)
+	}
+	return stats, total, totalVisitors, nil
+}
+
+func (s *AnalyticsService) GetOperatingSystemStatsWithFilterPaged(ctx context.Context, query AnalyticsQuery) ([]repository.OperatingSystemStats, int, int, error) {
+	stats, total, totalVisitors, err := s.analyticsRepo.GetOperatingSystemStatsWithFilterPaged(ctx, query)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("get operating system stats with filter paged: %w", err)
 	}
 	return stats, total, totalVisitors, nil
 }
@@ -621,22 +636,53 @@ func (s *AnalyticsService) GetEventCounts(ctx context.Context, query AnalyticsQu
 	return eventCounts, nil
 }
 
-// generateVisitorID creates a privacy-preserving visitor identifier
-// Uses daily salt rotation to prevent long-term tracking while maintaining session continuity
-func (s *AnalyticsService) generateVisitorID(ip, userAgent, siteKey string) string {
-	// Use daily salt for privacy - visitor IDs change daily
-	// This prevents long-term tracking while allowing accurate daily counts
-	dateSalt := time.Now().Format("2006-01-02")
+const unknownVisitorIPPrefix = "unknown"
 
-	// Hash: IP + UserAgent + SiteKey + DateSalt
-	// This approach balances privacy and accuracy:
-	// - Same visitor gets same ID within a day
-	// - Different ID each day prevents tracking across days
-	// - IP ensures different networks get different IDs
-	// - UserAgent helps distinguish different devices on same network
-	data := fmt.Sprintf("%s|%s|%s|%s", ip, userAgent, siteKey, dateSalt)
-	hash := sha256.Sum256([]byte(data))
-	return hex.EncodeToString(hash[:])[:32]
+// generateVisitorID creates the site-scoped daily UTC hash used by the
+// UTC-day-skipped client rotation helper. Client reuse compares today's and
+// yesterday's hash to preserve continuity across adjacent UTC days only.
+func (s *AnalyticsService) generateVisitorID(
+	siteID int64,
+	ip string,
+	browser models.ClientBrowser,
+	device models.ClientDevice,
+	now time.Time,
+) string {
+	dateBucket := now.UTC().Format("2006-01-02")
+	key := s.deriveVisitorIdentityKey(siteID, dateBucket)
+	ipPrefix := truncateVisitorIPPrefix(ip)
+	data := fmt.Sprintf("%d|%s|%s|%s", siteID, ipPrefix, browser.String(), device.String())
+
+	mac := hmac.New(sha256.New, key)
+	_, _ = mac.Write([]byte(data))
+
+	sum := mac.Sum(nil)
+	return hex.EncodeToString(sum[:16])
+}
+
+func (s *AnalyticsService) deriveVisitorIdentityKey(siteID int64, dateBucket string) []byte {
+	info := fmt.Appendf(nil, "analytics:%d:%s", siteID, dateBucket)
+	reader := hkdf.New(sha256.New, s.identitySecret, nil, info)
+	key := make([]byte, sha256.Size)
+	_, _ = io.ReadFull(reader, key)
+	return key
+}
+
+func truncateVisitorIPPrefix(ip string) string {
+	addr, err := netip.ParseAddr(strings.TrimSpace(ip))
+	if err != nil {
+		return unknownVisitorIPPrefix
+	}
+
+	if addr.Is4In6() {
+		addr = netip.AddrFrom4(addr.As4())
+	}
+
+	if addr.Is4() {
+		return netip.PrefixFrom(addr, 24).Masked().String()
+	}
+
+	return netip.PrefixFrom(addr, 64).Masked().String()
 }
 
 func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionField) (string, bool, error) {
@@ -727,52 +773,185 @@ func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionF
 	return string(bytes), true, nil
 }
 
-func categorizeDevice(ua useragent.UserAgent) string {
+func categorizeDevice(ua useragent.UserAgent) models.ClientDevice {
+	uaString := strings.ToLower(ua.String)
+
+	switch {
+	case strings.Contains(uaString, "watchos"),
+		strings.Contains(uaString, "watch os"),
+		strings.Contains(uaString, "apple watch"),
+		strings.Contains(uaString, "wear os"),
+		strings.Contains(uaString, "smartwatch"),
+		strings.Contains(uaString, "galaxy watch"):
+		return models.ClientDeviceWatch
+	case strings.Contains(uaString, "smart-tv"),
+		strings.Contains(uaString, "smarttv"),
+		strings.Contains(uaString, "android tv"),
+		strings.Contains(uaString, "bravia"),
+		strings.Contains(uaString, "hbbtv"),
+		strings.Contains(uaString, "googletv"),
+		strings.Contains(uaString, "appletv"),
+		strings.Contains(uaString, "crkey"),
+		strings.Contains(uaString, "aft"),
+		strings.Contains(uaString, "roku"),
+		strings.Contains(uaString, "viera"),
+		strings.Contains(uaString, "netcast"),
+		strings.Contains(uaString, "tv;"):
+		return models.ClientDeviceSmartTV
+	case strings.Contains(uaString, "playstation"),
+		strings.Contains(uaString, "xbox"),
+		strings.Contains(uaString, "nintendo switch"):
+		return models.ClientDeviceConsole
+	}
+
 	if ua.Tablet {
-		return "tablet"
+		return models.ClientDeviceTablet
 	}
 	if ua.Mobile {
-		return "mobile"
+		return models.ClientDeviceMobile
 	}
 	if ua.Desktop {
-		return "desktop"
+		return models.ClientDeviceDesktop
 	}
 
-	uaString := strings.ToLower(ua.String)
-	if strings.Contains(uaString, "iphone") || strings.Contains(uaString, "android") {
+	if strings.Contains(uaString, "ipad") || strings.Contains(uaString, "tablet") {
+		return models.ClientDeviceTablet
+	}
+	if strings.Contains(uaString, "iphone") || strings.Contains(uaString, "ipod") {
+		return models.ClientDeviceMobile
+	}
+	if strings.Contains(uaString, "android") {
 		if strings.Contains(uaString, "mobile") {
-			return "mobile"
+			return models.ClientDeviceMobile
 		}
-
-		if strings.Contains(uaString, "tablet") {
-			return "tablet"
-		}
-
-		if strings.Contains(uaString, "iphone") {
-			return "mobile"
-		}
-
-		if strings.Contains(uaString, "ipad") {
-			return "tablet"
-		}
+		return models.ClientDeviceTablet
+	}
+	if strings.Contains(uaString, "windows") ||
+		strings.Contains(uaString, "macintosh") ||
+		strings.Contains(uaString, "linux") ||
+		strings.Contains(uaString, "cros") {
+		return models.ClientDeviceDesktop
 	}
 
-	return "desktop"
+	return models.ClientDeviceDesktop
 }
 
-func categorizeScreenSize(width int) string {
+func normalizeBrowser(ua useragent.UserAgent) models.ClientBrowser {
+	uaString := strings.ToLower(ua.String)
+
 	switch {
-	case width < 576:
-		return "xs"
-	case width < 768:
-		return "sm"
-	case width < 992:
-		return "md"
-	case width < 1200:
-		return "lg"
-	default:
-		return "xl"
+	case strings.Contains(uaString, "playstation"):
+		return models.ClientBrowserPlayStation
+	case strings.Contains(uaString, "xbox"):
+		return models.ClientBrowserXbox
+	case strings.Contains(uaString, "fb_iab"),
+		strings.Contains(uaString, "fban"),
+		strings.Contains(uaString, "fbav"):
+		return models.ClientBrowserFacebookInApp
+	case strings.Contains(uaString, "instagram"):
+		return models.ClientBrowserInstagramInApp
+	case strings.Contains(uaString, "edg/"),
+		strings.Contains(uaString, "edgios"),
+		ua.IsEdge():
+		return models.ClientBrowserEdge
+	case strings.Contains(uaString, "samsungbrowser"):
+		return models.ClientBrowserSamsungInternet
+	case strings.Contains(uaString, "opr/"),
+		strings.Contains(uaString, "opera mini"),
+		strings.Contains(uaString, "opera mobi"),
+		ua.IsOpera(),
+		ua.IsOperaMini():
+		return models.ClientBrowserOpera
+	case strings.Contains(uaString, "vivaldi"):
+		return models.ClientBrowserVivaldi
+	case strings.Contains(uaString, "yabrowser"),
+		strings.Contains(uaString, "yowser"):
+		return models.ClientBrowserYandex
+	case strings.Contains(uaString, "duckduckgo"):
+		return models.ClientBrowserDuckDuckGo
+	case strings.Contains(uaString, "ucbrowser"),
+		strings.Contains(uaString, "ucweb"):
+		return models.ClientBrowserUCBrowser
+	case strings.Contains(uaString, "miuibrowser"):
+		return models.ClientBrowserMIUI
+	case strings.Contains(uaString, "msie"),
+		strings.Contains(uaString, "trident"),
+		ua.IsInternetExplorer():
+		return models.ClientBrowserInternetExplorer
+	case strings.Contains(uaString, "wv"),
+		strings.Contains(uaString, "webview"):
+		return models.ClientBrowserAndroidWebView
+	case strings.Contains(uaString, "crios"),
+		strings.Contains(uaString, "chrome"),
+		ua.IsChrome():
+		return models.ClientBrowserChrome
+	case strings.Contains(uaString, "fxios"),
+		strings.Contains(uaString, "firefox"),
+		ua.IsFirefox():
+		return models.ClientBrowserFirefox
+	case strings.Contains(uaString, "safari"),
+		(strings.Contains(uaString, "applewebkit") &&
+			(strings.Contains(uaString, "iphone") || strings.Contains(uaString, "ipad") || strings.Contains(uaString, "macintosh"))),
+		ua.IsSafari():
+		return models.ClientBrowserSafari
 	}
+
+	name := strings.TrimSpace(ua.Name)
+	if name == "" {
+		return models.ClientBrowserOther
+	}
+
+	if browser, ok := models.ClientBrowserFromLabel(name); ok {
+		return browser
+	}
+	return models.ClientBrowserFromLegacyLabel(name)
+}
+
+func normalizeOS(ua useragent.UserAgent) models.ClientOS {
+	uaString := strings.ToLower(ua.String)
+
+	switch {
+	case strings.Contains(uaString, "wear os"):
+		return models.ClientOSWearOS
+	case strings.Contains(uaString, "watchos"),
+		strings.Contains(uaString, "watch os"),
+		strings.Contains(uaString, "apple watch"):
+		return models.ClientOSWatchOS
+	case strings.Contains(uaString, "playstation"):
+		return models.ClientOSPlayStation
+	case strings.Contains(uaString, "xbox"):
+		return models.ClientOSXbox
+	case strings.Contains(uaString, "ipad"):
+		return models.ClientOSIPadOS
+	case strings.Contains(uaString, "iphone"),
+		strings.Contains(uaString, "ipod"),
+		ua.IsIOS():
+		return models.ClientOSIOS
+	case strings.Contains(uaString, "android"):
+		return models.ClientOSAndroid
+	case strings.Contains(uaString, "cros"),
+		ua.IsChromeOS():
+		return models.ClientOSChromeOS
+	case strings.Contains(uaString, "windows"),
+		ua.IsWindows():
+		return models.ClientOSWindows
+	case strings.Contains(uaString, "mac os"),
+		strings.Contains(uaString, "macintosh"),
+		ua.IsMacOS():
+		return models.ClientOSMacOS
+	case strings.Contains(uaString, "linux"),
+		ua.IsLinux():
+		return models.ClientOSLinux
+	}
+
+	if os, ok := models.ClientOSFromLabel(strings.TrimSpace(ua.OS)); ok {
+		return os
+	}
+	return models.ClientOSFromLegacyLabel(strings.TrimSpace(ua.OS))
+}
+
+func categorizeScreenSize(width int) models.ClientScreenSize {
+	return models.ClientScreenSizeFromWidth(width)
 }
 
 func IsAllowedDomain(origin, referer string, domains []*models.SiteDomain) bool {
@@ -808,7 +987,7 @@ func hostFromHeader(raw string) string {
 		return ""
 	}
 
-	normalized, err := utils.ValidateDomain(host)
+	normalized, err := validation.ValidateDomain(host)
 	if err != nil {
 		return ""
 	}
@@ -852,13 +1031,9 @@ func (s *AnalyticsService) isCountryBlocked(blocked []*models.SiteBlockedCountry
 	if len(blocked) == 0 || s.geoIPService == nil {
 		return false
 	}
-	c, err := s.geoIPService.ResolveCountry(ip)
-	if nil != err {
-		err = fmt.Errorf("get country for ip %s: %w", ip, err)
-		slog.Error("country resolve failed", "err", err)
-	}
+	c := s.resolveCountryBestEffort(ip)
 
-	if c == (Country{}) || c == LocalNetworkCountry {
+	if c == (Country{}) || c == UnknownCountry || c == LocalNetworkCountry {
 		return false
 	}
 	for _, entry := range blocked {
@@ -867,4 +1042,22 @@ func (s *AnalyticsService) isCountryBlocked(blocked []*models.SiteBlockedCountry
 		}
 	}
 	return false
+}
+
+func (s *AnalyticsService) resolveCountryBestEffort(ip string) Country {
+	if s.geoIPService == nil {
+		return UnknownCountry
+	}
+
+	country, err := s.geoIPService.ResolveCountry(ip)
+	if err == nil {
+		return country
+	}
+
+	if errors.Is(err, ErrNoDBReader) {
+		return UnknownCountry
+	}
+
+	slog.Error("country resolve failed", "err", fmt.Errorf("get country for ip %s: %w", ip, err))
+	return UnknownCountry
 }

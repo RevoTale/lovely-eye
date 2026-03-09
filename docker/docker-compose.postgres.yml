@@ -6,7 +6,7 @@ services:
     environment:
       - DB_DRIVER=postgres
       - DB_DSN=postgres://${POSTGRES_USER:-lovely}:${POSTGRES_PASSWORD:-lovely}@lovely-eye-db:5432/${POSTGRES_DB:-lovely_eye}?sslmode=disable
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - JWT_SECRET=${JWT_SECRET:-}
       - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
       - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
     healthcheck:
@@ -27,7 +27,7 @@ services:
     environment:
       - DB_DRIVER=postgres
       - DB_DSN=postgres://${POSTGRES_USER:-lovely}:${POSTGRES_PASSWORD:-lovely}@lovely-eye-db:5432/${POSTGRES_DB:-lovely_eye}?sslmode=disable
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - JWT_SECRET=${JWT_SECRET:-}
       - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
       - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
     depends_on:
@@ -43,7 +43,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-lovely}
       - POSTGRES_DB=${POSTGRES_DB:-lovely_eye}
     volumes:
-      - lovely-eye-data:/var/lib/postgresql/data
+      - lovely-eye-data:/var/lib/postgresql
     networks:
       - lovely-eye-net
     healthcheck:

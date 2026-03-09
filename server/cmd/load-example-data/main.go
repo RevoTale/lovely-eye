@@ -14,7 +14,9 @@ import (
 	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/repository"
 	"github.com/lovely-eye/server/internal/services"
-	"github.com/lovely-eye/server/pkg/utils"
+	"github.com/lovely-eye/server/pkg/random"
+	"github.com/lovely-eye/server/pkg/textutil"
+	"github.com/lovely-eye/server/pkg/urlpath"
 	"github.com/uptrace/bun"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -52,7 +54,7 @@ type behaviorPattern struct {
 func main() {
 	cfg := config.Load()
 
-	db, err := database.New(&cfg.Database)
+	db, err := database.New(cfg.Database)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -101,9 +103,9 @@ func main() {
 }
 
 type seedCounts struct {
-	clients         int
-	sessions        int
-	pageViews       int
+	clients          int
+	sessions         int
+	pageViews        int
 	predefinedEvents int
 }
 
@@ -285,8 +287,8 @@ func seedData(ctx context.Context, db *bun.DB, siteID int64, defs []*models.Even
 	now := time.Now()
 	recentRemaining := recentSessions
 
-	for i := 0; i < defaultUsers; i++ {
-		hash, err := utils.GenerateRandomString(64)
+	for range defaultUsers {
+		hash, err := random.GenerateRandomString(64)
 		if err != nil {
 			return counts, fmt.Errorf("generate client hash: %w", err)
 		}
@@ -295,10 +297,41 @@ func seedData(ctx context.Context, db *bun.DB, siteID int64, defs []*models.Even
 			SiteID:     siteID,
 			Hash:       hash,
 			Country:    pickString(rng, []string{"US", "GB", "DE", "FR", "CA", "NL"}),
-			Device:     pickString(rng, []string{"desktop", "mobile", "tablet"}),
-			Browser:    pickString(rng, []string{"Chrome", "Safari", "Firefox", "Edge"}),
-			OS:         pickString(rng, []string{"Windows", "macOS", "Linux", "iOS", "Android"}),
-			ScreenSize: pickString(rng, []string{"1920x1080", "1366x768", "390x844", "1440x900"}),
+			Device: pickEnum(rng, []models.ClientDevice{
+				models.ClientDeviceDesktop,
+				models.ClientDeviceMobile,
+				models.ClientDeviceTablet,
+				models.ClientDeviceSmartTV,
+				models.ClientDeviceConsole,
+				models.ClientDeviceWatch,
+			}),
+			Browser: pickEnum(rng, []models.ClientBrowser{
+				models.ClientBrowserChrome,
+				models.ClientBrowserSafari,
+				models.ClientBrowserFirefox,
+				models.ClientBrowserEdge,
+				models.ClientBrowserOpera,
+				models.ClientBrowserSamsungInternet,
+				models.ClientBrowserAndroidWebView,
+			}),
+			OS: pickEnum(rng, []models.ClientOS{
+				models.ClientOSWindows,
+				models.ClientOSMacOS,
+				models.ClientOSLinux,
+				models.ClientOSChromeOS,
+				models.ClientOSIOS,
+				models.ClientOSIPadOS,
+				models.ClientOSAndroid,
+				models.ClientOSWatchOS,
+				models.ClientOSWearOS,
+			}),
+			ScreenSize: pickEnum(rng, []models.ClientScreenSize{
+				models.ClientScreenSizeWatch,
+				models.ClientScreenSizeXS,
+				models.ClientScreenSizeSM,
+				models.ClientScreenSizeLG,
+				models.ClientScreenSizeXL,
+			}),
 		}
 
 		if _, err := db.NewInsert().Model(client).Exec(ctx); err != nil {
@@ -324,7 +357,7 @@ func seedData(ctx context.Context, db *bun.DB, siteID int64, defs []*models.Even
 }
 
 type patternCounts struct {
-	pageViews       int
+	pageViews        int
 	predefinedEvents int
 }
 
@@ -395,7 +428,7 @@ func applyPattern(
 			Time:         eventTime,
 			Hour:         eventTime / 3600,
 			Day:          eventTime / 86400,
-			Path:         utils.NormalizeURL(seed.path),
+			Path:         urlpath.NormalizeURL(seed.path),
 			DefinitionID: &defID,
 		}
 		if err := analyticsRepo.CreateEvent(ctx, event); err != nil {
@@ -418,7 +451,7 @@ func applyPattern(
 func normalizePaths(input []string) []string {
 	paths := make([]string, 0, len(input))
 	for _, path := range input {
-		paths = append(paths, utils.NormalizeURL(path))
+		paths = append(paths, urlpath.NormalizeURL(path))
 	}
 	if len(paths) == 0 {
 		return []string{"/"}
@@ -436,7 +469,7 @@ func buildEventData(def *models.EventDefinition, props map[string]string) []*mod
 		if value == "" {
 			value = fallbackEventValue(field)
 		}
-		value = utils.TruncateString(value, field.MaxLength)
+		value = textutil.TruncateString(value, field.MaxLength)
 		data = append(data, &models.EventData{
 			FieldID: field.ID,
 			Value:   value,
@@ -500,6 +533,14 @@ func randRange(rng *mathrand.Rand, min, max int) int {
 func pickString(rng *mathrand.Rand, values []string) string {
 	if len(values) == 0 {
 		return ""
+	}
+	return values[rng.Intn(len(values))]
+}
+
+func pickEnum[T any](rng *mathrand.Rand, values []T) T {
+	var zero T
+	if len(values) == 0 {
+		return zero
 	}
 	return values[rng.Intn(len(values))]
 }

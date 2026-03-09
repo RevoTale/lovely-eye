@@ -1,14 +1,15 @@
-
-import { Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
+import type { FunctionComponent } from 'react';
 import { EventCountFieldsFragmentDoc } from '@/gql/graphql';
 import type { EventCountsQuery, EventsQuery } from '@/gql/graphql';
 import { useFragment as getFragmentData } from '@/gql/fragment-masking';
-import { EventsCard } from '@/components/events-card';
-import { EventCountsCard } from '@/components/event-counts-card';
+import type { DashboardLoadState } from '@/lib/dashboard-load-state';
+import EventCountsCard from '@/components/event-counts-card';
+import EventsCard from '@/components/events-card';
 
 interface EventsSectionProps {
   siteId: string;
-  loading: boolean;
+  eventsState: DashboardLoadState;
+  eventCountsState: DashboardLoadState;
   eventsResult: EventsQuery['events'] | undefined;
   eventsCounts: EventCountsQuery['eventCounts'];
   page: number;
@@ -19,51 +20,17 @@ interface EventsSectionProps {
   onCountsPageChange: (page: number) => void;
 }
 
-export const EventsSection = ({
-  siteId,
-  loading,
-  eventsResult,
-  eventsCounts,
-  page,
-  pageSize,
-  onPageChange,
-  countsPage,
-  countsPageSize,
-  onCountsPageChange,
-}: EventsSectionProps): React.ReactNode => {
+const EventsSection: FunctionComponent<EventsSectionProps> = ({
+  siteId, eventsState, eventCountsState, eventsResult, eventsCounts, page, pageSize, onPageChange, countsPage, countsPageSize, onCountsPageChange,
+}) => {
   const eventCountsData = getFragmentData(EventCountFieldsFragmentDoc, eventsCounts);
-  if (eventsResult === undefined || loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-5 w-32" />
-        </CardHeader>
-        <CardContent>
-          <Skeleton className="h-20 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      <EventsCard
-        siteId={siteId}
-        events={eventsResult.events}
-        total={eventsResult.total}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={onPageChange}
-      />
-      <EventCountsCard
-        siteId={siteId}
-        eventCounts={eventCountsData}
-        page={countsPage}
-        pageSize={countsPageSize}
-        onPageChange={onCountsPageChange}
-      />
+      <EventsCard siteId={siteId} events={eventsResult?.events ?? []} total={eventsResult?.total ?? 0} page={page} pageSize={pageSize} onPageChange={onPageChange} state={eventsState} />
+      <EventCountsCard siteId={siteId} eventCounts={eventCountsData} page={countsPage} pageSize={countsPageSize} onPageChange={onCountsPageChange} state={eventCountsState} />
     </div>
   );
-}
+};
+
+export default EventsSection;

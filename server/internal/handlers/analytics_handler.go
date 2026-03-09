@@ -2,11 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
-	"net"
 	"net/http"
-	"strings"
 
 	"github.com/lovely-eye/server/internal/services"
+	"github.com/lovely-eye/server/pkg/clientip"
 )
 
 type AnalyticsHandler struct {
@@ -72,7 +71,7 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 			Path:       req.Path,
 			Properties: req.Properties,
 			UserAgent:  r.UserAgent(),
-			IP:         getClientIP(r),
+			IP:         clientip.GetClientIP(r.Header.Get("X-Forwarded-For"), r.Header.Get("X-Real-IP"), r.RemoteAddr),
 			Origin:     r.Header.Get("Origin"),
 			Referer:    r.Header.Get("Referer"),
 		})
@@ -88,7 +87,7 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 			ScreenWidth: req.ScreenWidth,
 			Duration:    req.Duration,
 			UserAgent:   r.UserAgent(),
-			IP:          getClientIP(r),
+			IP:          clientip.GetClientIP(r.Header.Get("X-Forwarded-For"), r.Header.Get("X-Real-IP"), r.RemoteAddr),
 			Origin:      r.Header.Get("Origin"),
 			Referer:     r.Header.Get("Referer"),
 			UTMSource:   req.UTMSource,
@@ -151,29 +150,4 @@ func (h *AnalyticsHandler) applyAnalyticsCORS(w http.ResponseWriter, r *http.Req
 
 func respondError(w http.ResponseWriter, status int, message string) {
 	http.Error(w, message, status)
-}
-
-func getClientIP(r *http.Request) string {
-
-	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-
-		ips := strings.Split(forwarded, ",")
-		if len(ips) > 0 {
-			ip := strings.TrimSpace(ips[0])
-			if ip != "" {
-				return ip
-			}
-		}
-	}
-
-	if realIP := r.Header.Get("X-Real-IP"); realIP != "" {
-		return realIP
-	}
-
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-
-		return r.RemoteAddr
-	}
-	return ip
 }

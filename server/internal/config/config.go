@@ -11,15 +11,27 @@ import (
 	"time"
 )
 
+const (
+	defaultIPDBURL       string = "https://download.db-ip.com/free/dbip-country-lite.mmdb.gz"
+	defaultIPDBLocalPath string = "/data/GeoLite2-Country.mmdb"
+)
+
+const defaultDBDSN string = "file:data/lovely_eye.db?cache=shared&mode=rwc"
+const (
+	DBDriverPG     DBDriver = "postgres"
+	DBDriverSQLite DBDriver = "sqlite"
+)
+
+type DBDriver = string
+
 type Config struct {
-	Server                 ServerConfig
-	Database               DatabaseConfig
-	Auth                   AuthConfig
-	LogLevel               slog.Level // Log level: DEBUG(-4), INFO(0), WARN(4), ERROR(8) - default: WARN
-	GeoIPDBPath            string
-	GeoIPDownloadURL       string
-	GeoIPMaxMindLicenseKey string
-	TrackerJS              []byte // Optional: for testing, to avoid loading from file
+	Server    ServerConfig
+	Database  DatabaseConfig
+	Auth      AuthConfig
+	Analytics AnalyticsConfig
+	GeoIP     GeoIPConfig
+	LogLevel  slog.Level // Log level: DEBUG(-4), INFO(0), WARN(4), ERROR(8) - default: WARN
+	TrackerJS []byte     // Optional: for testing, to avoid loading from file
 }
 
 type ServerConfig struct {
@@ -30,7 +42,7 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Driver         string
+	Driver         DBDriver
 	DSN            string
 	MaxConns       int
 	MinConns       int
@@ -48,18 +60,29 @@ type AuthConfig struct {
 	InitialAdminPassword string // password for initial admin (optional)
 }
 
-func Load() *Config {
+type AnalyticsConfig struct {
+	IdentitySecret string
+}
+
+type GeoIPConfig struct {
+	DBPath            string
+	DownloadURL       string
+	MaxMindLicenseKey string
+}
+
+func Load() Config {
+	authSecret := getJWTSecret()
 	basePath := getEnv("BASE_PATH", "/")
 	downloadURL := getEnv("GEOIP_DOWNLOAD_URL", "")
 	maxMindKey := getEnv("GEOIP_MAXMIND_LICENSE_KEY", "")
 	if downloadURL == "" && maxMindKey == "" {
-		downloadURL = "https://download.db-ip.com/free/dbip-country-lite.mmdb.gz"
+		downloadURL = defaultIPDBURL
 	}
 
 	if basePath != "/" {
 		basePath = "/" + strings.Trim(basePath, "/")
 	}
-	return &Config{
+	return Config{
 		Server: ServerConfig{
 			Host:          getEnv("SERVER_HOST", "0.0.0.0"),
 			Port:          getEnv("SERVER_PORT", "8080"),
@@ -67,14 +90,14 @@ func Load() *Config {
 			DashboardPath: getEnv("DASHBOARD_PATH", "dashboard"),
 		},
 		Database: DatabaseConfig{
-			Driver:         getEnv("DB_DRIVER", "sqlite"),
-			DSN:            getEnv("DB_DSN", "file:data/lovely_eye.db?cache=shared&mode=rwc"),
+			Driver:         getEnv("DB_DRIVER", DBDriverSQLite),
+			DSN:            getEnv("DB_DSN", defaultDBDSN),
 			MaxConns:       getEnvInt("DB_MAX_CONNS", 10),
 			MinConns:       getEnvInt("DB_MIN_CONNS", 1),
 			ConnectTimeout: getEnvDuration("DB_CONNECT_TIMEOUT", 7*time.Second),
 		},
 		Auth: AuthConfig{
-			JWTSecret:            getJWTSecret(),
+			JWTSecret:            authSecret,
 			AccessTokenExpiry:    time.Duration(getEnvInt("JWT_ACCESS_EXPIRY_MINUTES", 15)) * time.Minute,
 			RefreshExpiry:        time.Duration(getEnvInt("JWT_REFRESH_DAYS", 7)) * 24 * time.Hour,
 			AllowRegistration:    getEnvBool("ALLOW_REGISTRATION", false),
@@ -83,10 +106,15 @@ func Load() *Config {
 			InitialAdminUsername: getEnv("INITIAL_ADMIN_USERNAME", ""),
 			InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
 		},
-		LogLevel:               getEnvLogLevel("LOG_LEVEL", slog.LevelWarn),
-		GeoIPDBPath:            getEnv("GEOIP_DB_PATH", "/data/GeoLite2-Country.mmdb"),
-		GeoIPDownloadURL:       downloadURL,
-		GeoIPMaxMindLicenseKey: maxMindKey,
+		Analytics: AnalyticsConfig{
+			IdentitySecret: getAnalyticsIdentitySecret(authSecret),
+		},
+		GeoIP: GeoIPConfig{
+			DBPath:            getEnv("GEOIP_DB_PATH", defaultIPDBLocalPath),
+			DownloadURL:       downloadURL,
+			MaxMindLicenseKey: maxMindKey,
+		},
+		LogLevel: getEnvLogLevel("LOG_LEVEL", slog.LevelWarn),
 	}
 }
 
@@ -104,6 +132,17 @@ func getJWTSecret() string {
 		log.Fatal("Failed to generate random JWT secret")
 	}
 	return hex.EncodeToString(bytes)
+}
+
+func getAnalyticsIdentitySecret(fallback string) string {
+	if secret := os.Getenv("ANALYTICS_IDENTITY_SECRET"); secret != "" {
+		if len(secret) < 32 {
+			log.Fatal("ANALYTICS_IDENTITY_SECRET must be at least 32 characters")
+		}
+		return secret
+	}
+
+	return fallback
 }
 
 func getEnv(key, defaultValue string) string {

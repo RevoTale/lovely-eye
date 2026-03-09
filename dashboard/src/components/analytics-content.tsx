@@ -1,181 +1,49 @@
-
-import { DashboardStatsFieldsFragmentDoc, RealtimeStatsFieldsFragmentDoc } from '@/gql/graphql';
-import type {
-  CountryStatsFieldsFragment,
-  DeviceStatsFieldsFragment,
-  EventCountsQuery,
-  EventsQuery,
-  FilterInput,
-  PageStatsFieldsFragment,
-  ReferrerStatsFieldsFragment,
-  RealtimeQuery,
-} from '@/gql/graphql';
-import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
-import { Users, Eye, Clock, TrendingDown } from 'lucide-react';
-import { StatCard } from '@/components/stat-card';
-import { OverviewChartSection } from '@/components/overview-chart-section';
-import { ActivePagesCard } from '@/components/active-pages-card';
-import { EventsSection } from '@/components/events-section';
-import { TopPagesCard } from '@/components/top-pages-card';
-import { ReferrersCard } from '@/components/referrers-card';
-import { CountryCard } from '@/components/country-card';
-import { DevicesCard } from '@/components/devices-card';
-import { formatDuration } from '@/lib/dashboard-utils';
+import type { FunctionComponent } from 'react';
+import AnalyticsOverviewSection from '@/components/analytics-overview-section';
+import AnalyticsPlatformBreakdownSection from '@/components/analytics-platform-breakdown-section';
+import AnalyticsTrafficBreakdownSection from '@/components/analytics-traffic-breakdown-section';
+import EventsSection from '@/components/events-section';
+import { DashboardStatsFieldsFragmentDoc, type DashboardQuery, type EventCountsQuery, type EventsQuery, type FilterInput, type RealtimeQuery } from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
+import type { DashboardLoadState } from '@/lib/dashboard-load-state';
+import { createEmptyDashboardStats, extractStatsData } from '@/lib/dashboard-utils';
 
 interface AnalyticsContentProps {
   siteId: string;
-  stats: FragmentType<typeof DashboardStatsFieldsFragmentDoc>;
+  stats: DashboardQuery['dashboard'] | undefined;
+  dashboardState: DashboardLoadState;
+  realtime: RealtimeQuery['realtime'] | undefined;
   dateRange: { from: Date; to: Date } | null;
   filter: FilterInput | null;
   chartBucket: 'daily' | 'hourly';
   onChartBucketChange: (bucket: 'daily' | 'hourly') => void;
-  realtime: RealtimeQuery['realtime'] | undefined;
-  eventsLoading: boolean;
   eventsResult: EventsQuery['events'] | undefined;
-  eventsCounts: EventCountsQuery['eventCounts'];
+  eventsState: DashboardLoadState;
+  eventCounts: EventCountsQuery['eventCounts'];
+  eventCountsState: DashboardLoadState;
   eventsPage: number;
-  eventsPageSize: number;
-  onEventsPageChange: (page: number) => void;
   eventsCountsPage: number;
-  eventsCountsPageSize: number;
-  onEventsCountsPageChange: (page: number) => void;
-  topPages: PageStatsFieldsFragment[];
-  topPagesTotal: number;
   topPagesPage: number;
-  topPagesPageSize: number;
-  topPagesLoading?: boolean;
-  onTopPagesPageChange: (page: number) => void;
-  referrers: ReferrerStatsFieldsFragment[];
-  referrersTotal: number;
   referrersPage: number;
-  referrersPageSize: number;
-  referrersLoading?: boolean;
-  onReferrersPageChange: (page: number) => void;
-  countries: CountryStatsFieldsFragment[];
-  countriesTotal: number;
-  countriesTotalVisitors: number;
-  countriesPage: number;
-  countriesPageSize: number;
-  countriesLoading?: boolean;
-  onCountriesPageChange: (page: number) => void;
-  devices: DeviceStatsFieldsFragment[];
-  devicesTotal: number;
-  devicesTotalVisitors: number;
   devicesPage: number;
-  devicesPageSize: number;
-  devicesLoading?: boolean;
-  onDevicesPageChange: (page: number) => void;
+  osPage: number;
+  countriesPage: number;
+  onPageChange: (key: string, page: number) => void;
+  pageSizes: { EVENTS: number; EVENT_COUNTS: number; TOP_PAGES: number; REFERRERS: number; DEVICES: number; OS: number; COUNTRIES: number };
 }
 
-export const AnalyticsContent = (props: AnalyticsContentProps): React.ReactNode => {
-  const {
-    siteId, stats, dateRange, filter, chartBucket, onChartBucketChange, realtime,
-    eventsLoading, eventsResult, eventsCounts, eventsPage, eventsPageSize, onEventsPageChange,
-    eventsCountsPage, eventsCountsPageSize, onEventsCountsPageChange,
-    topPages, topPagesTotal, topPagesPage, topPagesPageSize, topPagesLoading = false, onTopPagesPageChange,
-    referrers, referrersTotal, referrersPage, referrersPageSize, referrersLoading = false, onReferrersPageChange,
-    countries, countriesTotal, countriesTotalVisitors, countriesPage, countriesPageSize, countriesLoading = false, onCountriesPageChange,
-    devices, devicesTotal, devicesTotalVisitors, devicesPage, devicesPageSize, devicesLoading = false, onDevicesPageChange,
-  } = props;
-  const statsData = getFragmentData(DashboardStatsFieldsFragmentDoc, stats);
-  const realtimeData =
-    realtime === undefined ? undefined : getFragmentData(RealtimeStatsFieldsFragmentDoc, realtime);
-  const activePages = realtimeData?.activePages;
-  const hasActivePages = activePages !== undefined;
+const AnalyticsContent: FunctionComponent<AnalyticsContentProps> = ({ siteId, stats, dashboardState, realtime, dateRange, filter, chartBucket, onChartBucketChange, eventsResult, eventsState, eventCounts, eventCountsState, eventsPage, eventsCountsPage, topPagesPage, referrersPage, devicesPage, osPage, countriesPage, onPageChange, pageSizes }) => {
+  const statsData = stats === undefined ? createEmptyDashboardStats() : getFragmentData(DashboardStatsFieldsFragmentDoc, stats);
+  const statsCollections = extractStatsData(stats);
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          title="Total Visitors"
-          value={statsData.visitors.toLocaleString()}
-          icon={Users}
-        />
-        <StatCard
-          title="Page Views"
-          value={statsData.pageViews.toLocaleString()}
-          icon={Eye}
-        />
-        <StatCard
-          title="Avg. Session"
-          value={formatDuration(statsData.avgDuration)}
-          icon={Clock}
-        />
-        <StatCard
-          title="Bounce Rate"
-          value={`${String(Math.round(statsData.bounceRate))}%`}
-          icon={TrendingDown}
-        />
-      </div>
-
-      <OverviewChartSection
-        siteId={siteId}
-        dateRange={dateRange}
-        filter={filter}
-        bucket={chartBucket}
-        onBucketChange={onChartBucketChange}
-      />
-
-      {hasActivePages ? (
-        <ActivePagesCard activePages={activePages} />
-      ) : null}
-
-      <EventsSection
-        siteId={siteId}
-        loading={eventsLoading}
-        eventsResult={eventsResult}
-        eventsCounts={eventsCounts}
-        page={eventsPage}
-        pageSize={eventsPageSize}
-        onPageChange={onEventsPageChange}
-        countsPage={eventsCountsPage}
-        countsPageSize={eventsCountsPageSize}
-        onCountsPageChange={onEventsCountsPageChange}
-      />
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <TopPagesCard
-          pages={topPages}
-          total={topPagesTotal}
-          page={topPagesPage}
-          pageSize={topPagesPageSize}
-          siteId={siteId}
-          loading={topPagesLoading}
-          onPageChange={onTopPagesPageChange}
-        />
-        <ReferrersCard
-          referrers={referrers}
-          totalCount={referrersTotal}
-          totalVisitors={statsData.visitors}
-          siteId={siteId}
-          page={referrersPage}
-          pageSize={referrersPageSize}
-          loading={referrersLoading}
-          onPageChange={onReferrersPageChange}
-        />
-      </div>
-
-      <CountryCard
-        countries={countries}
-        total={countriesTotal}
-        totalVisitors={countriesTotalVisitors}
-        page={countriesPage}
-        pageSize={countriesPageSize}
-        siteId={siteId}
-        loading={countriesLoading}
-        onPageChange={onCountriesPageChange}
-      />
-
-      <DevicesCard
-        devices={devices}
-        total={devicesTotal}
-        totalVisitors={devicesTotalVisitors}
-        page={devicesPage}
-        pageSize={devicesPageSize}
-        siteId={siteId}
-        loading={devicesLoading}
-        onPageChange={onDevicesPageChange}
-      />
+      <AnalyticsOverviewSection siteId={siteId} stats={statsData} dashboardState={dashboardState} realtime={realtime} dateRange={dateRange} filter={filter} chartBucket={chartBucket} onChartBucketChange={onChartBucketChange} />
+      <EventsSection siteId={siteId} eventsState={eventsState} eventCountsState={eventCountsState} eventsResult={eventsResult} eventsCounts={eventCounts} page={eventsPage} pageSize={pageSizes.EVENTS} onPageChange={(page) => onPageChange('eventsPage', page)} countsPage={eventsCountsPage} countsPageSize={pageSizes.EVENT_COUNTS} onCountsPageChange={(page) => onPageChange('eventsCountsPage', page)} />
+      <AnalyticsTrafficBreakdownSection siteId={siteId} dashboardState={dashboardState} topPages={statsCollections.topPages} topPagesTotal={statsCollections.topPagesTotal} topPagesPage={topPagesPage} topPagesPageSize={pageSizes.TOP_PAGES} onTopPagesPageChange={(page) => onPageChange('topPagesPage', page)} referrers={statsCollections.referrersItems} referrersTotal={statsCollections.referrersTotal} referrersPage={referrersPage} referrersPageSize={pageSizes.REFERRERS} totalVisitors={statsData.visitors} onReferrersPageChange={(page) => onPageChange('referrersPage', page)} countries={statsCollections.countriesItems} countriesTotal={statsCollections.countriesTotal} countriesTotalVisitors={statsCollections.countriesTotalVisitors} countriesPage={countriesPage} countriesPageSize={pageSizes.COUNTRIES} onCountriesPageChange={(page) => onPageChange('countriesPage', page)} />
+      <AnalyticsPlatformBreakdownSection siteId={siteId} dashboardState={dashboardState} totalVisitors={statsData.visitors} browsers={statsCollections.browsersItems} devices={statsCollections.devicesItems} devicesTotal={statsCollections.devicesTotal} devicesTotalVisitors={statsCollections.devicesTotalVisitors} devicesPage={devicesPage} devicesPageSize={pageSizes.DEVICES} onDevicesPageChange={(page) => onPageChange('devicesPage', page)} operatingSystems={statsCollections.operatingSystemsItems} operatingSystemsTotal={statsCollections.operatingSystemsTotal} operatingSystemsTotalVisitors={statsCollections.operatingSystemsTotalVisitors} osPage={osPage} osPageSize={pageSizes.OS} onOSPageChange={(page) => onPageChange('osPage', page)} />
     </>
   );
-}
+};
+
+export default AnalyticsContent;

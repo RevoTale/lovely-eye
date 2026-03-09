@@ -27,6 +27,10 @@ type TrackPayload = {
   utm_campaign: string;
 };
 
+type PayloadStringKey = 'name' | 'path' | 'referrer' | 'utm_source' | 'utm_medium' | 'utm_campaign';
+
+type PayloadNumberKey = 'screen_width' | 'duration';
+
 declare global {
   interface Window {
     lovelyEye?: {
@@ -36,8 +40,6 @@ declare global {
 }
 
 (() => {
-  'use strict';
-
   const script = document.currentScript as HTMLScriptElement | null;
   const siteKey = script?.getAttribute('data-site-key') ?? '';
   const apiUrl = script?.getAttribute('data-api-url') ?? script?.src?.replace(/\/[^/]*$/, '') ?? '';
@@ -63,6 +65,38 @@ declare global {
     }
   };
 
+  const assignStringOverride = (
+    payload: TrackPayload,
+    key: PayloadStringKey,
+    value: string | undefined
+  ): void => {
+    if (typeof value === 'string') {
+      payload[key] = value;
+    }
+  };
+
+  const assignNumberOverride = (
+    payload: TrackPayload,
+    key: PayloadNumberKey,
+    value: number | undefined
+  ): void => {
+    if (typeof value === 'number') {
+      payload[key] = value;
+    }
+  };
+
+  const getPropertiesValue = (properties: TrackInput['properties']): string | undefined => {
+    if (typeof properties === 'string') {
+      return properties;
+    }
+
+    if (properties !== undefined) {
+      return JSON.stringify(properties);
+    }
+
+    return undefined;
+  };
+
   const buildPayload = (data?: TrackInput): TrackPayload => {
     const params = new URLSearchParams(window.location.search);
     const payload: TrackPayload = {
@@ -75,33 +109,24 @@ declare global {
       duration: 0,
       utm_source: params.get('utm_source') || '',
       utm_medium: params.get('utm_medium') || '',
-      utm_campaign: params.get('utm_campaign') || ''
+      utm_campaign: params.get('utm_campaign') || '',
     };
 
     if (!data) return payload;
 
-    const {
-      name,
-      path,
-      referrer,
-      screen_width,
-      duration,
-      properties,
-      utm_source,
-      utm_medium,
-      utm_campaign
-    } = data ?? {};
+    assignStringOverride(payload, 'name', data.name);
+    assignStringOverride(payload, 'path', data.path);
+    assignStringOverride(payload, 'referrer', data.referrer);
+    assignNumberOverride(payload, 'screen_width', data.screen_width);
+    assignNumberOverride(payload, 'duration', data.duration);
+    assignStringOverride(payload, 'utm_source', data.utm_source);
+    assignStringOverride(payload, 'utm_medium', data.utm_medium);
+    assignStringOverride(payload, 'utm_campaign', data.utm_campaign);
 
-    if (typeof name === 'string') payload.name = name;
-    if (typeof path === 'string') payload.path = path;
-    if (typeof referrer === 'string') payload.referrer = referrer;
-    if (typeof screen_width === 'number') payload.screen_width = screen_width;
-    if (typeof duration === 'number') payload.duration = duration;
-    if (typeof utm_source === 'string') payload.utm_source = utm_source;
-    if (typeof utm_medium === 'string') payload.utm_medium = utm_medium;
-    if (typeof utm_campaign === 'string') payload.utm_campaign = utm_campaign;
-    if (typeof properties === 'string') payload.properties = properties;
-    else if (properties) payload.properties = JSON.stringify(properties);
+    const properties = getPropertiesValue(data.properties);
+    if (properties !== undefined) {
+      payload.properties = properties;
+    }
 
     return payload;
   };
@@ -118,7 +143,7 @@ declare global {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: payload,
-        keepalive: true
+        keepalive: true,
       }).catch(() => {});
     }
   };
@@ -148,18 +173,20 @@ declare global {
     });
 
     const originalPushState = history.pushState;
-    history.pushState = function () {
-      originalPushState.apply(this, arguments as unknown as [data: unknown, title: string, url?: string | URL | null]);
+    history.pushState = function (this: History, ...args: Parameters<History['pushState']>) {
+      originalPushState.apply(this, args);
       track();
     };
 
     const originalReplaceState = history.replaceState;
-    history.replaceState = function () {
-      originalReplaceState.apply(this, arguments as unknown as [data: unknown, title: string, url?: string | URL | null]);
+    history.replaceState = function (this: History, ...args: Parameters<History['replaceState']>) {
+      originalReplaceState.apply(this, args);
       track();
     };
 
-    window.addEventListener('popstate', track);
+    window.addEventListener('popstate', () => {
+      track();
+    });
     window.addEventListener('beforeunload', trackLeave);
   };
 

@@ -1,4 +1,7 @@
-h1:FEvFol5AffYX9htHh6ufvUTAQS78ho+a0OhQid8AQNo=
+h1:uSJrP2zYOnB9TcineUu30zcgj/YSrI7JJtUBvLd/wt4=
 20260121204035_initial_db.up.sql h1:rygq/KQ1y9hMBnwv4LYpSBRYEGMzvVm3ioA0WjkTBJ8=
 20260122093132_add_site_domain_ordering_and_event_definition_uniques.up.sql h1:qRx+MmQn5vUpN46T+xVBFh42ewl+fZwxCw001byXGW8=
 20260123090000_remove_event_type.up.sql h1:SCtZB7QC8/Fxd9CeIDHhUCFBfAluioenDjxCu4dLRgc=
+20260309120000_add_countries_table.up.sql h1:QNucva9TmSbliFotzPUjhxPfuwKhttYO9b7E6cFEe2A=
+20260309151141_analytics_client_dimensions_enums.up.sql h1:ZzvGa5HJSChjnVUx2fGLYDKt43+X5wVsChgK3D/QPhc=
+20260309183000_clients_hash_utc_day_skipped_rotation.up.sql h1:rgYejsPZ0Ps+JonW7R/ViZ9LKjtk/goW8XKDGHioUcM=

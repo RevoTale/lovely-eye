@@ -1,0 +1,39 @@
+version: "3"
+
+includes:
+  dashboard:
+    taskfile: ./dashboard/Taskfile.yml
+    dir: ./dashboard
+  docker:
+    taskfile: ./docker/Taskfile.yml
+    dir: ./docker
+  server:
+    taskfile: ./server/Taskfile.yml
+    dir: ./server
+
+tasks:
+  run-example-app:
+    desc: Run the example Docker stack (SQLite)
+    cmds:
+      - task: docker:run-example-compose-app
+
+  run-example-app-pg:
+    desc: Run the example Docker stack (PostgreSQL)
+    cmds:
+      - task: docker:run-example-compose-app-pg
+
+  test:
+    desc: Run dashboard and server tests
+    cmds:
+      - echo "Running dashboard testing..."
+      - task: dashboard:test
+      - echo "Running server unit tests..."
+      - task: server:test
+        vars:
+          DASHBOARD_PATH: ../dashboard/dist
+
+  generate:
+    desc: Generate dashboard and server code/artifacts
+    cmds:
+      - task: dashboard:generate
+      - task: server:generate

@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,8 +24,8 @@ import (
 
 var defaultPaging = operations.PagingInput{Limit: 50, Offset: 0}
 
-func testConfig() *config.Config {
-	return &config.Config{
+func testConfig() config.Config {
+	return config.Config{
 		Server: config.ServerConfig{
 			Host:          "127.0.0.1",
 			Port:          "0",
@@ -41,6 +43,9 @@ func testConfig() *config.Config {
 			SecureCookies:     false,
 			CookieDomain:      "",
 		},
+		Analytics: config.AnalyticsConfig{
+			IdentitySecret: strings.Repeat("a", 32),
+		},
 		// Mock tracker.js for testing (avoid file I/O)
 		TrackerJS: []byte(`console.log("mock tracker")`),
 	}
@@ -57,7 +62,7 @@ func newTestServer(t *testing.T) *testServer {
 	srv, err := server.New(testConfig())
 	require.NoError(t, err, "failed to create server")
 
-	httpServer := httptest.NewServer(srv.Handler)
+	httpServer := newTestHTTPServer(srv.Handler)
 
 	t.Cleanup(func() {
 		httpServer.Close()
@@ -74,7 +79,16 @@ func newTestServer(t *testing.T) *testServer {
 }
 
 func newTestHTTPServer(handler http.Handler) *httptest.Server {
-	return httptest.NewServer(handler)
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		panic(fmt.Errorf("listen on 127.0.0.1:0: %w", err))
+	}
+	server := &httptest.Server{
+		Listener: listener,
+		Config:   &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second},
+	}
+	server.Start()
+	return server
 }
 
 func postJSONWithOrigin(client *http.Client, url string, body []byte, origin string) (*http.Response, error) {
@@ -299,13 +313,13 @@ func TestDashboardAuthorization(t *testing.T) {
 	siteID := siteResp.CreateSite.Id
 
 	t.Run("authenticated user can view dashboard", func(t *testing.T) {
-		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.NoError(t, err)
 		require.Equal(t, 0, resp.Dashboard.Visitors)
 	})
 
 	t.Run("unauthenticated user cannot view dashboard", func(t *testing.T) {
-		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
 		require.Error(t, err)
 	})
 

@@ -1,0 +1,16 @@
+version: "3"
+
+vars:
+  GO: go
+  TSC: bunx tsc
+
+tasks:
+  build:
+    desc: Build tracker artifact
+    cmds:
+      - "{{.GO}} run build.go"
+
+  typecheck:
+    desc: Typecheck tracker TypeScript sources
+    cmds:
+      - "{{.TSC}} -p tsconfig.json"

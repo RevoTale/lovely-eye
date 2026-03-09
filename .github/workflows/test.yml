@@ -18,7 +18,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.26'
       - name: Install dependencies
         run: go mod tidy
       - name: Check generated code is up-to-date
@@ -73,7 +73,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: '1.26'
       - name: Install dependencies
         run: go mod download
       - name: Build tracker asset
@@ -81,7 +81,7 @@ jobs:
       - name: Ensure generated assets are committed
         run: |
           if ! git diff --exit-code; then
-            echo "::error::Generated assets are out of date. Run 'make -C server/static build' and commit the results."
+            echo "::error::Generated assets are out of date. Run 'task -d server/static build' and commit the results."
             git diff
             exit 1
           fi

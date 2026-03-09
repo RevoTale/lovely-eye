@@ -1,7 +1,7 @@
 
 import { useMemo, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { useQuery } from '@apollo/client/react';
-import { GeoIpCountriesDocument, TrafficBlockingCountryFieldsFragmentDoc } from '@/gql/graphql';
+import { CountriesByCodeDocument, CountryFieldsFragmentDoc, GeoIpCountriesDocument } from '@/gql/graphql';
 import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from '@/components/ui';
 import { Loader2, Shield, X } from 'lucide-react';
@@ -40,9 +40,9 @@ export const TrafficBlockingCard = ({
   const MAX_COUNTRY_MATCHES = 8;
   const MAX_COUNTRIES = 250;
   const MAX_IPS = 500;
-const SEARCH_MIN_LENGTH = 2;
-const COUNTRY_PAGE_SIZE = 100;
-const COUNTRY_PAGE_OFFSET = 0;
+  const SEARCH_MIN_LENGTH = 2;
+  const COUNTRY_PAGE_SIZE = 100;
+  const COUNTRY_PAGE_OFFSET = 0;
   const SEARCH_SINGLE_MATCH_COUNT = 1;
 
   const buildBlockedIPEntries = (values: string[]): BlockedIPEntry[] =>
@@ -62,6 +62,10 @@ const COUNTRY_PAGE_OFFSET = 0;
   const [newIPValue, setNewIPValue] = useState('');
   const [newIPError, setNewIPError] = useState('');
 
+  const normalizedBlockedCountries = useMemo(
+    () => normalizeCountryCodesPreserveOrder(blockedCountries),
+    [blockedCountries]
+  );
   const trimmedCountrySearch = countrySearch.trim();
   const shouldSearchCountries = geoIPReady && trimmedCountrySearch.length >= SEARCH_MIN_LENGTH;
   const { data: geoIPCountriesData, loading: geoIPCountriesLoading } = useQuery(GeoIpCountriesDocument, {
@@ -74,23 +78,33 @@ const COUNTRY_PAGE_OFFSET = 0;
     },
     skip: !shouldSearchCountries,
   });
+  const { data: selectedCountriesData } = useQuery(CountriesByCodeDocument, {
+    variables: {
+      codes: normalizedBlockedCountries,
+      paging: {
+        limit: normalizedBlockedCountries.length || 1,
+        offset: COUNTRY_PAGE_OFFSET,
+      },
+    },
+    skip: normalizedBlockedCountries.length === EMPTY_COUNT,
+  });
 
   const geoIPCountries = getFragmentData(
-    TrafficBlockingCountryFieldsFragmentDoc,
+    CountryFieldsFragmentDoc,
     geoIPCountriesData?.geoIPCountries ?? []
+  );
+  const selectedCountries = getFragmentData(
+    CountryFieldsFragmentDoc,
+    selectedCountriesData?.geoIPCountries ?? []
   );
   const blockedIPCount = useMemo(
     () => getNormalizedBlockedIPs(blockedIPs.map(({ value }) => value)).length,
     [blockedIPs]
   );
-  const normalizedBlockedCountries = useMemo(
-    () => normalizeCountryCodesPreserveOrder(blockedCountries),
-    [blockedCountries]
-  );
   const { length: blockedCountryCount } = normalizedBlockedCountries;
   const countryNameLookup = useMemo(
-    () => new Map(geoIPCountries.map((country) => [country.code, country.name] as const)),
-    [geoIPCountries]
+    () => new Map([...selectedCountries, ...geoIPCountries].map((country) => [country.code, country.name] as const)),
+    [geoIPCountries, selectedCountries]
   );
   const isUpdating = savingBlockedIPs || savingBlockedCountries;
 
@@ -338,10 +352,10 @@ const COUNTRY_PAGE_OFFSET = 0;
                 No blocked countries yet.
               </span>
             ) : (
-              blockedCountries.map((code) => {
+              normalizedBlockedCountries.map((code) => {
                 const normalizedCode = code.trim().toUpperCase();
                 const displayName =
-                  countryNameLookup.get(normalizedCode) ?? code;
+                  countryNameLookup.get(normalizedCode) ?? normalizedCode;
                 const showCode = displayName.trim().toUpperCase() !== normalizedCode;
                 return (
                   <Badge key={code} variant="secondary" className="flex items-center gap-2">

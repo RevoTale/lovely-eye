@@ -24,11 +24,15 @@ type EventCount struct {
 type FilterInput struct {
 	// Filter by specific referrer
 	Referrer []string `json:"referrer,omitempty"`
-	// Filter by device type (desktop, mobile, tablet)
+	// Filter by browser type
+	Browser []string `json:"browser,omitempty"`
+	// Filter by device type (desktop, mobile, tablet, smart-tv, console)
 	Device []string `json:"device,omitempty"`
+	// Filter by operating system
+	Os []string `json:"os,omitempty"`
 	// Filter by page path
 	Page []string `json:"page,omitempty"`
-	// Filter by country (stored country name)
+	// Filter by ISO country code
 	Country []string `json:"country,omitempty"`
 	// Filter by event type (page view or predefined)
 	EventType []EventType `json:"eventType,omitempty"`
@@ -38,11 +42,6 @@ type FilterInput struct {
 	EventPath []string `json:"eventPath,omitempty"`
 	// Filter by event definition ID
 	EventDefinitionID []string `json:"eventDefinitionId,omitempty"`
-}
-
-type GeoIPCountry struct {
-	Code string `json:"code"`
-	Name string `json:"name"`
 }
 
 type GeoIPStatus struct {
@@ -66,6 +65,12 @@ type PagedDeviceStats struct {
 	Items         []*DeviceStats `json:"items"`
 	Total         int            `json:"total"`
 	TotalVisitors int            `json:"totalVisitors"`
+}
+
+type PagedOperatingSystemStats struct {
+	Items         []*OperatingSystemStats `json:"items"`
+	Total         int                     `json:"total"`
+	TotalVisitors int                     `json:"totalVisitors"`
 }
 
 type PagedPageStats struct {

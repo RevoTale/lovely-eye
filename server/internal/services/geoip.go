@@ -1,32 +1,23 @@
 package services
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"log/slog"
-	"net/http"
-	"net/netip"
-	"os"
-	"path/filepath"
-	"sort"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/oschwald/geoip2-golang/v2"
-	"github.com/oschwald/maxminddb-golang/v2"
+	geoipcore "github.com/lovely-eye/server/internal/geoip"
+	"github.com/lovely-eye/server/internal/geoip/downloader"
+	"github.com/lovely-eye/server/internal/geoip/lookup"
 )
 
 const (
-	geoIPStateDisabled    = "disabled"
-	geoIPStateMissing     = "missing"
-	geoIPStateDownloading = "downloading"
-	geoIPStateReady       = "ready"
-	geoIPStateError       = "error"
+	geoIPStateDisabled    = geoipcore.StateDisabled
+	geoIPStateMissing     = geoipcore.StateMissing
+	geoIPStateDownloading = geoipcore.StateDownloading
+	geoIPStateReady       = geoipcore.StateReady
+	geoIPStateError       = geoipcore.StateError
 )
 
 type GeoIPConfig struct {
@@ -35,10 +26,24 @@ type GeoIPConfig struct {
 	MaxMindLicenseKey string
 }
 
+type GeoIPSource string
+
+const (
+	GeoIPSourceUnknown     GeoIPSource = ""
+	GeoIPSourceFile        GeoIPSource = "file"
+	GeoIPSourceDownloadURL GeoIPSource = "download-url"
+	GeoIPSourceDBIP        GeoIPSource = "dbip"
+	GeoIPSourceMaxMind     GeoIPSource = "maxmind"
+)
+
+func (s GeoIPSource) String() string {
+	return string(s)
+}
+
 type GeoIPStatus struct {
 	State     string
 	DBPath    string
-	Source    string
+	Source    GeoIPSource
 	LastError string
 	UpdatedAt *time.Time
 }
@@ -48,51 +53,84 @@ type GeoIPCountry struct {
 	Name string
 }
 
-type GeoIPService struct {
-	reader *geoip2.Reader
-	mu     sync.RWMutex
+type Country struct {
+	Name    string
+	ISOCode string
+}
 
-	dbPath            string
-	downloadURL       string
-	maxMindLicenseKey string
+var ErrNoDBReader = geoipcore.ErrNoDBReader
+
+var UnknownCountry = Country{
+	Name:    "Unknown",
+	ISOCode: "-",
+}
+
+var LocalNetworkCountry = Country{
+	Name:    "Local Network",
+	ISOCode: "-",
+}
+
+type geoIPLookup interface {
+	HasReader() bool
+	FileExists() bool
+	UpdatedAt() *time.Time
+	Load() error
+	ListCountries(search string) ([]geoipcore.ListedCountry, error)
+	ResolveCountry(ipStr string) (geoipcore.Country, error)
+	Close() error
+}
+
+type geoIPDownloader interface {
+	HasDownloadSource() bool
+	ConfiguredSource() geoipcore.Source
+	BuildDownloadPlan() (downloader.DownloadPlan, error)
+	Download(ctx context.Context, plan downloader.DownloadPlan) error
+}
+
+type GeoIPService struct {
+	dbPath string
+
+	lookup     geoIPLookup
+	downloader geoIPDownloader
 
 	status   GeoIPStatus
 	statusMu sync.RWMutex
 
 	enabled    bool
 	downloadMu sync.Mutex
-	httpClient *http.Client
-
-	countriesMu        sync.RWMutex
-	countries          []GeoIPCountry
-	countriesUpdatedAt *time.Time
 }
 
-func NewGeoIPService(cfg GeoIPConfig) (*GeoIPService, error) {
+func NewGeoIPService(cfg GeoIPConfig) *GeoIPService {
+	coreCfg := geoipcore.Config{
+		DBPath:            cfg.DBPath,
+		DownloadURL:       cfg.DownloadURL,
+		MaxMindLicenseKey: cfg.MaxMindLicenseKey,
+	}
+
 	service := &GeoIPService{
-		dbPath:            cfg.DBPath,
-		downloadURL:       cfg.DownloadURL,
-		maxMindLicenseKey: cfg.MaxMindLicenseKey,
-		httpClient:        &http.Client{Timeout: 30 * time.Second},
+		dbPath:     cfg.DBPath,
+		lookup:     lookup.New(cfg.DBPath),
+		downloader: downloader.New(coreCfg),
 	}
 	service.setStatus(GeoIPStatus{
 		State:  geoIPStateDisabled,
 		DBPath: cfg.DBPath,
 	})
-	return service, nil
+	return service
 }
 
 func (g *GeoIPService) SetEnabled(enabled bool) {
 	g.statusMu.Lock()
 	g.enabled = enabled
+	g.statusMu.Unlock()
+
 	if !enabled {
-		g.status = GeoIPStatus{
+		_ = g.lookup.Close()
+		g.setStatus(GeoIPStatus{
 			State:  geoIPStateDisabled,
 			DBPath: g.dbPath,
-		}
-		g.clearCountriesCache()
+		})
 	}
-	g.statusMu.Unlock()
 }
 
 func (g *GeoIPService) Status() GeoIPStatus {
@@ -107,85 +145,18 @@ func (g *GeoIPService) ListCountries(search string) ([]GeoIPCountry, error) {
 		return []GeoIPCountry{}, nil
 	}
 
-	if status.UpdatedAt != nil {
-		if cached := g.getCachedCountries(*status.UpdatedAt); cached != nil {
-			return filterCountries(cached, search), nil
-		}
-	}
-
-	reader, err := maxminddb.Open(g.dbPath)
+	countries, err := g.lookup.ListCountries(search)
 	if err != nil {
-		return nil, fmt.Errorf("open GeoIP database: %w", err)
+		return nil, fmt.Errorf("list GeoIP countries: %w", err)
 	}
-	defer func() {
-		if err := reader.Close(); err != nil {
-			slog.Error("failed to close maxminddb reader", "error", err)
-		}
-	}()
-
-	type countryRecord struct {
-		Country struct {
-			ISOCode string            `maxminddb:"iso_code"`
-			Names   map[string]string `maxminddb:"names"`
-		} `maxminddb:"country"`
-		RegisteredCountry struct {
-			ISOCode string            `maxminddb:"iso_code"`
-			Names   map[string]string `maxminddb:"names"`
-		} `maxminddb:"registered_country"`
-	}
-
-	seen := make(map[string]string)
-	for result := range reader.Networks() {
-		var record countryRecord
-		if err := result.Decode(&record); err != nil {
-			return nil, fmt.Errorf("read GeoIP network: %w", err)
-		}
-		if !result.Found() {
-			continue
-		}
-
-		code := record.Country.ISOCode
-		name := record.Country.Names["en"]
-		if code == "" {
-			code = record.RegisteredCountry.ISOCode
-			name = record.RegisteredCountry.Names["en"]
-		}
-		if code == "" {
-			continue
-		}
-		if name == "" {
-			name = code
-		}
-		if _, ok := seen[code]; ok {
-			continue
-		}
-		seen[code] = name
-	}
-
-	countries := make([]GeoIPCountry, 0, len(seen))
-	for code, name := range seen {
-		countries = append(countries, GeoIPCountry{
-			Code: code,
-			Name: name,
-		})
-	}
-	sort.Slice(countries, func(i, j int) bool {
-		if countries[i].Name == countries[j].Name {
-			return countries[i].Code < countries[j].Code
-		}
-		return countries[i].Name < countries[j].Name
-	})
-
-	if status.UpdatedAt != nil {
-		g.setCachedCountries(countries, *status.UpdatedAt)
-	}
-	return filterCountries(countries, search), nil
+	return newGeoIPCountries(countries), nil
 }
 
 func (g *GeoIPService) EnsureAvailable(ctx context.Context) error {
 	g.statusMu.RLock()
 	enabled := g.enabled
 	g.statusMu.RUnlock()
+
 	if !enabled {
 		g.setStatus(GeoIPStatus{
 			State:  geoIPStateDisabled,
@@ -194,331 +165,93 @@ func (g *GeoIPService) EnsureAvailable(ctx context.Context) error {
 		return nil
 	}
 
+	return g.loadDatabase(ctx, false)
+}
+
+func (g *GeoIPService) Refresh(ctx context.Context) error {
+	return g.loadDatabase(ctx, true)
+}
+
+func (g *GeoIPService) ResolveCountry(ipStr string) (Country, error) {
+	country, err := g.lookup.ResolveCountry(ipStr)
+	return newCountry(country), err
+}
+
+func (g *GeoIPService) Close() error {
+	if err := g.lookup.Close(); err != nil {
+		return fmt.Errorf("close GeoIP lookup: %w", err)
+	}
+	return nil
+}
+
+func (g *GeoIPService) loadDatabase(ctx context.Context, forceRefresh bool) error {
 	if g.dbPath == "" {
-		return g.setStatusError(geoIPStateMissing, "GeoIP database path is not configured")
+		return g.setStatusError(geoIPStateMissing, GeoIPSourceUnknown, errors.New("GeoIP database path is not configured"))
 	}
 
-	if g.hasReader() {
-		g.setStatus(GeoIPStatus{
-			State:     geoIPStateReady,
-			DBPath:    g.dbPath,
-			Source:    "file",
-			UpdatedAt: g.dbFileUpdatedAt(),
-		})
-		return nil
-	}
-
-	if g.fileExists(g.dbPath) {
-		if err := g.loadReader(); err == nil {
-			g.setStatus(GeoIPStatus{
-				State:     geoIPStateReady,
-				DBPath:    g.dbPath,
-				Source:    "file",
-				UpdatedAt: g.dbFileUpdatedAt(),
-			})
+	var loadErr error
+	if !forceRefresh {
+		if g.lookup.HasReader() {
+			g.setReadyStatus(GeoIPSourceFile)
 			return nil
+		}
+
+		if g.lookup.FileExists() {
+			if err := g.lookup.Load(); err == nil {
+				g.setReadyStatus(GeoIPSourceFile)
+				return nil
+			} else {
+				loadErr = err
+			}
 		}
 	}
 
-	if !g.downloadConfigured() {
-		return g.setStatusError(geoIPStateMissing, "GeoIP download source is not configured")
+	if !g.downloader.HasDownloadSource() {
+		if loadErr != nil {
+			return g.setStatusError(geoIPStateError, GeoIPSourceFile, loadErr)
+		}
+		return g.setStatusError(geoIPStateMissing, GeoIPSourceUnknown, errors.New("GeoIP download source is not configured"))
 	}
 
 	g.downloadMu.Lock()
 	defer g.downloadMu.Unlock()
 
-	if g.hasReader() {
-		g.setStatus(GeoIPStatus{
-			State:     geoIPStateReady,
-			DBPath:    g.dbPath,
-			Source:    "file",
-			UpdatedAt: g.dbFileUpdatedAt(),
-		})
+	if !forceRefresh && g.lookup.HasReader() {
+		g.setReadyStatus(GeoIPSourceFile)
 		return nil
 	}
 
-	if err := g.downloadAndLoad(ctx); err != nil {
-		return err
-	}
-
-	g.setStatus(GeoIPStatus{
-		State:     geoIPStateReady,
-		DBPath:    g.dbPath,
-		Source:    g.downloadSource(),
-		UpdatedAt: g.dbFileUpdatedAt(),
-	})
-	return nil
-}
-
-func (g *GeoIPService) downloadAndLoad(ctx context.Context) error {
-	downloadURLs, source, err := g.resolveDownloadURL()
+	plan, err := g.downloader.BuildDownloadPlan()
 	if err != nil {
-		return g.setStatusError(geoIPStateMissing, err.Error())
+		return g.setStatusError(geoIPStateMissing, newGeoIPSource(g.downloader.ConfiguredSource()), err)
 	}
 
+	source := newGeoIPSource(plan.Source)
 	g.setStatus(GeoIPStatus{
 		State:  geoIPStateDownloading,
 		DBPath: g.dbPath,
 		Source: source,
 	})
 
-	var downloadErr error
-	for _, url := range downloadURLs {
-		downloadErr = g.downloadDatabase(ctx, url)
-		if downloadErr == nil {
-			downloadErr = nil
-			break
-		}
-	}
-	if downloadErr != nil {
-		return g.setStatusError(geoIPStateError, downloadErr.Error())
+	if err := g.downloader.Download(ctx, plan); err != nil {
+		return g.setStatusError(geoIPStateError, source, err)
 	}
 
-	if err := g.loadReader(); err != nil {
-		return g.setStatusError(geoIPStateError, err.Error())
+	if err := g.lookup.Load(); err != nil {
+		return g.setStatusError(geoIPStateError, source, err)
 	}
 
+	g.setReadyStatus(source)
 	return nil
 }
 
-func (g *GeoIPService) downloadDatabase(ctx context.Context, url string) error {
-	if err := os.MkdirAll(filepath.Dir(g.dbPath), 0o750); err != nil {
-		return fmt.Errorf("create GeoIP directory: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return fmt.Errorf("build GeoIP request: %w", err)
-	}
-
-	resp, err := g.httpClient.Do(req)
-	if err != nil {
-		return fmt.Errorf("download GeoIP database: %w", err)
-	}
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			slog.Error("failed to close response body", "error", err)
-		}
-	}()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("download GeoIP database: unexpected status %s", resp.Status)
-	}
-
-	tmpFile, err := os.CreateTemp(filepath.Dir(g.dbPath), "geoip-*.download")
-	if err != nil {
-		return fmt.Errorf("create GeoIP temp file: %w", err)
-	}
-	defer func() {
-		_ = os.Remove(tmpFile.Name())
-	}()
-
-	if _, err := io.Copy(tmpFile, resp.Body); err != nil {
-		_ = tmpFile.Close()
-		return fmt.Errorf("save GeoIP download: %w", err)
-	}
-	if err := tmpFile.Close(); err != nil {
-		return fmt.Errorf("close GeoIP download: %w", err)
-	}
-
-	if g.isTarGz(url, resp.Header.Get("Content-Type")) {
-		return g.extractTarGz(tmpFile.Name())
-	}
-
-	if g.isGzip(url, resp.Header.Get("Content-Type")) {
-		return g.extractGzip(tmpFile.Name())
-	}
-
-	return g.replaceDatabase(tmpFile.Name())
-}
-
-func (g *GeoIPService) extractTarGz(archivePath string) error {
-	file, err := os.Open(archivePath) // #nosec G304 -- archivePath is constructed from validated dbPath
-	if err != nil {
-		return fmt.Errorf("open GeoIP archive: %w", err)
-	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			slog.Error("failed to close archive file", "error", err)
-		}
-	}()
-
-	gzipReader, err := gzip.NewReader(file)
-	if err != nil {
-		return fmt.Errorf("read GeoIP gzip: %w", err)
-	}
-	defer func() {
-		if err := gzipReader.Close(); err != nil {
-			slog.Error("failed to close gzip reader", "error", err)
-		}
-	}()
-
-	tarReader := tar.NewReader(gzipReader)
-	for {
-		header, err := tarReader.Next()
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("read GeoIP archive: %w", err)
-		}
-		if header.Typeflag != tar.TypeReg {
-			continue
-		}
-		if !strings.HasSuffix(header.Name, ".mmdb") {
-			continue
-		}
-
-		tmpPath := g.dbPath + ".tmp"
-		out, err := os.Create(tmpPath) // #nosec G304 -- tmpPath is constructed from validated dbPath
-		if err != nil {
-			return fmt.Errorf("create GeoIP database: %w", err)
-		}
-		// #nosec G110 -- GeoIP database files are from trusted sources (MaxMind)
-		if _, err := io.Copy(out, tarReader); err != nil {
-			_ = out.Close()
-			return fmt.Errorf("write GeoIP database: %w", err)
-		}
-		if err := out.Close(); err != nil {
-			return fmt.Errorf("close GeoIP database: %w", err)
-		}
-		return g.replaceDatabase(tmpPath)
-	}
-
-	return fmt.Errorf("GeoIP archive did not contain an .mmdb file")
-}
-
-func (g *GeoIPService) replaceDatabase(tempPath string) error {
-	if err := os.Chmod(tempPath, 0o600); err != nil {
-		return fmt.Errorf("set GeoIP database permissions: %w", err)
-	}
-	if err := os.Rename(tempPath, g.dbPath); err != nil {
-		return fmt.Errorf("move GeoIP database: %w", err)
-	}
-	return nil
-}
-
-func (g *GeoIPService) isTarGz(url, contentType string) bool {
-	url = strings.ToLower(url)
-	if strings.HasSuffix(url, ".tar.gz") || strings.HasSuffix(url, ".tgz") {
-		return true
-	}
-	return strings.Contains(strings.ToLower(contentType), "tar")
-}
-
-func (g *GeoIPService) isGzip(url, contentType string) bool {
-	url = strings.ToLower(url)
-	if strings.HasSuffix(url, ".gz") && !strings.HasSuffix(url, ".tar.gz") && !strings.HasSuffix(url, ".tgz") {
-		return true
-	}
-	contentType = strings.ToLower(contentType)
-	return strings.Contains(contentType, "gzip") && !strings.Contains(contentType, "tar")
-}
-
-func (g *GeoIPService) extractGzip(archivePath string) error {
-	file, err := os.Open(archivePath) // #nosec G304 -- archivePath is constructed from validated dbPath
-	if err != nil {
-		return fmt.Errorf("open GeoIP archive: %w", err)
-	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			slog.Error("failed to close archive file", "error", err)
-		}
-	}()
-
-	gzipReader, err := gzip.NewReader(file)
-	if err != nil {
-		return fmt.Errorf("read GeoIP gzip: %w", err)
-	}
-	defer func() {
-		if err := gzipReader.Close(); err != nil {
-			slog.Error("failed to close gzip reader", "error", err)
-		}
-	}()
-
-	tmpPath := g.dbPath + ".tmp"
-	out, err := os.Create(tmpPath) // #nosec G304 -- tmpPath is constructed from validated dbPath
-	if err != nil {
-		return fmt.Errorf("create GeoIP database: %w", err)
-	}
-	// #nosec G110 -- GeoIP database files are from trusted sources (MaxMind)
-	if _, err := io.Copy(out, gzipReader); err != nil {
-		_ = out.Close()
-		return fmt.Errorf("write GeoIP database: %w", err)
-	}
-	if err := out.Close(); err != nil {
-		return fmt.Errorf("close GeoIP database: %w", err)
-	}
-	return g.replaceDatabase(tmpPath)
-}
-
-func (g *GeoIPService) resolveDownloadURL() ([]string, string, error) {
-	if g.downloadURL != "" {
-		source := "download-url"
-		if strings.Contains(g.downloadURL, "db-ip.com") {
-			source = "dbip"
-		}
-		return g.expandDownloadURLs(g.downloadURL), source, nil
-	}
-	if g.maxMindLicenseKey == "" {
-		return nil, "", errors.New("GeoIP download URL or MaxMind license key is required")
-	}
-	url := fmt.Sprintf("https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=%s&suffix=tar.gz", g.maxMindLicenseKey)
-	return []string{url}, "maxmind", nil
-}
-
-func (g *GeoIPService) expandDownloadURLs(url string) []string {
-	if !strings.Contains(url, "dbip-country-lite.mmdb.gz") {
-		return []string{url}
-	}
-
-	now := time.Now()
-	candidates := make([]string, 0, 3)
-	for i := 0; i < 3; i++ {
-		month := now.AddDate(0, -i, 0).Format("2006-01")
-		candidate := strings.Replace(url, "dbip-country-lite.mmdb.gz", fmt.Sprintf("dbip-country-lite-%s.mmdb.gz", month), 1)
-		candidates = append(candidates, candidate)
-	}
-	return candidates
-}
-
-func (g *GeoIPService) downloadConfigured() bool {
-	return g.downloadURL != "" || g.maxMindLicenseKey != ""
-}
-
-func (g *GeoIPService) downloadSource() string {
-	if g.downloadURL != "" {
-		return "download-url"
-	}
-	if g.maxMindLicenseKey != "" {
-		return "maxmind"
-	}
-	return ""
-}
-
-func (g *GeoIPService) loadReader() error {
-	reader, err := geoip2.Open(g.dbPath)
-	if err != nil {
-		return fmt.Errorf("open GeoIP database: %w", err)
-	}
-	g.mu.Lock()
-	if g.reader != nil {
-		_ = g.reader.Close()
-	}
-	g.reader = reader
-	g.mu.Unlock()
-	return nil
-}
-
-func (g *GeoIPService) hasReader() bool {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-	return g.reader != nil
-}
-
-func (g *GeoIPService) fileExists(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
+func (g *GeoIPService) setReadyStatus(source GeoIPSource) {
+	g.setStatus(GeoIPStatus{
+		State:     geoIPStateReady,
+		DBPath:    g.dbPath,
+		Source:    source,
+		UpdatedAt: g.lookup.UpdatedAt(),
+	})
 }
 
 func (g *GeoIPService) setStatus(status GeoIPStatus) {
@@ -531,130 +264,34 @@ func (g *GeoIPService) setStatus(status GeoIPStatus) {
 	g.statusMu.Unlock()
 }
 
-func (g *GeoIPService) dbFileUpdatedAt() *time.Time {
-	info, err := os.Stat(g.dbPath)
-	if err != nil || info.IsDir() {
-		return nil
-	}
-	modTime := info.ModTime()
-	return &modTime
-}
-
-func (g *GeoIPService) getCachedCountries(updatedAt time.Time) []GeoIPCountry {
-	g.countriesMu.RLock()
-	defer g.countriesMu.RUnlock()
-	if g.countriesUpdatedAt == nil || !g.countriesUpdatedAt.Equal(updatedAt) {
-		return nil
-	}
-	result := make([]GeoIPCountry, len(g.countries))
-	copy(result, g.countries)
-	return result
-}
-
-func (g *GeoIPService) setCachedCountries(countries []GeoIPCountry, updatedAt time.Time) {
-	g.countriesMu.Lock()
-	g.countries = make([]GeoIPCountry, len(countries))
-	copy(g.countries, countries)
-	g.countriesUpdatedAt = &updatedAt
-	g.countriesMu.Unlock()
-}
-
-func (g *GeoIPService) clearCountriesCache() {
-	g.countriesMu.Lock()
-	g.countries = nil
-	g.countriesUpdatedAt = nil
-	g.countriesMu.Unlock()
-}
-
-func filterCountries(countries []GeoIPCountry, search string) []GeoIPCountry {
-	query := strings.TrimSpace(strings.ToLower(search))
-	if query == "" {
-		result := make([]GeoIPCountry, len(countries))
-		copy(result, countries)
-		return result
-	}
-
-	filtered := make([]GeoIPCountry, 0, len(countries))
-	for _, country := range countries {
-		code := strings.ToLower(country.Code)
-		name := strings.ToLower(country.Name)
-		if strings.Contains(code, query) || strings.Contains(name, query) {
-			filtered = append(filtered, country)
-		}
-	}
-	return filtered
-}
-
-func (g *GeoIPService) setStatusError(state, message string) error {
+func (g *GeoIPService) setStatusError(state string, source GeoIPSource, err error) error {
 	g.setStatus(GeoIPStatus{
 		State:     state,
 		DBPath:    g.dbPath,
-		Source:    g.downloadSource(),
-		LastError: message,
+		Source:    source,
+		LastError: err.Error(),
 	})
-	return errors.New(message)
+	return err
 }
 
-var ErrNoDBReader = errors.New("no IP reader")
-var UnknownCountry = Country{
-	Name:    "Unknown",
-	ISOCode: "-",
-}
-var LocalNetworkCountry = Country{
-	Name:    "Local Network",
-	ISOCode: "-",
+func newGeoIPSource(source geoipcore.Source) GeoIPSource {
+	return GeoIPSource(source)
 }
 
-type Country struct {
-	Name    string
-	ISOCode string
+func newCountry(country geoipcore.Country) Country {
+	return Country{
+		Name:    country.Name,
+		ISOCode: country.ISOCode,
+	}
 }
 
-func (g *GeoIPService) ResolveCountry(ipStr string) (Country, error) {
-	ip, err := netip.ParseAddr(ipStr)
-	if err != nil {
-		return UnknownCountry, fmt.Errorf("failed parse country IP: %s", err.Error())
+func newGeoIPCountries(countries []geoipcore.ListedCountry) []GeoIPCountry {
+	result := make([]GeoIPCountry, 0, len(countries))
+	for _, country := range countries {
+		result = append(result, GeoIPCountry{
+			Code: country.Code,
+			Name: country.Name,
+		})
 	}
-
-	if !ip.IsGlobalUnicast() || ip.IsPrivate() {
-		return LocalNetworkCountry, nil
-	}
-
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
-	if g.reader == nil {
-		return UnknownCountry, ErrNoDBReader
-	}
-
-	record, err := g.reader.Country(ip)
-	if err != nil {
-		return UnknownCountry, fmt.Errorf("failed to get country: %s", err.Error())
-	}
-
-	name := record.Country.Names.English
-	code := record.Country.ISOCode
-	if code == "" {
-		name = record.RegisteredCountry.Names.English
-		code = record.RegisteredCountry.ISOCode
-	}
-	if name == "" {
-		name = code
-	}
-	if code == "" {
-		return UnknownCountry, nil
-	}
-	return Country{Name: name, ISOCode: code}, nil
-}
-
-func (g *GeoIPService) Close() error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
-	if g.reader != nil {
-		if err := g.reader.Close(); err != nil {
-			return fmt.Errorf("failed to close geoip reader: %w", err)
-		}
-	}
-	return nil
+	return result
 }

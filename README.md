@@ -7,7 +7,7 @@ Self-hosted web analytics with a Go backend and React dashboard. Built for low-r
 
 ## Features
 
-- **Privacy-first**: no analytics cookies, daily visitor ID rotation
+- **Privacy-first**: no analytics cookies, keyed server-side visitor identity with UTC-day-skipped rotation
 - **Bot filtering**: excludes crawlers, scrapers, monitoring bots.
 - **Lightweight**: runtime consumes around ~15MB of RAM on AMD processor.
 - **SQLite and PostgreSQL** supported.
@@ -25,7 +25,13 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - JWT_SECRET=your-secret-key-min-32-chars
+      # Optional for local development. Set a fixed value in production to
+      # preserve dashboard sessions across restarts.
+      - JWT_SECRET=${JWT_SECRET:-}
+      # Optional: dedicated secret for analytics visitor identity. Falls back to
+      # JWT_SECRET when unset. Set a fixed value in production to keep visitor
+      # counting stable across restarts.
+      - ANALYTICS_IDENTITY_SECRET=${ANALYTICS_IDENTITY_SECRET:-}
       # Dashboard auth uses cookies and requires HTTPS (serve behind a reverse proxy)
       # Default is true; you can disable it to serve over HTTP.
       # Tracking is cookieless; this setting only affects dashboard auth.
@@ -53,7 +59,13 @@ services:
     environment:
       - DB_DRIVER=postgres
       - DB_DSN=postgres://${POSTGRES_USER:-lovely}:${POSTGRES_PASSWORD:-lovely}@lovely-eye-db:5432/${POSTGRES_DB:-lovely_eye}?sslmode=disable
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      # Optional for local development. Set a fixed value in production to
+      # preserve dashboard sessions across restarts.
+      - JWT_SECRET=${JWT_SECRET:-}
+      # Optional: dedicated secret for analytics visitor identity. Falls back to
+      # JWT_SECRET when unset. Set a fixed value in production to keep visitor
+      # counting stable across restarts.
+      - ANALYTICS_IDENTITY_SECRET=${ANALYTICS_IDENTITY_SECRET:-}
       # Dashboard auth uses cookies and requires HTTPS (serve behind a reverse proxy)
       # Default is true; you can disable it to serve over HTTP.
       # Tracking is cookieless; this setting only affects dashboard auth.
@@ -95,13 +107,15 @@ networks:
 
 ### From Source
 
-Requires Go 1.25+.
+Requires Go 1.26+.
 
 ```bash
 cd server
 go run ./cmd/server
 ```
 Server starts at http://localhost:8080. The first registered user becomes admin. SQLite by default.
+If `JWT_SECRET` is unset, the server generates one at startup and dashboard sessions do not survive restarts.
+If `ANALYTICS_IDENTITY_SECRET` is unset, analytics identity falls back to `JWT_SECRET`.
 
 ### Next Step. Install the tracking script.
 
@@ -122,7 +136,8 @@ After you started your containers:
 | `SERVER_PORT` | `8080` | Server port |
 | `DB_DRIVER` | `sqlite` | `sqlite` or `postgres` |
 | `DB_DSN` | `file:data/lovely_eye.db?cache=shared&mode=rwc` | Database connection string |
-| `JWT_SECRET` | (random) | JWT signing key (min 32 chars, required for production) |
+| `JWT_SECRET` | generated at startup if empty | JWT signing key. Must be at least 32 chars when set. Set it explicitly in production or multi-instance deployments. |
+| `ANALYTICS_IDENTITY_SECRET` | falls back to `JWT_SECRET` | Optional dedicated secret for analytics visitor identity. Must be at least 32 chars when set. Helps reduce the impact of database-only leaks by making visitor IDs harder to recompute. |
 | `SECURE_COOKIES` | `true` | Use secure cookies (requires HTTPS). Set to `false` for local dev |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
 | `GEOIP_DB_PATH` | `/data/GeoLite2-Country.mmdb` | Path to GeoLite2-Country.mmdb for country stats |
@@ -130,6 +145,8 @@ After you started your containers:
 | `GEOIP_MAXMIND_LICENSE_KEY` | - | MaxMind license key for GeoLite2 auto-download |
 
 Country tracking downloads the GeoIP database on demand when at least one site enables it. If the download fails, the dashboard will show the error in site settings.
+
+Analytics visitor identity is server-generated and derived from a keyed hash of site ID, truncated IP prefix, browser family, and device class. The hash is computed per UTC day, but the server reuses the same client across `today` and `yesterday`; if only yesterday matches, that row is rewritten to today's hash. Country tracking stays separate from visitor identity, sessions still expire after 30 minutes of inactivity, and the dedicated analytics identity secret helps reduce the impact of database-only leaks because visitor IDs cannot be recomputed from stored analytics data alone.
 
 ## Custom Events
 

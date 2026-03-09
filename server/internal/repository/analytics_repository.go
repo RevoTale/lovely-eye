@@ -2,7 +2,10 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/lovely-eye/server/internal/models"
@@ -15,7 +18,9 @@ type AnalyticsRepository struct {
 
 type AnalyticsFilter struct {
 	Referrer           []string
+	Browser            []string
 	Device             []string
+	OS                 []string
 	Page               []string
 	Country            []string
 	EventTypes         []EventType
@@ -45,7 +50,23 @@ func NewAnalyticsRepository(db *bun.DB) *AnalyticsRepository {
 	return &AnalyticsRepository{db: db}
 }
 
-func (r *AnalyticsRepository) FindOrCreateClient(ctx context.Context, siteID int64, hash, device, browser, os, screenSize, country string) (*models.Client, error) {
+func (r *AnalyticsRepository) RunInTx(ctx context.Context, fn func(ctx context.Context, tx bun.Tx) error) error {
+	if err := r.db.RunInTx(ctx, nil, fn); err != nil {
+		return fmt.Errorf("run analytics transaction: %w", err)
+	}
+	return nil
+}
+
+func (r *AnalyticsRepository) FindOrCreateClient(
+	ctx context.Context,
+	siteID int64,
+	hash string,
+	device models.ClientDevice,
+	browser models.ClientBrowser,
+	os models.ClientOS,
+	screenSize models.ClientScreenSize,
+	country string,
+) (*models.Client, error) {
 	// Try to find existing client by hash
 	client := new(models.Client)
 	err := r.db.NewSelect().
@@ -78,6 +99,58 @@ func (r *AnalyticsRepository) FindOrCreateClient(ctx context.Context, siteID int
 	return client, nil
 }
 
+func (r *AnalyticsRepository) FindClientByHashesTx(ctx context.Context, tx bun.IDB, siteID int64, todayHash, yesterdayHash string) (*models.Client, error) {
+	client := new(models.Client)
+	err := tx.NewSelect().
+		Model(client).
+		Where("site_id = ?", siteID).
+		Where("(hash = ? OR hash = ?)", todayHash, yesterdayHash).
+		OrderExpr("CASE WHEN hash = ? THEN 0 ELSE 1 END", todayHash).
+		Order("id DESC").
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("find client by hashes: %w", err)
+	}
+	return client, nil
+}
+
+func (r *AnalyticsRepository) FindClientByHashTx(ctx context.Context, tx bun.IDB, siteID int64, hash string) (*models.Client, error) {
+	client := new(models.Client)
+	err := tx.NewSelect().
+		Model(client).
+		Where("site_id = ?", siteID).
+		Where("hash = ?", hash).
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("find client by hash: %w", err)
+	}
+	return client, nil
+}
+
+func (r *AnalyticsRepository) CreateClientTx(ctx context.Context, tx bun.IDB, client *models.Client) error {
+	_, err := tx.NewInsert().Model(client).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("create client: %w", err)
+	}
+	return nil
+}
+
+func (r *AnalyticsRepository) UpdateClientTx(ctx context.Context, tx bun.IDB, client *models.Client) error {
+	_, err := tx.NewUpdate().Model(client).WherePK().Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("update client: %w", err)
+	}
+	return nil
+}
+
 func (r *AnalyticsRepository) GetActiveSession(ctx context.Context, siteID, clientID int64, sinceUnix int64) (*models.Session, error) {
 	session := new(models.Session)
 	err := r.db.NewSelect().
@@ -90,6 +163,25 @@ func (r *AnalyticsRepository) GetActiveSession(ctx context.Context, siteID, clie
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active session: %w", err)
+	}
+	return session, nil
+}
+
+func (r *AnalyticsRepository) GetActiveSessionTx(ctx context.Context, tx bun.IDB, siteID, clientID int64, sinceUnix int64) (*models.Session, error) {
+	session := new(models.Session)
+	err := tx.NewSelect().
+		Model(session).
+		Where("site_id = ?", siteID).
+		Where("client_id = ?", clientID).
+		Where("exit_time > ?", sinceUnix).
+		Order("exit_time DESC").
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("get active session: %w", err)
 	}
 	return session, nil
 }
@@ -111,10 +203,38 @@ func (r *AnalyticsRepository) GetRecentPageViewEvent(ctx context.Context, sessio
 	return event, nil
 }
 
+func (r *AnalyticsRepository) GetRecentPageViewEventTx(ctx context.Context, tx bun.IDB, sessionID int64, path string, since int64) (*models.Event, error) {
+	event := new(models.Event)
+	err := tx.NewSelect().
+		Model(event).
+		Where("session_id = ?", sessionID).
+		Where("path = ?", path).
+		Where("definition_id IS NULL").
+		Where("time > ?", since).
+		Order("time DESC").
+		Limit(1).
+		Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("get recent page view event: %w", err)
+	}
+	return event, nil
+}
+
 func (r *AnalyticsRepository) CreateSession(ctx context.Context, session *models.Session) error {
 	_, err := r.db.NewInsert().Model(session).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
+	}
+	return nil
+}
+
+func (r *AnalyticsRepository) CreateSessionTx(ctx context.Context, tx bun.IDB, session *models.Session) error {
+	_, err := tx.NewInsert().Model(session).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("create session: %w", err)
 	}
 	return nil
 }
@@ -128,6 +248,18 @@ func (r *AnalyticsRepository) GetSession(ctx context.Context, id int64) (*models
 	return session, nil
 }
 
+func (r *AnalyticsRepository) GetSessionTx(ctx context.Context, tx bun.IDB, id int64) (*models.Session, error) {
+	session := new(models.Session)
+	err := tx.NewSelect().Model(session).Where("id = ?", id).Scan(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, sql.ErrNoRows
+		}
+		return nil, fmt.Errorf("get session: %w", err)
+	}
+	return session, nil
+}
+
 func (r *AnalyticsRepository) UpdateSession(ctx context.Context, session *models.Session) error {
 	_, err := r.db.NewUpdate().Model(session).WherePK().Exec(ctx)
 	if err != nil {
@@ -136,10 +268,26 @@ func (r *AnalyticsRepository) UpdateSession(ctx context.Context, session *models
 	return nil
 }
 
+func (r *AnalyticsRepository) UpdateSessionTx(ctx context.Context, tx bun.IDB, session *models.Session) error {
+	_, err := tx.NewUpdate().Model(session).WherePK().Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("update session: %w", err)
+	}
+	return nil
+}
+
 func (r *AnalyticsRepository) CreateEvent(ctx context.Context, event *models.Event) error {
 	_, err := r.db.NewInsert().Model(event).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create event: %w", err)
+	}
+	return nil
+}
+
+func (r *AnalyticsRepository) CreateEventTx(ctx context.Context, tx bun.IDB, event *models.Event) error {
+	_, err := tx.NewInsert().Model(event).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("create event: %w", err)
 	}
 	return nil
 }
@@ -205,6 +353,17 @@ func (r *AnalyticsRepository) CreateEventDataBatch(ctx context.Context, eventDat
 	_, err := r.db.NewInsert().Model(&eventDataList).Exec(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create event data batch: %w", err)
+	}
+	return nil
+}
+
+func (r *AnalyticsRepository) CreateEventDataBatchTx(ctx context.Context, tx bun.IDB, eventDataList []*models.EventData) error {
+	if len(eventDataList) == 0 {
+		return nil
+	}
+	_, err := tx.NewInsert().Model(&eventDataList).Exec(ctx)
+	if err != nil {
+		return fmt.Errorf("create event data batch: %w", err)
 	}
 	return nil
 }
@@ -296,7 +455,7 @@ func (r *AnalyticsRepository) GetEventsByIDs(ctx context.Context, eventIDs []int
 		Model(&events).
 		Relation("Data.Field").
 		Relation("Definition.Fields").
-		Where("e.id IN (?)", bun.In(eventIDs)).
+		Where("e.id IN (?)", bun.List(eventIDs)).
 		Scan(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get events by IDs: %w", err)
@@ -463,7 +622,7 @@ func (r *AnalyticsRepository) GetTopReferrers(ctx context.Context, siteID int64,
 }
 
 type BrowserStats struct {
-	Browser  string
+	Browser  models.ClientBrowser
 	Visitors int
 }
 
@@ -479,7 +638,7 @@ func (r *AnalyticsRepository) GetBrowserStats(ctx context.Context, siteID int64,
 		Where("s.site_id = ?", siteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.browser != ''").
+		Where("c.browser != ?", models.ClientBrowserUnknown).
 		Group("c.browser").
 		Order("visitors DESC").
 		Limit(limit).
@@ -491,7 +650,12 @@ func (r *AnalyticsRepository) GetBrowserStats(ctx context.Context, siteID int64,
 }
 
 type DeviceStats struct {
-	Device   string
+	Device   models.ClientDevice
+	Visitors int
+}
+
+type OperatingSystemStats struct {
+	OS       models.ClientOS
 	Visitors int
 }
 
@@ -507,7 +671,7 @@ func (r *AnalyticsRepository) GetDeviceStats(ctx context.Context, siteID int64, 
 		Where("s.site_id = ?", siteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.device != ''").
+		Where("c.device != ?", models.ClientDeviceUnknown).
 		Group("c.device").
 		Order("visitors DESC").
 		Limit(limit).
@@ -519,8 +683,8 @@ func (r *AnalyticsRepository) GetDeviceStats(ctx context.Context, siteID int64, 
 }
 
 type CountryStats struct {
-	Country  string
-	Visitors int
+	CountryCode string
+	Visitors    int
 }
 
 func (r *AnalyticsRepository) GetCountryStats(ctx context.Context, siteID int64, from, to time.Time, limit int) ([]CountryStats, error) {
@@ -530,13 +694,13 @@ func (r *AnalyticsRepository) GetCountryStats(ctx context.Context, siteID int64,
 	err := r.db.NewSelect().
 		TableExpr("sessions s").
 		Join("INNER JOIN clients c ON s.client_id = c.id").
-		ColumnExpr("COALESCE(NULLIF(c.country, ''), 'Unknown') as country").
+		ColumnExpr("COALESCE(NULLIF(c.country, ''), '-') as country_code").
 		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		Where("s.site_id = ?", siteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Group("c.country").
-		Order("visitors DESC").
+		GroupExpr("COALESCE(NULLIF(c.country, ''), '-')").
+		Order("visitors DESC", "country_code ASC").
 		Limit(limit).
 		Scan(ctx, &stats)
 	if err != nil {
@@ -620,21 +784,44 @@ func eventTypeFlags(eventTypes []EventType) (bool, bool) {
 	return hasPageView, hasPredefined
 }
 
+func uint8FilterValues[T ~uint8](values []T) []uint8 {
+	if len(values) == 0 {
+		return nil
+	}
+
+	translated := make([]uint8, 0, len(values))
+	for _, value := range values {
+		translated = append(translated, uint8(value))
+	}
+	return translated
+}
+
+func applyEnumFilter[T ~uint8](q *bun.SelectQuery, rawValues []string, parse func([]string) []T, clause string) *bun.SelectQuery {
+	if len(rawValues) == 0 {
+		return q
+	}
+
+	translated := parse(rawValues)
+	if len(translated) == 0 {
+		return q.Where("1 = 0")
+	}
+	return q.Where(clause, bun.List(uint8FilterValues(translated)))
+}
+
 func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQuery {
 	if len(filter.Referrer) > 0 {
 
-		q = q.Where("s.referrer IN (?)", bun.In(filter.Referrer))
+		q = q.Where("s.referrer IN (?)", bun.List(filter.Referrer))
 	}
-	if len(filter.Device) > 0 {
-
-		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE device IN (?))", bun.In(filter.Device))
-	}
+	q = applyEnumFilter(q, filter.Browser, models.ParseClientBrowserFilters, "s.client_id IN (SELECT id FROM clients WHERE browser IN (?))")
+	q = applyEnumFilter(q, filter.Device, models.ParseClientDeviceFilters, "s.client_id IN (SELECT id FROM clients WHERE device IN (?))")
+	q = applyEnumFilter(q, filter.OS, models.ParseClientOSFilters, "s.client_id IN (SELECT id FROM clients WHERE os IN (?))")
 	if len(filter.Page) > 0 {
-		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NULL AND path IN (?))", bun.In(filter.Page))
+		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NULL AND path IN (?))", bun.List(filter.Page))
 	}
 	if len(filter.Country) > 0 {
 
-		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE country IN (?))", bun.In(normalizeCountryValues(filter.Country)))
+		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE COALESCE(NULLIF(country, ''), '-') IN (?))", bun.List(normalizeCountryCodes(filter.Country)))
 	}
 	if len(filter.EventTypes) > 0 {
 		hasPageView, hasPredefined := eventTypeFlags(filter.EventTypes)
@@ -645,13 +832,13 @@ func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.Select
 		}
 	}
 	if len(filter.EventName) > 0 {
-		q = q.Where("s.id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.In(filter.EventName))
+		q = q.Where("s.id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.List(filter.EventName))
 	}
 	if len(filter.EventPath) > 0 {
-		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE path IN (?))", bun.In(filter.EventPath))
+		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE path IN (?))", bun.List(filter.EventPath))
 	}
 	if len(filter.EventDefinitionIDs) > 0 {
-		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IN (?))", bun.In(filter.EventDefinitionIDs))
+		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IN (?))", bun.List(filter.EventDefinitionIDs))
 	}
 	return q
 }
@@ -666,27 +853,27 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 		}
 	}
 	if len(filter.Page) > 0 {
-		q = q.Where("e.path IN (?)", bun.In(filter.Page))
+		q = q.Where("e.path IN (?)", bun.List(filter.Page))
 	}
-	if len(filter.Referrer) > 0 || len(filter.Device) > 0 || len(filter.Country) > 0 || len(filter.EventTypes) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
+	if len(filter.Referrer) > 0 || len(filter.Browser) > 0 || len(filter.Device) > 0 || len(filter.OS) > 0 || len(filter.Country) > 0 || len(filter.EventTypes) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
 
 		if len(filter.Referrer) > 0 {
-			q = q.Where("e.session_id IN (SELECT id FROM sessions WHERE referrer IN (?))", bun.In(filter.Referrer))
+			q = q.Where("e.session_id IN (SELECT id FROM sessions WHERE referrer IN (?))", bun.List(filter.Referrer))
 		}
-		if len(filter.Device) > 0 {
-			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.device IN (?))", bun.In(filter.Device))
-		}
+		q = applyEnumFilter(q, filter.Browser, models.ParseClientBrowserFilters, "e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.browser IN (?))")
+		q = applyEnumFilter(q, filter.Device, models.ParseClientDeviceFilters, "e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.device IN (?))")
+		q = applyEnumFilter(q, filter.OS, models.ParseClientOSFilters, "e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.os IN (?))")
 		if len(filter.Country) > 0 {
-			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.country IN (?))", bun.In(normalizeCountryValues(filter.Country)))
+			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE COALESCE(NULLIF(c.country, ''), '-') IN (?))", bun.List(normalizeCountryCodes(filter.Country)))
 		}
 		if len(filter.EventName) > 0 {
-			q = q.Where("e.session_id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.In(filter.EventName))
+			q = q.Where("e.session_id IN (SELECT DISTINCT e.session_id FROM events e INNER JOIN event_definitions ed ON e.definition_id = ed.id WHERE ed.name IN (?))", bun.List(filter.EventName))
 		}
 		if len(filter.EventPath) > 0 {
-			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE path IN (?))", bun.In(filter.EventPath))
+			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE path IN (?))", bun.List(filter.EventPath))
 		}
 		if len(filter.EventDefinitionIDs) > 0 {
-			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IN (?))", bun.In(filter.EventDefinitionIDs))
+			q = q.Where("e.session_id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IN (?))", bun.List(filter.EventDefinitionIDs))
 		}
 	}
 	return q
@@ -695,44 +882,33 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 func applyEventNamePathFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQuery {
 	if len(filter.EventName) > 0 {
 		q = q.Join("INNER JOIN event_definitions ed ON e.definition_id = ed.id")
-		q = q.Where("ed.name IN (?)", bun.In(filter.EventName))
+		q = q.Where("ed.name IN (?)", bun.List(filter.EventName))
 	}
 	if len(filter.EventPath) > 0 {
-		q = q.Where("e.path IN (?)", bun.In(filter.EventPath))
+		q = q.Where("e.path IN (?)", bun.List(filter.EventPath))
 	}
 	if len(filter.EventDefinitionIDs) > 0 {
-		q = q.Where("e.definition_id IN (?)", bun.In(filter.EventDefinitionIDs))
+		q = q.Where("e.definition_id IN (?)", bun.List(filter.EventDefinitionIDs))
 	}
 	return q
 }
 
-func normalizeCountryValues(values []string) []string {
-	normalized := make([]string, 0, len(values)+1)
-	seen := make(map[string]struct{}, len(values)+1)
-	hasUnknown := false
+func normalizeCountryCodes(values []string) []string {
+	normalized := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
 
 	for _, value := range values {
-		if value == "" {
-			continue
+		code := strings.ToUpper(strings.TrimSpace(value))
+		switch code {
+		case "", "UNKNOWN":
+			code = "-"
 		}
-		if value == "Unknown" {
-			hasUnknown = true
-			continue
-		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		normalized = append(normalized, value)
-	}
 
-	if hasUnknown {
-		if _, ok := seen[""]; !ok {
-			normalized = append(normalized, "")
+		if _, ok := seen[code]; ok {
+			continue
 		}
-		if _, ok := seen["Unknown"]; !ok {
-			normalized = append(normalized, "Unknown")
-		}
+		seen[code] = struct{}{}
+		normalized = append(normalized, code)
 	}
 
 	return normalized
@@ -904,7 +1080,7 @@ func (r *AnalyticsRepository) GetBrowserStatsWithFilter(ctx context.Context, que
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.browser != ''")
+		Where("c.browser != ?", models.ClientBrowserUnknown)
 	q = applySessionFilters(q, query.Filter)
 	q = q.Group("c.browser").
 		Order("visitors DESC", "c.browser ASC")
@@ -933,7 +1109,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilter(ctx context.Context, quer
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.device != ''")
+		Where("c.device != ?", models.ClientDeviceUnknown)
 	q = applySessionFilters(q, query.Filter)
 	err := q.Group("c.device").
 		Order("visitors DESC", "c.device ASC").
@@ -952,14 +1128,14 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilter(ctx context.Context, que
 	q := r.db.NewSelect().
 		TableExpr("sessions s").
 		Join("INNER JOIN clients c ON s.client_id = c.id").
-		ColumnExpr("COALESCE(NULLIF(c.country, ''), 'Unknown') as country").
+		ColumnExpr("COALESCE(NULLIF(c.country, ''), '-') as country_code").
 		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix)
 	q = applySessionFilters(q, query.Filter)
-	err := q.Group("c.country").
-		Order("visitors DESC", "country ASC").
+	err := q.GroupExpr("COALESCE(NULLIF(c.country, ''), '-')").
+		Order("visitors DESC", "country_code ASC").
 		Limit(query.Limit).
 		Scan(ctx, &stats)
 	if err != nil {
@@ -1064,7 +1240,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.device != ''")
+		Where("c.device != ?", models.ClientDeviceUnknown)
 	q = applySessionFilters(q, query.Filter)
 	err := q.Group("c.device").
 		Order("visitors DESC", "c.device ASC").
@@ -1082,7 +1258,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.device != ''")
+		Where("c.device != ?", models.ClientDeviceUnknown)
 	countQuery = applySessionFilters(countQuery, query.Filter)
 	err = countQuery.Scan(ctx, &total)
 	if err != nil {
@@ -1096,7 +1272,7 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("c.device != ''")
+		Where("c.device != ?", models.ClientDeviceUnknown)
 	deviceCounts = applySessionFilters(deviceCounts, query.Filter)
 	deviceCounts = deviceCounts.Group("c.device")
 
@@ -1110,6 +1286,66 @@ func (r *AnalyticsRepository) GetDeviceStatsWithFilterPaged(ctx context.Context,
 	return stats, total, totalVisitors, nil
 }
 
+func (r *AnalyticsRepository) GetOperatingSystemStatsWithFilterPaged(ctx context.Context, query AnalyticsQuery) ([]OperatingSystemStats, int, int, error) {
+	var stats []OperatingSystemStats
+	var total int
+	var totalVisitors int
+	fromUnix := query.From.Unix()
+	toUnix := query.To.Unix()
+	q := r.db.NewSelect().
+		TableExpr("sessions s").
+		Join("INNER JOIN clients c ON s.client_id = c.id").
+		ColumnExpr("c.os").
+		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
+		Where("s.site_id = ?", query.SiteID).
+		Where("s.enter_time >= ?", fromUnix).
+		Where("s.enter_time <= ?", toUnix).
+		Where("c.os != ?", models.ClientOSUnknown)
+	q = applySessionFilters(q, query.Filter)
+	err := q.Group("c.os").
+		Order("visitors DESC", "c.os ASC").
+		Limit(query.Limit).
+		Offset(query.Offset).
+		Scan(ctx, &stats)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("failed to get operating system stats with filter paged: %w", err)
+	}
+
+	countQuery := r.db.NewSelect().
+		TableExpr("sessions s").
+		Join("INNER JOIN clients c ON s.client_id = c.id").
+		ColumnExpr("COUNT(DISTINCT c.os)").
+		Where("s.site_id = ?", query.SiteID).
+		Where("s.enter_time >= ?", fromUnix).
+		Where("s.enter_time <= ?", toUnix).
+		Where("c.os != ?", models.ClientOSUnknown)
+	countQuery = applySessionFilters(countQuery, query.Filter)
+	err = countQuery.Scan(ctx, &total)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("failed to count operating systems with filter: %w", err)
+	}
+
+	osCounts := r.db.NewSelect().
+		TableExpr("sessions s").
+		Join("INNER JOIN clients c ON s.client_id = c.id").
+		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
+		Where("s.site_id = ?", query.SiteID).
+		Where("s.enter_time >= ?", fromUnix).
+		Where("s.enter_time <= ?", toUnix).
+		Where("c.os != ?", models.ClientOSUnknown)
+	osCounts = applySessionFilters(osCounts, query.Filter)
+	osCounts = osCounts.Group("c.os")
+
+	err = r.db.NewSelect().
+		TableExpr("(?) as os_counts", osCounts).
+		ColumnExpr("COALESCE(SUM(visitors), 0)").
+		Scan(ctx, &totalVisitors)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("failed to sum operating system visitors with filter: %w", err)
+	}
+	return stats, total, totalVisitors, nil
+}
+
 func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context, query AnalyticsQuery) ([]CountryStats, int, int, error) {
 	var stats []CountryStats
 	var total int
@@ -1119,14 +1355,14 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context
 	q := r.db.NewSelect().
 		TableExpr("sessions s").
 		Join("INNER JOIN clients c ON s.client_id = c.id").
-		ColumnExpr("COALESCE(NULLIF(c.country, ''), 'Unknown') as country").
+		ColumnExpr("COALESCE(NULLIF(c.country, ''), '-') as country_code").
 		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix)
 	q = applySessionFilters(q, query.Filter)
-	err := q.Group("c.country").
-		Order("visitors DESC", "country ASC").
+	err := q.GroupExpr("COALESCE(NULLIF(c.country, ''), '-')").
+		Order("visitors DESC", "country_code ASC").
 		Limit(query.Limit).
 		Offset(query.Offset).
 		Scan(ctx, &stats)
@@ -1137,7 +1373,7 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context
 	countQuery := r.db.NewSelect().
 		TableExpr("sessions s").
 		Join("INNER JOIN clients c ON s.client_id = c.id").
-		ColumnExpr("COUNT(DISTINCT COALESCE(NULLIF(c.country, ''), 'Unknown'))").
+		ColumnExpr("COUNT(DISTINCT COALESCE(NULLIF(c.country, ''), '-'))").
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix)
@@ -1155,7 +1391,7 @@ func (r *AnalyticsRepository) GetCountryStatsWithFilterPaged(ctx context.Context
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix)
 	countryCounts = applySessionFilters(countryCounts, query.Filter)
-	countryCounts = countryCounts.Group("c.country")
+	countryCounts = countryCounts.GroupExpr("COALESCE(NULLIF(c.country, ''), '-')")
 
 	err = r.db.NewSelect().
 		TableExpr("(?) as country_counts", countryCounts).

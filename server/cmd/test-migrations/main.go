@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -28,7 +27,7 @@ func run() int {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	db, err := database.New(&cfg.Database)
+	db, err := database.New(cfg.Database)
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)
 		return 1
@@ -50,7 +49,7 @@ func run() int {
 	// Without it, Bun may mark a failed migration as applied so you can rollback. :contentReference[oaicite:2]{index=2}
 	migrator := migrate.NewMigrator(db, migs, migrate.WithMarkAppliedOnSuccess(true))
 
-	dbType := strings.ToUpper(cfg.Database.Driver)
+	dbType := (cfg.Database.Driver)
 	fmt.Printf("=== Testing %s Migrations ===\n", dbType)
 	fmt.Printf("DB_DRIVER: %s\n", cfg.Database.Driver)
 	fmt.Printf("DB_DSN: %s\n\n", cfg.Database.DSN)

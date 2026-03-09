@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -31,7 +33,7 @@ type Server struct {
 	trackerJS        []byte
 }
 
-func New(cfg *config.Config) (*Server, error) {
+func New(cfg config.Config) (*Server, error) {
 
 	var trackerJS []byte
 	if len(cfg.TrackerJS) == 0 {
@@ -45,7 +47,7 @@ func New(cfg *config.Config) (*Server, error) {
 		trackerJS = cfg.TrackerJS
 	}
 
-	db, err := database.New(&cfg.Database)
+	db, err := database.New(cfg.Database)
 	if err != nil {
 		return nil, fmt.Errorf("create database connection: %w", err)
 	}
@@ -60,6 +62,7 @@ func New(cfg *config.Config) (*Server, error) {
 	userRepo := repository.NewUserRepository(db)
 	siteRepo := repository.NewSiteRepository(db)
 	analyticsRepo := repository.NewAnalyticsRepository(db)
+	countryRepo := repository.NewCountryRepository(db)
 	eventDefinitionRepo := repository.NewEventDefinitionRepository(db)
 
 	// Initialize auth service
@@ -72,18 +75,20 @@ func New(cfg *config.Config) (*Server, error) {
 		CookieDomain:      cfg.Auth.CookieDomain,
 	})
 
-	geoIPService, err := services.NewGeoIPService(services.GeoIPConfig{
-		DBPath:            cfg.GeoIPDBPath,
-		DownloadURL:       cfg.GeoIPDownloadURL,
-		MaxMindLicenseKey: cfg.GeoIPMaxMindLicenseKey,
+	geoIPService := services.NewGeoIPService(services.GeoIPConfig{
+		DBPath:            cfg.GeoIP.DBPath,
+		DownloadURL:       cfg.GeoIP.DownloadURL,
+		MaxMindLicenseKey: cfg.GeoIP.MaxMindLicenseKey,
 	})
-	if err != nil {
-		fmt.Printf("Warning: Failed to initialize GeoIP service: %v. Country detection will be disabled.\n", err)
-	}
 
 	siteService := services.NewSiteService(siteRepo)
 	eventDefinitionService := services.NewEventDefinitionService(eventDefinitionRepo)
-	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo, eventDefinitionRepo, geoIPService)
+	countryService := services.NewCountryService(countryRepo, geoIPService)
+	identitySecret := cfg.Analytics.IdentitySecret
+	if identitySecret == "" {
+		identitySecret = cfg.Auth.JWTSecret
+	}
+	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo, eventDefinitionRepo, geoIPService, countryService, identitySecret)
 	if err := analyticsService.SyncGeoIPRequirement(context.Background()); err != nil {
 		fmt.Printf("Warning: GeoIP database sync failed: %v\n", err)
 	}
@@ -100,7 +105,7 @@ func New(cfg *config.Config) (*Server, error) {
 	// Initialize auth middleware
 	authMiddleware := auth.NewMiddleware(authService)
 
-	resolver := graph.NewResolver(authService, siteService, analyticsService, eventDefinitionService)
+	resolver := graph.NewResolver(authService, siteService, analyticsService, countryService, eventDefinitionService)
 
 	mux := http.NewServeMux()
 
@@ -117,8 +122,9 @@ func New(cfg *config.Config) (*Server, error) {
 	// Auth uses JWT in HttpOnly + Secure cookies with SameSite=Strict/Lax
 	// No CSRF protection needed - see https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
 	graphqlHandler := http.HandlerFunc(graph.Handler(resolver))
-	mux.Handle("POST "+basePath+"/graphql", graphqlHandler)
-	mux.HandleFunc("GET "+basePath+"/graphql", graphqlPlaygroundHandler)
+	graphqlPath := basePath + "/graphql"
+	mux.Handle("POST "+graphqlPath, graphqlHandler)
+	mux.HandleFunc("GET "+graphqlPath, graphqlPlaygroundHandler(graphqlPath))
 
 	mux.HandleFunc("GET "+basePath+"/tracker.js", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
@@ -181,17 +187,26 @@ func New(cfg *config.Config) (*Server, error) {
 }
 
 func (s *Server) Close() error {
-	if err := database.Close(s.DB); err != nil {
-		return fmt.Errorf("close database: %w", err)
+	var err error
+	if s.AnalyticsService != nil {
+		if closeErr := s.AnalyticsService.Close(); closeErr != nil {
+			err = errors.Join(err, closeErr)
+		}
 	}
-	return nil
+	if closeErr := database.Close(s.DB); closeErr != nil {
+		err = errors.Join(err, fmt.Errorf("close database: %w", closeErr))
+	}
+	return err
 }
 
-func graphqlPlaygroundHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
+func graphqlPlaygroundHandler(graphqlPath string) http.HandlerFunc {
+	graphqlPathJSON, err := json.Marshal(graphqlPath)
+	if err != nil {
+		slog.Error("failed to marshal graphql path", "error", err)
+		graphqlPathJSON = []byte(`"/graphql"`)
+	}
 
-	graphqlPath := r.URL.Path
-	html := `<!DOCTYPE html>
+	html := []byte(`<!DOCTYPE html>
 <html>
 <head>
   <title>Lovely Eye GraphQL Playground</title>
@@ -203,14 +218,18 @@ func graphqlPlaygroundHandler(w http.ResponseWriter, r *http.Request) {
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script crossorigin src="https://cdn.jsdelivr.net/npm/graphiql@3/graphiql.min.js"></script>
   <script>
-    const fetcher = GraphiQL.createFetcher({ url: '` + graphqlPath + `' });
+    const fetcher = GraphiQL.createFetcher({ url: ` + string(graphqlPathJSON) + ` });
     ReactDOM.createRoot(document.getElementById('graphiql')).render(
       React.createElement(GraphiQL, { fetcher: fetcher })
     );
   </script>
 </body>
-</html>`
-	if _, err := w.Write([]byte(html)); err != nil {
-		slog.Error("failed to write graphql playground", "error", err)
+</html>`)
+
+	return func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if _, err := w.Write(html); err != nil {
+			slog.Error("failed to write graphql playground", "error", err)
+		}
 	}
 }

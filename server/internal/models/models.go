@@ -78,20 +78,27 @@ type SiteBlockedCountry struct {
 	Site *Site `bun:"rel:belongs-to,join:site_id=id" json:"site,omitempty"`
 }
 
-// Client represents a unique visitor, deduplicated by hash.
-// Stores STABLE attributes (don't change between sessions).
-// Same visitor = same hash = same row → keeps DB small.
+type Country struct {
+	bun.BaseModel `bun:"table:countries,alias:co"`
+
+	Code string `bun:"code,pk,type:varchar(2)" json:"code"`
+	Name string `bun:"name,notnull,type:varchar(128)" json:"name"`
+}
+
+// Client represents a pseudonymous visitor identity resolved by UTC-day-skipped
+// rotation. The stored hash is a daily UTC key; matching yesterday rewrites the
+// same row to today's hash so continuity survives adjacent UTC-day boundaries.
 type Client struct {
 	bun.BaseModel `bun:"table:clients,alias:c"`
 
-	ID         int64  `bun:"id,pk,autoincrement" json:"id"`
-	SiteID     int64  `bun:"site_id,notnull" json:"site_id"`
-	Hash       string `bun:"hash,notnull,type:varchar(64)" json:"hash"` // SHA-256 hex, from current architecture
-	Country    string `bun:"country,type:varchar(2)" json:"country"`
-	Device     string `bun:"device,type:varchar(10)" json:"device"`
-	Browser    string `bun:"browser,type:varchar(32)" json:"browser"`
-	OS         string `bun:"os,type:varchar(32)" json:"os"`
-	ScreenSize string `bun:"screen_size,type:varchar(16)" json:"screen_size"`
+	ID         int64            `bun:"id,pk,autoincrement" json:"id"`
+	SiteID     int64            `bun:"site_id,notnull,unique:clients_site_id_hash" json:"site_id"`
+	Hash       string           `bun:"hash,notnull,type:varchar(64),unique:clients_site_id_hash" json:"hash"` // Truncated HMAC-SHA-256 hex over site-scoped daily UTC visitor signals
+	Country    string           `bun:"country,type:varchar(2)" json:"country"`
+	Device     ClientDevice     `bun:"device,notnull,default:0" json:"device"`
+	Browser    ClientBrowser    `bun:"browser,notnull,default:0" json:"browser"`
+	OS         ClientOS         `bun:"os,notnull,default:0" json:"os"`
+	ScreenSize ClientScreenSize `bun:"screen_size,notnull,default:0" json:"screen_size"`
 
 	Site     *Site      `bun:"rel:belongs-to,join:site_id=id" json:"site,omitempty"`
 	Sessions []*Session `bun:"rel:has-many,join:id=client_id" json:"sessions,omitempty"`

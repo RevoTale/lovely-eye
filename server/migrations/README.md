@@ -12,26 +12,26 @@ The devcontainer automatically provides:
 
 ### Create New Migrations
 1. Edit models in `internal/models/models.go`
-2. Run `make migrator-diff` (prompts for migration name)
+2. Run `task migrator-diff` (prompts for migration name)
 3. Atlas CLI generates `.up.sql` and `.down.sql` for both SQLite and PostgreSQL
 
 ### Test Before Committing
 ```bash
-make test-migrations  # Tests full up/down cycle on both databases
+task test-migrations  # Tests full up/down cycle on both databases
 ```
 
 ### Apply Locally
 ```bash
-make migrate-up
+task migrate-up
 ```
 
 ## Production Deployment
 
 ```bash
-make migrate-init    # First time only - creates migration tracking tables
-make migrate-up      # Applies all pending migrations
-make migrate-status  # Shows what's applied
-make migrate-down    # Rollback if needed
+task migrate-init    # First time only - creates migration tracking tables
+task migrate-up      # Applies all pending migrations
+task migrate-status  # Shows what's applied
+task migrate-down    # Rollback if needed
 ```
 
 ## CI/CD Integration
@@ -61,4 +61,5 @@ Separate directories needed because SQLite and PostgreSQL use different syntax (
 
 - `DB_DRIVER` - `sqlite` (default) or `postgres`
 - `DB_DSN` - Connection string
-- `JWT_SECRET` - Required for app initialization
+- `JWT_SECRET` - Optional. If unset, the app generates one at startup. Set it explicitly in production because dashboard sessions will not survive restarts.
+- `ANALYTICS_IDENTITY_SECRET` - Optional. Falls back to `JWT_SECRET`. Set it explicitly in production if visitor identity should remain stable across restarts without sharing the auth secret. Analytics uses it for the daily UTC hashes behind UTC-day-skipped rotation, and it also reduces the impact of database-only leaks by making visitor IDs harder to recompute.

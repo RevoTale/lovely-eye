@@ -8,6 +8,7 @@ query Dashboard(
   $referrersPaging: PagingInput!,
   $browsersPaging: PagingInput!,
   $devicesPaging: PagingInput!,
+  $osPaging: PagingInput!,
   $countriesPaging: PagingInput!,
   # @genqlient(pointer: true)
   $dailyStatsBucket: TimeBucket,
@@ -47,11 +48,22 @@ query Dashboard(
         visitors
       }
     }
+    operatingSystems(paging: $osPaging) {
+      total
+      totalVisitors
+      items {
+        os
+        visitors
+      }
+    }
     countries(paging: $countriesPaging) {
       total
       totalVisitors
       items {
-        country
+        country {
+          code
+          name
+        }
         visitors
       }
     }

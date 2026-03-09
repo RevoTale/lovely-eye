@@ -1,11 +1,16 @@
 
+import { useQuery } from '@apollo/client/react';
 import { Badge } from '@/components/ui';
+import { CountryFieldsFragmentDoc, CountriesByCodeDocument } from '@/gql/graphql';
+import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 import { Link } from '@/router';
 import { normalizeFilterValue, removeFilterValue, updateFilterSearch } from '@/lib/filter-utils';
 
 interface FilterSearch {
   referrer?: string | string[] | undefined;
+  browser?: string | string[] | undefined;
   device?: string | string[] | undefined;
+  os?: string | string[] | undefined;
   page?: string | string[] | undefined;
   country?: string | string[] | undefined;
   eventName?: string | string[] | undefined;
@@ -21,14 +26,40 @@ const EMPTY_COUNT = 0;
 
 export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.ReactNode => {
   const referrers = normalizeFilterValue(search.referrer);
+  const browsers = normalizeFilterValue(search.browser);
   const devices = normalizeFilterValue(search.device);
+  const operatingSystems = normalizeFilterValue(search.os);
   const pages = normalizeFilterValue(search.page);
   const countries = normalizeFilterValue(search.country);
+  const normalizedCountryCodes = Array.from(
+    new Set(
+      countries
+        .map((country) => country.trim().toUpperCase())
+        .filter((country) => country.length > EMPTY_COUNT)
+    )
+  );
   const eventNames = normalizeFilterValue(search.eventName);
   const eventPaths = normalizeFilterValue(search.eventPath);
+  const { data: countryLookupData } = useQuery(CountriesByCodeDocument, {
+    variables: {
+      codes: normalizedCountryCodes,
+      paging: {
+        limit: normalizedCountryCodes.length || 1,
+        offset: 0,
+      },
+    },
+    skip: normalizedCountryCodes.length === EMPTY_COUNT,
+  });
+  const lookedUpCountries = getFragmentData(
+    CountryFieldsFragmentDoc,
+    countryLookupData?.geoIPCountries ?? []
+  );
+  const countryNameLookup = new Map(lookedUpCountries.map((country) => [country.code, country.name] as const));
   const hasFilters =
     referrers.length > EMPTY_COUNT ||
+    browsers.length > EMPTY_COUNT ||
     devices.length > EMPTY_COUNT ||
+    operatingSystems.length > EMPTY_COUNT ||
     pages.length > EMPTY_COUNT ||
     countries.length > EMPTY_COUNT ||
     eventNames.length > EMPTY_COUNT ||
@@ -36,6 +67,11 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
   if (!hasFilters) {
     return null;
   }
+
+  const getCountryDisplayName = (country: string): string => {
+    const normalizedCountryCode = country.trim().toUpperCase();
+    return countryNameLookup.get(normalizedCountryCode) ?? country;
+  };
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
@@ -55,6 +91,21 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
           </Badge>
         </Link>
       ))}
+      {browsers.map((browser) => (
+        <Link
+          key={`browser-${browser}`}
+          to="/sites/$siteId"
+          params={{ siteId }}
+          search={(prev) => ({
+            ...updateFilterSearch(prev, 'browser', removeFilterValue(prev.browser, browser)),
+          })}
+        >
+          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
+            <span className="text-xs">Browser: {browser}</span>
+            <span className="ml-1 text-xs">×</span>
+          </Badge>
+        </Link>
+      ))}
       {devices.map((device) => (
         <Link
           key={`device-${device}`}
@@ -66,6 +117,21 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
         >
           <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
             <span className="text-xs">Device: {device}</span>
+            <span className="ml-1 text-xs">×</span>
+          </Badge>
+        </Link>
+      ))}
+      {operatingSystems.map((os) => (
+        <Link
+          key={`os-${os}`}
+          to="/sites/$siteId"
+          params={{ siteId }}
+          search={(prev) => ({
+            ...updateFilterSearch(prev, 'os', removeFilterValue(prev.os, os)),
+          })}
+        >
+          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
+            <span className="text-xs">OS: {os}</span>
             <span className="ml-1 text-xs">×</span>
           </Badge>
         </Link>
@@ -95,7 +161,7 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
           })}
         >
           <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Country: {country}</span>
+            <span className="text-xs">Country: {getCountryDisplayName(country)}</span>
             <span className="ml-1 text-xs">×</span>
           </Badge>
         </Link>

@@ -28,12 +28,15 @@ No CSRF tokens needed. See [discussion](https://www.reddit.com/r/node/comments/1
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `JWT_SECRET` | (random) | Secret key for signing tokens. Must be at least 32 characters. |
+| `JWT_SECRET` | generated at startup if empty | Secret key for signing tokens. Must be at least 32 characters when set. Set it explicitly in production if sessions should survive restarts. |
+| `ANALYTICS_IDENTITY_SECRET` | falls back to `JWT_SECRET` | Optional dedicated secret for analytics visitor identity. Must be at least 32 characters when set. Analytics uses it for the daily UTC hashes behind UTC-day-skipped rotation, and it helps reduce the impact of database-only leaks by making visitor IDs harder to recompute. |
 | `JWT_ACCESS_EXPIRY_MINUTES` | `15` | Access token lifetime in minutes |
 | `JWT_REFRESH_DAYS` | `7` | Refresh token lifetime in days |
 | `SECURE_COOKIES` | `true` | Set to `true` in production (requires HTTPS) |
 | `COOKIE_DOMAIN` | (empty) | Cookie domain (leave empty for current domain) |
 | `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
+
+`ANALYTICS_IDENTITY_SECRET` is used by analytics tracking, not dashboard auth. It is documented here because it falls back to `JWT_SECRET` when unset.
 
 ## Roles
 

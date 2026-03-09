@@ -1,0 +1,12 @@
+version: "3"
+
+tasks:
+  run-example-compose-app:
+    desc: Run SQLite example Docker compose stack
+    cmds:
+      - docker compose --env-file .env.example -f docker-compose.yml up --build
+
+  run-example-compose-app-pg:
+    desc: Run PostgreSQL example Docker compose stack
+    cmds:
+      - docker compose --env-file .env.example -f docker-compose.postgres.yml up --build

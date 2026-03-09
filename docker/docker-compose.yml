@@ -4,7 +4,7 @@ services:
     ports:
       - "${PORT:-8080}:8080"
     environment:
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - JWT_SECRET=${JWT_SECRET:-}
       - SECURE_COOKIES=${SECURE_COOKIES:-true}
       - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-false}
       - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
@@ -24,7 +24,7 @@ services:
     build: ../
     command: ["./load-example-data"]
     environment:
-      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
+      - JWT_SECRET=${JWT_SECRET:-}
       - SECURE_COOKIES=${SECURE_COOKIES:-true}
       - ALLOW_REGISTRATION=${ALLOW_REGISTRATION:-false}
       - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}

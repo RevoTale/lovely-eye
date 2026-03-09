@@ -37,6 +37,7 @@ func main() {
 		&models.SiteDomain{},
 		&models.SiteBlockedIP{},
 		&models.SiteBlockedCountry{},
+		&models.Country{},
 		&models.Client{},
 		&models.Session{},
 		&models.Event{},
