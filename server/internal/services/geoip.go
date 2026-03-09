@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -146,7 +147,7 @@ func (g *GeoIPService) ListCountries(search string) ([]GeoIPCountry, error) {
 
 	countries, err := g.lookup.ListCountries(search)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list GeoIP countries: %w", err)
 	}
 	return newGeoIPCountries(countries), nil
 }
@@ -177,7 +178,10 @@ func (g *GeoIPService) ResolveCountry(ipStr string) (Country, error) {
 }
 
 func (g *GeoIPService) Close() error {
-	return g.lookup.Close()
+	if err := g.lookup.Close(); err != nil {
+		return fmt.Errorf("close GeoIP lookup: %w", err)
+	}
+	return nil
 }
 
 func (g *GeoIPService) loadDatabase(ctx context.Context, forceRefresh bool) error {

@@ -28,6 +28,7 @@ type Config struct {
 	Server    ServerConfig
 	Database  DatabaseConfig
 	Auth      AuthConfig
+	Analytics AnalyticsConfig
 	GeoIP     GeoIPConfig
 	LogLevel  slog.Level // Log level: DEBUG(-4), INFO(0), WARN(4), ERROR(8) - default: WARN
 	TrackerJS []byte     // Optional: for testing, to avoid loading from file
@@ -59,6 +60,10 @@ type AuthConfig struct {
 	InitialAdminPassword string // password for initial admin (optional)
 }
 
+type AnalyticsConfig struct {
+	IdentitySecret string
+}
+
 type GeoIPConfig struct {
 	DBPath            string
 	DownloadURL       string
@@ -66,6 +71,7 @@ type GeoIPConfig struct {
 }
 
 func Load() Config {
+	authSecret := getJWTSecret()
 	basePath := getEnv("BASE_PATH", "/")
 	downloadURL := getEnv("GEOIP_DOWNLOAD_URL", "")
 	maxMindKey := getEnv("GEOIP_MAXMIND_LICENSE_KEY", "")
@@ -91,7 +97,7 @@ func Load() Config {
 			ConnectTimeout: getEnvDuration("DB_CONNECT_TIMEOUT", 7*time.Second),
 		},
 		Auth: AuthConfig{
-			JWTSecret:            getJWTSecret(),
+			JWTSecret:            authSecret,
 			AccessTokenExpiry:    time.Duration(getEnvInt("JWT_ACCESS_EXPIRY_MINUTES", 15)) * time.Minute,
 			RefreshExpiry:        time.Duration(getEnvInt("JWT_REFRESH_DAYS", 7)) * 24 * time.Hour,
 			AllowRegistration:    getEnvBool("ALLOW_REGISTRATION", false),
@@ -99,6 +105,9 @@ func Load() Config {
 			CookieDomain:         getEnv("COOKIE_DOMAIN", ""),
 			InitialAdminUsername: getEnv("INITIAL_ADMIN_USERNAME", ""),
 			InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
+		},
+		Analytics: AnalyticsConfig{
+			IdentitySecret: getAnalyticsIdentitySecret(authSecret),
 		},
 		GeoIP: GeoIPConfig{
 			DBPath:            getEnv("GEOIP_DB_PATH", defaultIPDBLocalPath),
@@ -123,6 +132,17 @@ func getJWTSecret() string {
 		log.Fatal("Failed to generate random JWT secret")
 	}
 	return hex.EncodeToString(bytes)
+}
+
+func getAnalyticsIdentitySecret(fallback string) string {
+	if secret := os.Getenv("ANALYTICS_IDENTITY_SECRET"); secret != "" {
+		if len(secret) < 32 {
+			log.Fatal("ANALYTICS_IDENTITY_SECRET must be at least 32 characters")
+		}
+		return secret
+	}
+
+	return fallback
 }
 
 func getEnv(key, defaultValue string) string {

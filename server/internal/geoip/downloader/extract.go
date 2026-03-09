@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/url"
 	"os"
 	"path"
@@ -28,13 +29,21 @@ func (d *Downloader) installDatabaseFromTarGz(archivePath string) error {
 	if err != nil {
 		return fmt.Errorf("open GeoIP archive: %w", err)
 	}
-	defer archiveFile.Close()
+	defer func() {
+		if closeErr := archiveFile.Close(); closeErr != nil {
+			slog.Warn("close GeoIP archive file", "path", archivePath, "error", closeErr)
+		}
+	}()
 
 	gzipReader, err := gzip.NewReader(archiveFile)
 	if err != nil {
 		return fmt.Errorf("open GeoIP gzip archive: %w", err)
 	}
-	defer gzipReader.Close()
+	defer func() {
+		if closeErr := gzipReader.Close(); closeErr != nil {
+			slog.Warn("close GeoIP gzip reader", "path", archivePath, "error", closeErr)
+		}
+	}()
 
 	tarReader := tar.NewReader(gzipReader)
 	for {
@@ -61,13 +70,21 @@ func (d *Downloader) installDatabaseFromGzip(archivePath string) error {
 	if err != nil {
 		return fmt.Errorf("open GeoIP archive: %w", err)
 	}
-	defer archiveFile.Close()
+	defer func() {
+		if closeErr := archiveFile.Close(); closeErr != nil {
+			slog.Warn("close GeoIP archive file", "path", archivePath, "error", closeErr)
+		}
+	}()
 
 	gzipReader, err := gzip.NewReader(archiveFile)
 	if err != nil {
 		return fmt.Errorf("open GeoIP gzip archive: %w", err)
 	}
-	defer gzipReader.Close()
+	defer func() {
+		if closeErr := gzipReader.Close(); closeErr != nil {
+			slog.Warn("close GeoIP gzip reader", "path", archivePath, "error", closeErr)
+		}
+	}()
 
 	return d.installDatabaseFromReader(gzipReader)
 }

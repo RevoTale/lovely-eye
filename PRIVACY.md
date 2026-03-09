@@ -14,12 +14,12 @@ Lovely Eye is self-hosted analytics. The site owner is the data controller. This
 
 ## Visitor Identifiers
 
-We derive a daily-rotating visitor identifier from IP address and user agent. It changes every 24 hours and is not a persistent identifier.
+We derive a daily-rotating visitor identifier on the server. It is based on a keyed hash of site ID, truncated IP prefix, browser family, and device class. It changes every UTC day and is not a persistent identifier. This keyed approach helps reduce the impact of database-only leaks because the stored analytics rows do not include enough information to recompute the identifier on their own.
 
 ## IP Addresses Under GDPR
 
 IP addresses can be personal data. GDPR does not ban storing them, but it requires a lawful basis, minimized retention, security, and justification.
-Lovely Eye uses IPs transiently for hashing and country lookup and does not store them by default.
+Lovely Eye uses IPs transiently for visitor identity and country lookup and does not store them by default. For identity, the IP is truncated before hashing.
 
 ## Data Retention
 

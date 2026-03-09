@@ -54,7 +54,11 @@ func (d *Downloader) downloadToTempFile(ctx context.Context, downloadURL string)
 	if err != nil {
 		return "", fmt.Errorf("download GeoIP database from %q: %w", downloadURL, err)
 	}
-	defer response.Body.Close()
+	defer func() {
+		if closeErr := response.Body.Close(); closeErr != nil {
+			slog.Warn("close GeoIP download response body", "error", closeErr)
+		}
+	}()
 
 	if response.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("download GeoIP database from %q: unexpected status %s", downloadURL, response.Status)
@@ -81,7 +85,7 @@ func (d *Downloader) downloadToTempFile(ctx context.Context, downloadURL string)
 
 func (d *Downloader) createTempFile(pattern string) (*os.File, error) {
 	databaseDir := filepath.Dir(d.dbPath)
-	if err := os.MkdirAll(databaseDir, 0o755); err != nil {
+	if err := os.MkdirAll(databaseDir, 0o750); err != nil {
 		return nil, fmt.Errorf("create GeoIP database directory: %w", err)
 	}
 

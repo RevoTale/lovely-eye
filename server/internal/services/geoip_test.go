@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -46,7 +48,7 @@ func TestGeoIPService_EnsureAvailable_MissingSource(t *testing.T) {
 func TestGeoIPService_EnsureAvailable_DownloadFailure(t *testing.T) {
 	t.Parallel()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	server := newIPv4TestServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusInternalServerError)
 	}))
 	defer server.Close()
@@ -71,7 +73,7 @@ func TestGeoIPService_EnsureAvailable_DownloadInvalidArchive(t *testing.T) {
 	t.Parallel()
 
 	archive := buildTarGz(t, "GeoLite2-Country.mmdb", []byte("not-a-real-mmdb"))
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	server := newIPv4TestServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/gzip")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(archive)
@@ -201,6 +203,19 @@ func buildTarGz(t *testing.T, name string, contents []byte) []byte {
 	require.NoError(t, tarWriter.Close())
 	require.NoError(t, gzipWriter.Close())
 	return buf.Bytes()
+}
+
+func newIPv4TestServer(handler http.Handler) *httptest.Server {
+	listener, err := net.Listen("tcp4", "127.0.0.1:0")
+	if err != nil {
+		panic(fmt.Errorf("listen on 127.0.0.1:0: %w", err))
+	}
+	server := &httptest.Server{
+		Listener: listener,
+		Config:   &http.Server{Handler: handler, ReadHeaderTimeout: 5 * time.Second},
+	}
+	server.Start()
+	return server
 }
 
 type fakeGeoIPLookup struct {

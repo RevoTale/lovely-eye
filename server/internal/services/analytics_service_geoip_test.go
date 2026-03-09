@@ -16,7 +16,7 @@ func TestAnalyticsService_ResolveCountryBestEffort_NoReader(t *testing.T) {
 		resolveErr: geoipcore.ErrNoDBReader,
 	}
 
-	analytics := NewAnalyticsService(nil, nil, nil, svc, nil)
+	analytics := NewAnalyticsService(nil, nil, nil, svc, nil, "test-analytics-identity-secret-32chars")
 	country := analytics.resolveCountryBestEffort("8.8.8.8")
 
 	require.Equal(t, UnknownCountry, country)
@@ -30,7 +30,7 @@ func TestAnalyticsService_ResolveCountryBestEffort_UnexpectedErrorFallsBack(t *t
 		resolveErr: errors.New("broken reader"),
 	}
 
-	analytics := NewAnalyticsService(nil, nil, nil, svc, nil)
+	analytics := NewAnalyticsService(nil, nil, nil, svc, nil, "test-analytics-identity-secret-32chars")
 	country := analytics.resolveCountryBestEffort("8.8.8.8")
 
 	require.Equal(t, UnknownCountry, country)

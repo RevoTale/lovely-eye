@@ -15,6 +15,8 @@ type CountryRepository struct {
 	db *bun.DB
 }
 
+var ErrCountryNotFound = errors.New("country not found")
+
 func NewCountryRepository(db *bun.DB) *CountryRepository {
 	return &CountryRepository{db: db}
 }
@@ -88,7 +90,7 @@ func (r *CountryRepository) GetCountryByCode(ctx context.Context, code string) (
 		Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrCountryNotFound
 		}
 		return nil, fmt.Errorf("get country by code: %w", err)
 	}

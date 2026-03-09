@@ -20,8 +20,10 @@ type fakeGeoIPProvider struct {
 	ensureCalls  int
 	refreshCalls int
 
-	ensureErr  error
-	refreshErr error
+	ensureErr       error
+	refreshErr      error
+	resolveErr      error
+	resolvedCountry Country
 
 	countries []GeoIPCountry
 }
@@ -43,6 +45,12 @@ func (f *fakeGeoIPProvider) Refresh(context.Context) error {
 }
 
 func (f *fakeGeoIPProvider) ResolveCountry(string) (Country, error) {
+	if f.resolveErr != nil {
+		return Country{}, f.resolveErr
+	}
+	if f.resolvedCountry != (Country{}) {
+		return f.resolvedCountry, nil
+	}
 	return UnknownCountry, nil
 }
 
@@ -121,6 +129,7 @@ func TestAnalyticsService_SyncGeoIPRequirement_SyncsCountriesAfterEnsure(t *test
 		nil,
 		geoIP,
 		countrySyncer,
+		"test-analytics-identity-secret-32chars",
 	)
 
 	err := service.SyncGeoIPRequirement(context.Background())
@@ -135,7 +144,7 @@ func TestAnalyticsService_RefreshGeoIPDatabase_SyncsCountriesAfterRefresh(t *tes
 	geoIP := &fakeGeoIPProvider{}
 	countrySyncer := &fakeCountrySyncer{}
 
-	service := NewAnalyticsService(nil, nil, nil, geoIP, countrySyncer)
+	service := NewAnalyticsService(nil, nil, nil, geoIP, countrySyncer, "test-analytics-identity-secret-32chars")
 
 	status, err := service.RefreshGeoIPDatabase(context.Background())
 	require.NoError(t, err)
@@ -150,7 +159,7 @@ func TestAnalyticsService_RefreshGeoIPDatabase_PropagatesCountrySyncError(t *tes
 	geoIP := &fakeGeoIPProvider{}
 	countrySyncer := &fakeCountrySyncer{syncErr: errors.New("write failed")}
 
-	service := NewAnalyticsService(nil, nil, nil, geoIP, countrySyncer)
+	service := NewAnalyticsService(nil, nil, nil, geoIP, countrySyncer, "test-analytics-identity-secret-32chars")
 
 	_, err := service.RefreshGeoIPDatabase(context.Background())
 	require.Error(t, err)

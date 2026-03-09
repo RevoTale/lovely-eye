@@ -25,6 +25,7 @@ tasks:
     desc: Run server tests, static typecheck, and lint
     env:
       DASHBOARD_PATH: "{{.DASHBOARD_PATH}}"
+      GOCACHE: /tmp/go-build-cache
     cmds:
       - "{{.GO}} test ./... --count=2"
       - task: static:typecheck

@@ -98,6 +98,6 @@ func TestCountryRepository_GetCountriesByCodes(t *testing.T) {
 	require.Equal(t, "United States", country.Name)
 
 	country, err = repo.GetCountryByCode(ctx, "FR")
-	require.NoError(t, err)
+	require.ErrorIs(t, err, ErrCountryNotFound)
 	require.Nil(t, country)
 }

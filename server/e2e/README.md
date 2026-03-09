@@ -5,3 +5,5 @@ No source code as test dependencies. Exceptions:
 - root config
 - basic types/constants for data integrity
 - generated operations: `import operations "github.com/lovely-eye/server/e2e/generated"`
+
+Analytics e2e tests should use a fixed `ANALYTICS_IDENTITY_SECRET` so visitor identity stays deterministic across test runs.

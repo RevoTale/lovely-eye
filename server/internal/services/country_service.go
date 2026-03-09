@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/lovely-eye/server/internal/models"
+	"github.com/lovely-eye/server/internal/repository"
 )
 
 type countryStore interface {
@@ -110,6 +111,9 @@ func (s *CountryService) Name(ctx context.Context, code string) string {
 
 	country, err := s.countryRepo.GetCountryByCode(ctx, normalizedCode)
 	if err != nil {
+		if errors.Is(err, repository.ErrCountryNotFound) {
+			return normalizedCode
+		}
 		slog.Error("country lookup failed", "code", normalizedCode, "error", err)
 		return normalizedCode
 	}

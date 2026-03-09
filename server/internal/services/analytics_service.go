@@ -2,14 +2,17 @@ package services
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
@@ -18,6 +21,7 @@ import (
 	"github.com/lovely-eye/server/internal/repository"
 	"github.com/lovely-eye/server/pkg/validation"
 	"github.com/mileusna/useragent"
+	"golang.org/x/crypto/hkdf"
 )
 
 type AnalyticsService struct {
@@ -27,6 +31,7 @@ type AnalyticsService struct {
 	eventDefinitionRepo *repository.EventDefinitionRepository
 	botDetector         *BotDetector
 	geoIPService        geoIPProvider
+	identitySecret      []byte
 }
 
 type geoIPProvider interface {
@@ -45,6 +50,7 @@ func NewAnalyticsService(
 	eventDefinitionRepo *repository.EventDefinitionRepository,
 	geoIPService geoIPProvider,
 	countryService countrySyncer,
+	identitySecret string,
 ) *AnalyticsService {
 	return &AnalyticsService{
 		analyticsRepo:       analyticsRepo,
@@ -53,6 +59,7 @@ func NewAnalyticsService(
 		eventDefinitionRepo: eventDefinitionRepo,
 		botDetector:         NewBotDetector(),
 		geoIPService:        geoIPService,
+		identitySecret:      []byte(identitySecret),
 	}
 }
 
@@ -99,9 +106,6 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		return nil
 	}
 
-	// Generate anonymous visitor ID (SHA-256 hash) with daily salt rotation for privacy
-	visitorHash := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
-
 	ua := useragent.Parse(input.UserAgent)
 	device := categorizeDevice(ua)
 	browser := ua.Name
@@ -113,6 +117,11 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 		os = "Other"
 	}
 	screenSize := categorizeScreenSize(input.ScreenWidth)
+	now := time.Now()
+	nowUnix := now.Unix()
+
+	// Generate a keyed, daily visitor identifier from truncated network and coarse device signals.
+	visitorHash := s.generateVisitorID(site.ID, input.IP, browser, device, now)
 
 	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
@@ -123,9 +132,6 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 	if err != nil {
 		return fmt.Errorf("find or create client: %w", err)
 	}
-
-	now := time.Now()
-	nowUnix := now.Unix()
 
 	sessionTimeout := now.Add(-30 * time.Minute)
 	session, err := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
@@ -266,9 +272,6 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		return nil
 	}
 
-	// Generate anonymous visitor ID (SHA-256 hash)
-	visitorHash := s.generateVisitorID(input.IP, input.UserAgent, site.PublicKey)
-
 	ua := useragent.Parse(input.UserAgent)
 	device := categorizeDevice(ua)
 	browser := ua.Name
@@ -280,6 +283,10 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 		os = "Other"
 	}
 	screenSize := ""
+	now := time.Now()
+	nowUnix := now.Unix()
+
+	visitorHash := s.generateVisitorID(site.ID, input.IP, browser, device, now)
 
 	country := UnknownCountry
 	if site.TrackCountry && s.geoIPService != nil {
@@ -290,9 +297,6 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 	if err != nil {
 		return fmt.Errorf("find or create client: %w", err)
 	}
-
-	now := time.Now()
-	nowUnix := now.Unix()
 
 	sessionTimeout := now.Add(-30 * time.Minute)
 	session, _ := s.getActiveSession(ctx, site.ID, client.ID, sessionTimeout)
@@ -639,22 +643,45 @@ func (s *AnalyticsService) GetEventCounts(ctx context.Context, query AnalyticsQu
 	return eventCounts, nil
 }
 
-// generateVisitorID creates a privacy-preserving visitor identifier
-// Uses daily salt rotation to prevent long-term tracking while maintaining session continuity
-func (s *AnalyticsService) generateVisitorID(ip, userAgent, siteKey string) string {
-	// Use daily salt for privacy - visitor IDs change daily
-	// This prevents long-term tracking while allowing accurate daily counts
-	dateSalt := time.Now().Format("2006-01-02")
+const unknownVisitorIPPrefix = "unknown"
 
-	// Hash: IP + UserAgent + SiteKey + DateSalt
-	// This approach balances privacy and accuracy:
-	// - Same visitor gets same ID within a day
-	// - Different ID each day prevents tracking across days
-	// - IP ensures different networks get different IDs
-	// - UserAgent helps distinguish different devices on same network
-	data := fmt.Sprintf("%s|%s|%s|%s", ip, userAgent, siteKey, dateSalt)
-	hash := sha256.Sum256([]byte(data))
-	return hex.EncodeToString(hash[:])[:32]
+// generateVisitorID creates a site-scoped, daily visitor identifier from coarse signals.
+func (s *AnalyticsService) generateVisitorID(siteID int64, ip, browser, device string, now time.Time) string {
+	dateBucket := now.UTC().Format("2006-01-02")
+	key := s.deriveVisitorIdentityKey(siteID, dateBucket)
+	ipPrefix := truncateVisitorIPPrefix(ip)
+	data := fmt.Sprintf("%d|%s|%s|%s", siteID, ipPrefix, browser, device)
+
+	mac := hmac.New(sha256.New, key)
+	_, _ = mac.Write([]byte(data))
+
+	sum := mac.Sum(nil)
+	return hex.EncodeToString(sum[:16])
+}
+
+func (s *AnalyticsService) deriveVisitorIdentityKey(siteID int64, dateBucket string) []byte {
+	info := fmt.Appendf(nil, "analytics:%d:%s", siteID, dateBucket)
+	reader := hkdf.New(sha256.New, s.identitySecret, nil, info)
+	key := make([]byte, sha256.Size)
+	_, _ = io.ReadFull(reader, key)
+	return key
+}
+
+func truncateVisitorIPPrefix(ip string) string {
+	addr, err := netip.ParseAddr(strings.TrimSpace(ip))
+	if err != nil {
+		return unknownVisitorIPPrefix
+	}
+
+	if addr.Is4In6() {
+		addr = netip.AddrFrom4(addr.As4())
+	}
+
+	if addr.Is4() {
+		return netip.PrefixFrom(addr, 24).Masked().String()
+	}
+
+	return netip.PrefixFrom(addr, 64).Masked().String()
 }
 
 func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionField) (string, bool, error) {

@@ -85,15 +85,14 @@ type Country struct {
 	Name string `bun:"name,notnull,type:varchar(128)" json:"name"`
 }
 
-// Client represents a unique visitor, deduplicated by hash.
-// Stores STABLE attributes (don't change between sessions).
-// Same visitor = same hash = same row → keeps DB small.
+// Client represents a pseudonymous visitor identity within the current rotation window.
+// Stores coarse client attributes used for analytics breakdowns.
 type Client struct {
 	bun.BaseModel `bun:"table:clients,alias:c"`
 
 	ID         int64  `bun:"id,pk,autoincrement" json:"id"`
 	SiteID     int64  `bun:"site_id,notnull" json:"site_id"`
-	Hash       string `bun:"hash,notnull,type:varchar(64)" json:"hash"` // SHA-256 hex, from current architecture
+	Hash       string `bun:"hash,notnull,type:varchar(64)" json:"hash"` // Truncated HMAC-SHA-256 hex over site-scoped, minimized visitor signals
 	Country    string `bun:"country,type:varchar(2)" json:"country"`
 	Device     string `bun:"device,type:varchar(10)" json:"device"`
 	Browser    string `bun:"browser,type:varchar(32)" json:"browser"`

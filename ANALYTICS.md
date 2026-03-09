@@ -4,11 +4,15 @@ Implementation notes for Lovely Eye analytics.
 
 ## Visitor Identification
 
-Anonymous hash computed from IP address, user agent, site key, and current date:
-- Hash algorithm: SHA256
-- Daily rotation: visitor ID changes every 24 hours
+Server-generated visitor ID computed from minimized request signals:
+- Hash algorithm: truncated HMAC-SHA-256
+- Key derivation: site-scoped, daily key derived from a server secret
+- Inputs: internal site ID, truncated IP prefix, browser family, device class
+- Daily rotation: visitor ID changes every UTC day
 - No client-side storage or cookies
 - Same visitor receives consistent ID throughout the day
+- Country is not part of the visitor ID
+- The server secret helps reduce the impact of database-only leaks by making visitor IDs harder to recompute outside the app
 
 ## Bot Filtering
 
@@ -37,7 +41,8 @@ Extracts real client IP from proxied requests:
 - Parses X-Forwarded-For header (first IP)
 - Falls back to X-Real-IP header
 - Strips port from RemoteAddr
-- IPs used only for hashing and geolocation, never stored
+- Truncates IP before hashing: IPv4 `/24`, IPv6 `/64`
+- IPs used only for visitor identity and optional geolocation, never stored
 
 ## Session Management
 
@@ -52,7 +57,9 @@ Tracks browsing sessions:
 
 - No client-side cookies or persistent identifiers
 - Visitor IDs rotate daily
-- Site key prevents cross-site tracking
+- Visitor IDs are derived server-side from minimized signals
+- Site-scoped keying prevents reuse across sites
+- Keyed visitor IDs reduce the value of database-only leaks
 - IP addresses never stored in database
 - Country-level geolocation only (no city data)
 

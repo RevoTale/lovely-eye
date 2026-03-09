@@ -50,21 +50,22 @@ func TestDashboardFiltering(t *testing.T) {
 		referrer    string
 		userAgent   string
 		screenWidth int
+		ip          string
 	}{
 
-		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", 1920},
-		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", 1920},
+		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", 1920, "203.0.113.10"},
+		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", 1920, "198.51.100.20"},
 
-		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", 375},
-		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", 375},
+		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", 375, "192.0.2.30"},
+		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", 375, "198.18.0.40"},
 
-		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", 1440},
-		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", 1440},
+		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", 1440, "198.18.1.50"},
+		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", 1440, "198.19.0.60"},
 
-		{"/home", "https://twitter.com", "Mozilla/5.0 (Android 13; Mobile) Chrome/119.0", 412},
+		{"/home", "https://twitter.com", "Mozilla/5.0 (Android 13; Mobile) Chrome/119.0", 412, "198.19.1.70"},
 	}
 
-	for i, data := range testData {
+	for _, data := range testData {
 		payload := map[string]interface{}{
 			"site_key":     siteKey,
 			"path":         data.path,
@@ -76,9 +77,9 @@ func TestDashboardFiltering(t *testing.T) {
 		req, _ := http.NewRequest("POST", ts.httpServer.URL+"/api/collect", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Origin", "https://filter-test.com")
-		// Append index to user agent to create different visitor IDs
-		// This simulates different visitors to avoid deduplication
-		req.Header.Set("User-Agent", data.userAgent+" TestVisitor/"+string(rune('A'+i)))
+		req.Header.Set("User-Agent", data.userAgent)
+		// Keep repeated page views in separate visitor buckets under the coarser identity rules.
+		req.Header.Set("X-Forwarded-For", data.ip)
 
 		resp, err := ts.httpServer.Client().Do(req)
 		require.NoError(t, err)

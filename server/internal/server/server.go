@@ -84,7 +84,11 @@ func New(cfg config.Config) (*Server, error) {
 	siteService := services.NewSiteService(siteRepo)
 	eventDefinitionService := services.NewEventDefinitionService(eventDefinitionRepo)
 	countryService := services.NewCountryService(countryRepo, geoIPService)
-	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo, eventDefinitionRepo, geoIPService, countryService)
+	identitySecret := cfg.Analytics.IdentitySecret
+	if identitySecret == "" {
+		identitySecret = cfg.Auth.JWTSecret
+	}
+	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo, eventDefinitionRepo, geoIPService, countryService, identitySecret)
 	if err := analyticsService.SyncGeoIPRequirement(context.Background()); err != nil {
 		fmt.Printf("Warning: GeoIP database sync failed: %v\n", err)
 	}
