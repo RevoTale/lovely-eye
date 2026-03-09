@@ -198,9 +198,11 @@ export type EventsResult = {
 };
 
 export type FilterInput = {
+  /** Filter by browser type */
+  browser: InputMaybe<Array<Scalars['String']['input']>>;
   /** Filter by ISO country code */
   country: InputMaybe<Array<Scalars['String']['input']>>;
-  /** Filter by device type (desktop, mobile, tablet) */
+  /** Filter by device type (desktop, mobile, tablet, smart-tv, console, watch) */
   device: InputMaybe<Array<Scalars['String']['input']>>;
   /** Filter by event definition ID */
   eventDefinitionId: InputMaybe<Array<Scalars['ID']['input']>>;

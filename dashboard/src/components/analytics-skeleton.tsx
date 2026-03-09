@@ -66,6 +66,7 @@ export const AnalyticsSkeleton = ({
         onPageChange('topPagesPage', page);
       }}
       referrers={[]}
+      browsers={[]}
       referrersTotal={EMPTY_COUNT}
       referrersPage={FIRST_PAGE}
       referrersPageSize={REFERRERS_PAGE_SIZE}
@@ -73,6 +74,7 @@ export const AnalyticsSkeleton = ({
       onReferrersPageChange={(page) => {
         onPageChange('referrersPage', page);
       }}
+      browsersLoading={true}
       countries={[]}
       countriesTotal={EMPTY_COUNT}
       countriesTotalVisitors={EMPTY_COUNT}

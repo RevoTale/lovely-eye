@@ -18,6 +18,7 @@ const searchSchema = z.object({
   osPage: z.string().optional(),
   countriesPage: z.string().optional(),
   referrer: filterValue,
+  browser: filterValue,
   device: filterValue,
   os: filterValue,
   page: filterValue,

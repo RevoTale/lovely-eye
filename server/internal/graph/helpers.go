@@ -48,6 +48,7 @@ func parseFilterInput(input *model.FilterInput) services.DashboardFilter {
 
 	return services.DashboardFilter{
 		Referrer:           referrers,
+		Browser:            input.Browser,
 		Device:             input.Device,
 		OS:                 input.Os,
 		Page:               input.Page,
@@ -61,6 +62,7 @@ func parseFilterInput(input *model.FilterInput) services.DashboardFilter {
 
 func isFilterEmpty(filter services.DashboardFilter) bool {
 	return len(filter.Referrer) == 0 &&
+		len(filter.Browser) == 0 &&
 		len(filter.Device) == 0 &&
 		len(filter.OS) == 0 &&
 		len(filter.Page) == 0 &&

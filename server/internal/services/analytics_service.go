@@ -108,14 +108,8 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 
 	ua := useragent.Parse(input.UserAgent)
 	device := categorizeDevice(ua)
-	browser := ua.Name
-	if browser == "" {
-		browser = "Other"
-	}
-	os := ua.OS
-	if os == "" {
-		os = "Other"
-	}
+	browser := normalizeBrowser(ua)
+	os := normalizeOS(ua)
 	screenSize := categorizeScreenSize(input.ScreenWidth)
 	now := time.Now()
 	nowUnix := now.Unix()
@@ -274,14 +268,8 @@ func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) e
 
 	ua := useragent.Parse(input.UserAgent)
 	device := categorizeDevice(ua)
-	browser := ua.Name
-	if browser == "" {
-		browser = "Other"
-	}
-	os := ua.OS
-	if os == "" {
-		os = "Other"
-	}
+	browser := normalizeBrowser(ua)
+	os := normalizeOS(ua)
 	screenSize := ""
 	now := time.Now()
 	nowUnix := now.Unix()
@@ -781,6 +769,36 @@ func sanitizeEventProperties(propsJSON string, fields []*models.EventDefinitionF
 }
 
 func categorizeDevice(ua useragent.UserAgent) string {
+	uaString := strings.ToLower(ua.String)
+
+	switch {
+	case strings.Contains(uaString, "watchos"),
+		strings.Contains(uaString, "watch os"),
+		strings.Contains(uaString, "apple watch"),
+		strings.Contains(uaString, "wear os"),
+		strings.Contains(uaString, "smartwatch"),
+		strings.Contains(uaString, "galaxy watch"):
+		return "watch"
+	case strings.Contains(uaString, "smart-tv"),
+		strings.Contains(uaString, "smarttv"),
+		strings.Contains(uaString, "android tv"),
+		strings.Contains(uaString, "bravia"),
+		strings.Contains(uaString, "hbbtv"),
+		strings.Contains(uaString, "googletv"),
+		strings.Contains(uaString, "appletv"),
+		strings.Contains(uaString, "crkey"),
+		strings.Contains(uaString, "aft"),
+		strings.Contains(uaString, "roku"),
+		strings.Contains(uaString, "viera"),
+		strings.Contains(uaString, "netcast"),
+		strings.Contains(uaString, "tv;"):
+		return "smart-tv"
+	case strings.Contains(uaString, "playstation"),
+		strings.Contains(uaString, "xbox"),
+		strings.Contains(uaString, "nintendo switch"):
+		return "console"
+	}
+
 	if ua.Tablet {
 		return "tablet"
 	}
@@ -791,30 +809,167 @@ func categorizeDevice(ua useragent.UserAgent) string {
 		return "desktop"
 	}
 
-	uaString := strings.ToLower(ua.String)
-	if strings.Contains(uaString, "iphone") || strings.Contains(uaString, "android") {
+	if strings.Contains(uaString, "ipad") || strings.Contains(uaString, "tablet") {
+		return "tablet"
+	}
+	if strings.Contains(uaString, "iphone") || strings.Contains(uaString, "ipod") {
+		return "mobile"
+	}
+	if strings.Contains(uaString, "android") {
 		if strings.Contains(uaString, "mobile") {
 			return "mobile"
 		}
-
-		if strings.Contains(uaString, "tablet") {
-			return "tablet"
-		}
-
-		if strings.Contains(uaString, "iphone") {
-			return "mobile"
-		}
-
-		if strings.Contains(uaString, "ipad") {
-			return "tablet"
-		}
+		return "tablet"
+	}
+	if strings.Contains(uaString, "windows") ||
+		strings.Contains(uaString, "macintosh") ||
+		strings.Contains(uaString, "linux") ||
+		strings.Contains(uaString, "cros") {
+		return "desktop"
 	}
 
 	return "desktop"
 }
 
+func normalizeBrowser(ua useragent.UserAgent) string {
+	uaString := strings.ToLower(ua.String)
+
+	switch {
+	case strings.Contains(uaString, "playstation"):
+		return "PlayStation Browser"
+	case strings.Contains(uaString, "xbox"):
+		return "Xbox Browser"
+	case strings.Contains(uaString, "fb_iab"),
+		strings.Contains(uaString, "fban"),
+		strings.Contains(uaString, "fbav"):
+		return "Facebook In-App Browser"
+	case strings.Contains(uaString, "instagram"):
+		return "Instagram In-App Browser"
+	case strings.Contains(uaString, "edg/"),
+		strings.Contains(uaString, "edgios"),
+		ua.IsEdge():
+		return "Edge"
+	case strings.Contains(uaString, "samsungbrowser"):
+		return "Samsung Internet"
+	case strings.Contains(uaString, "opr/"),
+		strings.Contains(uaString, "opera mini"),
+		strings.Contains(uaString, "opera mobi"),
+		ua.IsOpera(),
+		ua.IsOperaMini():
+		return "Opera"
+	case strings.Contains(uaString, "vivaldi"):
+		return "Vivaldi"
+	case strings.Contains(uaString, "yabrowser"),
+		strings.Contains(uaString, "yowser"):
+		return "Yandex Browser"
+	case strings.Contains(uaString, "duckduckgo"):
+		return "DuckDuckGo"
+	case strings.Contains(uaString, "ucbrowser"),
+		strings.Contains(uaString, "ucweb"):
+		return "UC Browser"
+	case strings.Contains(uaString, "miuibrowser"):
+		return "MIUI Browser"
+	case strings.Contains(uaString, "msie"),
+		strings.Contains(uaString, "trident"),
+		ua.IsInternetExplorer():
+		return "Internet Explorer"
+	case strings.Contains(uaString, "wv"),
+		strings.Contains(uaString, "webview"):
+		return "Android WebView"
+	case strings.Contains(uaString, "crios"),
+		strings.Contains(uaString, "chrome"),
+		ua.IsChrome():
+		return "Chrome"
+	case strings.Contains(uaString, "fxios"),
+		strings.Contains(uaString, "firefox"),
+		ua.IsFirefox():
+		return "Firefox"
+	case strings.Contains(uaString, "safari"),
+		(strings.Contains(uaString, "applewebkit") &&
+			(strings.Contains(uaString, "iphone") || strings.Contains(uaString, "ipad") || strings.Contains(uaString, "macintosh"))),
+		ua.IsSafari():
+		return "Safari"
+	}
+
+	name := strings.TrimSpace(ua.Name)
+	if name == "" {
+		return "Other"
+	}
+
+	switch strings.ToLower(name) {
+	case "chrome mobile ios", "chrome mobile":
+		return "Chrome"
+	case "mobile safari":
+		return "Safari"
+	case "edge mobile":
+		return "Edge"
+	case "firefox mobile":
+		return "Firefox"
+	case "opera mobi":
+		return "Opera"
+	default:
+		return name
+	}
+}
+
+func normalizeOS(ua useragent.UserAgent) string {
+	uaString := strings.ToLower(ua.String)
+
+	switch {
+	case strings.Contains(uaString, "wear os"):
+		return "Wear OS"
+	case strings.Contains(uaString, "watchos"),
+		strings.Contains(uaString, "watch os"),
+		strings.Contains(uaString, "apple watch"):
+		return "watchOS"
+	case strings.Contains(uaString, "playstation"):
+		return "PlayStation OS"
+	case strings.Contains(uaString, "xbox"):
+		return "Xbox OS"
+	case strings.Contains(uaString, "ipad"):
+		return "iPadOS"
+	case strings.Contains(uaString, "iphone"),
+		strings.Contains(uaString, "ipod"),
+		ua.IsIOS():
+		return "iOS"
+	case strings.Contains(uaString, "android"):
+		return "Android"
+	case strings.Contains(uaString, "cros"),
+		ua.IsChromeOS():
+		return "ChromeOS"
+	case strings.Contains(uaString, "windows"),
+		ua.IsWindows():
+		return "Windows"
+	case strings.Contains(uaString, "mac os"),
+		strings.Contains(uaString, "macintosh"),
+		ua.IsMacOS():
+		return "macOS"
+	case strings.Contains(uaString, "linux"),
+		ua.IsLinux():
+		return "Linux"
+	}
+
+	os := strings.TrimSpace(ua.OS)
+	switch strings.ToLower(os) {
+	case "":
+		return "Other"
+	case "watch os", "watchos":
+		return "watchOS"
+	case "wear os":
+		return "Wear OS"
+	case "mac os x", "os x":
+		return "macOS"
+	case "chrome os":
+		return "ChromeOS"
+	default:
+		return os
+	}
+}
+
 func categorizeScreenSize(width int) string {
 	switch {
+	case width > 0 && width < 320:
+		return "watch"
 	case width < 576:
 		return "xs"
 	case width < 768:

@@ -1,5 +1,6 @@
 import { normalizeFilterValue } from '@/lib/filter-utils';
 import {
+  BrowserStatsFieldsFragmentDoc,
   CountryStatsFieldsFragmentDoc,
   DashboardStatsFieldsFragmentDoc,
   DeviceStatsFieldsFragmentDoc,
@@ -8,6 +9,7 @@ import {
   ReferrerStatsFieldsFragmentDoc,
 } from '@/gql/graphql';
 import type {
+  BrowserStatsFieldsFragment,
   CountryStatsFieldsFragment,
   DashboardStatsFieldsFragment,
   DashboardQuery,
@@ -40,6 +42,7 @@ export function normalizeStatsBucket(value: PageValue): 'daily' | 'hourly' {
 
 interface FilterResult {
   referrers: string[];
+  browsers: string[];
   devices: string[];
   operatingSystems: string[];
   pages: string[];
@@ -52,6 +55,7 @@ interface FilterResult {
 
 export function buildFilters(search: Record<string, string | string[] | undefined>): FilterResult {
   const referrers = normalizeFilterValue(search['referrer']);
+  const browsers = normalizeFilterValue(search['browser']);
   const devices = normalizeFilterValue(search['device']);
   const operatingSystems = normalizeFilterValue(search['os']);
   const pages = normalizeFilterValue(search['page']);
@@ -62,6 +66,7 @@ export function buildFilters(search: Record<string, string | string[] | undefine
   const decodedSearch = {
     ...search,
     ...(referrers.length > EMPTY_COUNT ? { referrer: referrers } : {}),
+    ...(browsers.length > EMPTY_COUNT ? { browser: browsers } : {}),
     ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
     ...(operatingSystems.length > EMPTY_COUNT ? { os: operatingSystems } : {}),
     ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
@@ -72,6 +77,7 @@ export function buildFilters(search: Record<string, string | string[] | undefine
 
   const filter = {
     ...(referrers.length > EMPTY_COUNT ? { referrer: referrers } : {}),
+    ...(browsers.length > EMPTY_COUNT ? { browser: browsers } : {}),
     ...(devices.length > EMPTY_COUNT ? { device: devices } : {}),
     ...(operatingSystems.length > EMPTY_COUNT ? { os: operatingSystems } : {}),
     ...(pages.length > EMPTY_COUNT ? { page: pages } : {}),
@@ -80,10 +86,11 @@ export function buildFilters(search: Record<string, string | string[] | undefine
     ...(eventPaths.length > EMPTY_COUNT ? { eventPath: eventPaths } : {}),
   };
 
-  return { referrers, devices, operatingSystems, pages, countries, eventNames, eventPaths, decodedSearch, filter };
+  return { referrers, browsers, devices, operatingSystems, pages, countries, eventNames, eventPaths, decodedSearch, filter };
 }
 
 interface StatsDataResult {
+  browsersItems: BrowserStatsFieldsFragment[];
   topPages: PageStatsFieldsFragment[];
   topPagesTotal: number;
   referrersItems: ReferrerStatsFieldsFragment[];
@@ -148,6 +155,7 @@ export function extractStatsData(
       : getFragmentData(DashboardStatsFieldsFragmentDoc, stats);
   const topPages = getFragmentData(PageStatsFieldsFragmentDoc, normalizedStats.topPages.items);
   const referrersItems = getFragmentData(ReferrerStatsFieldsFragmentDoc, normalizedStats.topReferrers.items);
+  const browsersItems = getFragmentData(BrowserStatsFieldsFragmentDoc, normalizedStats.browsers);
   const devicesItems = getFragmentData(DeviceStatsFieldsFragmentDoc, normalizedStats.devices.items);
   const operatingSystemsItems = getFragmentData(
     OperatingSystemStatsFieldsFragmentDoc,
@@ -156,6 +164,7 @@ export function extractStatsData(
   const countriesItems = getFragmentData(CountryStatsFieldsFragmentDoc, normalizedStats.countries.items);
 
   return {
+    browsersItems,
     topPages,
     topPagesTotal: normalizedStats.topPages.total,
     referrersItems,

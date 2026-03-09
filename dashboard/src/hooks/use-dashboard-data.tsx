@@ -57,6 +57,7 @@ interface DashboardData {
 
 const buildEventCountsFilter = (filter: FilterInput | null): FilterInput => ({
   referrer: filter?.referrer ?? null,
+  browser: filter?.browser ?? null,
   device: filter?.device ?? null,
   page: filter?.page ?? null,
   country: filter?.country ?? null,

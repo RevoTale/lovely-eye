@@ -30,13 +30,14 @@ export const DashboardPage = (): ReactElement => {
   const countriesPage = useMemo(() => parsePage(search.countriesPage), [search.countriesPage]);
   const statsBucket = useMemo(() => normalizeStatsBucket(search.statsBucket), [search.statsBucket]);
 
-  const { referrers, devices, operatingSystems, pages, countries, eventNames, eventPaths, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
+  const { referrers, browsers, devices, operatingSystems, pages, countries, eventNames, eventPaths, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
   const filterInput = useMemo<FilterInput | null>(() => {
     if (Object.keys(filter).length === EMPTY_COUNT) {
       return null;
     }
     return {
       referrer: filter['referrer'] ?? null,
+      browser: filter['browser'] ?? null,
       device: filter['device'] ?? null,
       os: filter['os'] ?? null,
       page: filter['page'] ?? null,
@@ -49,8 +50,8 @@ export const DashboardPage = (): ReactElement => {
   }, [filter]);
 
   const filterKey = useMemo(
-    () => [referrers, devices, operatingSystems, pages, countries, eventNames, eventPaths].map((v) => v.join(',')).join('|'),
-    [referrers, devices, operatingSystems, pages, countries, eventNames, eventPaths]
+    () => [referrers, browsers, devices, operatingSystems, pages, countries, eventNames, eventPaths].map((v) => v.join(',')).join('|'),
+    [referrers, browsers, devices, operatingSystems, pages, countries, eventNames, eventPaths]
   );
 
   const dateRangeForChart = useMemo(() => {
@@ -109,6 +110,7 @@ export const DashboardPage = (): ReactElement => {
   }
 
   const {
+    browsersItems,
     topPages,
     topPagesTotal,
     referrersItems,
@@ -175,6 +177,7 @@ export const DashboardPage = (): ReactElement => {
             setPage('topPagesPage', page);
           }}
           referrers={referrersItems}
+          browsers={browsersItems}
           referrersTotal={referrersTotal}
           referrersPage={referrersPage}
           referrersPageSize={PAGE_SIZES.REFERRERS}

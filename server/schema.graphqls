@@ -270,7 +270,11 @@ input FilterInput {
   """
   referrer: [String!]
   """
-  Filter by device type (desktop, mobile, tablet)
+  Filter by browser type
+  """
+  browser: [String!]
+  """
+  Filter by device type (desktop, mobile, tablet, smart-tv, console, watch)
   """
   device: [String!]
   """

@@ -58,6 +58,7 @@ export function useChartDataLoader({ siteId, dateRange, filter, bucket }: UseCha
     dateRange: dateRange === null ? null : { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() },
     filter: filter === null ? null : {
       referrer: filter.referrer ?? null,
+      browser: filter.browser ?? null,
       device: filter.device ?? null,
       os: filter.os ?? null,
       page: filter.page ?? null,

@@ -492,7 +492,9 @@ func (v *EventsResponse) GetEvents() EventsEventsEventsResult { return v.Events 
 type FilterInput struct {
 	// Filter by specific referrer
 	Referrer []string `json:"referrer"`
-	// Filter by device type (desktop, mobile, tablet)
+	// Filter by browser type
+	Browser []string `json:"browser"`
+	// Filter by device type (desktop, mobile, tablet, smart-tv, console, watch)
 	Device []string `json:"device"`
 	// Filter by operating system
 	Os []string `json:"os"`
@@ -512,6 +514,9 @@ type FilterInput struct {
 
 // GetReferrer returns FilterInput.Referrer, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetReferrer() []string { return v.Referrer }
+
+// GetBrowser returns FilterInput.Browser, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetBrowser() []string { return v.Browser }
 
 // GetDevice returns FilterInput.Device, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetDevice() []string { return v.Device }

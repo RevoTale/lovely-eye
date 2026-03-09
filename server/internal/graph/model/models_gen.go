@@ -24,7 +24,9 @@ type EventCount struct {
 type FilterInput struct {
 	// Filter by specific referrer
 	Referrer []string `json:"referrer,omitempty"`
-	// Filter by device type (desktop, mobile, tablet)
+	// Filter by browser type
+	Browser []string `json:"browser,omitempty"`
+	// Filter by device type (desktop, mobile, tablet, smart-tv, console)
 	Device []string `json:"device,omitempty"`
 	// Filter by operating system
 	Os []string `json:"os,omitempty"`

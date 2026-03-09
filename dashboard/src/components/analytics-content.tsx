@@ -1,6 +1,7 @@
 
 import { DashboardStatsFieldsFragmentDoc, RealtimeStatsFieldsFragmentDoc } from '@/gql/graphql';
 import type {
+  BrowserStatsFieldsFragment,
   CountryStatsFieldsFragment,
   DeviceStatsFieldsFragment,
   EventCountsQuery,
@@ -19,6 +20,7 @@ import { ActivePagesCard } from '@/components/active-pages-card';
 import { EventsSection } from '@/components/events-section';
 import { TopPagesCard } from '@/components/top-pages-card';
 import { ReferrersCard } from '@/components/referrers-card';
+import { BrowserCard } from '@/components/browser-card';
 import { CountryCard } from '@/components/country-card';
 import { DevicesCard } from '@/components/devices-card';
 import { OSCard } from '@/components/os-card';
@@ -48,11 +50,13 @@ interface AnalyticsContentProps {
   topPagesLoading?: boolean;
   onTopPagesPageChange: (page: number) => void;
   referrers: ReferrerStatsFieldsFragment[];
+  browsers: BrowserStatsFieldsFragment[];
   referrersTotal: number;
   referrersPage: number;
   referrersPageSize: number;
   referrersLoading?: boolean;
   onReferrersPageChange: (page: number) => void;
+  browsersLoading?: boolean;
   countries: CountryStatsFieldsFragment[];
   countriesTotal: number;
   countriesTotalVisitors: number;
@@ -82,7 +86,8 @@ export const AnalyticsContent = (props: AnalyticsContentProps): React.ReactNode 
     eventsLoading, eventsResult, eventsCounts, eventsPage, eventsPageSize, onEventsPageChange,
     eventsCountsPage, eventsCountsPageSize, onEventsCountsPageChange,
     topPages, topPagesTotal, topPagesPage, topPagesPageSize, topPagesLoading = false, onTopPagesPageChange,
-    referrers, referrersTotal, referrersPage, referrersPageSize, referrersLoading = false, onReferrersPageChange,
+    referrers, browsers, referrersTotal, referrersPage, referrersPageSize, referrersLoading = false, onReferrersPageChange,
+    browsersLoading = false,
     countries, countriesTotal, countriesTotalVisitors, countriesPage, countriesPageSize, countriesLoading = false, onCountriesPageChange,
     devices, devicesTotal, devicesTotalVisitors, devicesPage, devicesPageSize, devicesLoading = false, onDevicesPageChange,
     operatingSystems, operatingSystemsTotal, operatingSystemsTotalVisitors, osPage, osPageSize,
@@ -177,7 +182,14 @@ export const AnalyticsContent = (props: AnalyticsContentProps): React.ReactNode 
         onPageChange={onCountriesPageChange}
       />
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <BrowserCard
+          browsers={browsers}
+          totalVisitors={statsData.visitors}
+          siteId={siteId}
+          loading={browsersLoading}
+        />
+
         <DevicesCard
           devices={devices}
           total={devicesTotal}

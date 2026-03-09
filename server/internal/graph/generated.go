@@ -1501,7 +1501,11 @@ input FilterInput {
   """
   referrer: [String!]
   """
-  Filter by device type (desktop, mobile, tablet)
+  Filter by browser type
+  """
+  browser: [String!]
+  """
+  Filter by device type (desktop, mobile, tablet, smart-tv, console)
   """
   device: [String!]
   """
@@ -7761,7 +7765,7 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"referrer", "device", "os", "page", "country", "eventType", "eventName", "eventPath", "eventDefinitionId"}
+	fieldsInOrder := [...]string{"referrer", "browser", "device", "os", "page", "country", "eventType", "eventName", "eventPath", "eventDefinitionId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -7775,6 +7779,13 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 				return it, err
 			}
 			it.Referrer = data
+		case "browser":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("browser"))
+			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Browser = data
 		case "device":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("device"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)

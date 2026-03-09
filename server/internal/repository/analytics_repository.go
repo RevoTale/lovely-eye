@@ -16,6 +16,7 @@ type AnalyticsRepository struct {
 
 type AnalyticsFilter struct {
 	Referrer           []string
+	Browser            []string
 	Device             []string
 	OS                 []string
 	Page               []string
@@ -632,6 +633,10 @@ func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.Select
 
 		q = q.Where("s.referrer IN (?)", bun.List(filter.Referrer))
 	}
+	if len(filter.Browser) > 0 {
+
+		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE browser IN (?))", bun.List(filter.Browser))
+	}
 	if len(filter.Device) > 0 {
 
 		q = q.Where("s.client_id IN (SELECT id FROM clients WHERE device IN (?))", bun.List(filter.Device))
@@ -679,10 +684,13 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 	if len(filter.Page) > 0 {
 		q = q.Where("e.path IN (?)", bun.List(filter.Page))
 	}
-	if len(filter.Referrer) > 0 || len(filter.Device) > 0 || len(filter.OS) > 0 || len(filter.Country) > 0 || len(filter.EventTypes) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
+	if len(filter.Referrer) > 0 || len(filter.Browser) > 0 || len(filter.Device) > 0 || len(filter.OS) > 0 || len(filter.Country) > 0 || len(filter.EventTypes) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
 
 		if len(filter.Referrer) > 0 {
 			q = q.Where("e.session_id IN (SELECT id FROM sessions WHERE referrer IN (?))", bun.List(filter.Referrer))
+		}
+		if len(filter.Browser) > 0 {
+			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.browser IN (?))", bun.List(filter.Browser))
 		}
 		if len(filter.Device) > 0 {
 			q = q.Where("e.session_id IN (SELECT s.id FROM sessions s INNER JOIN clients c ON s.client_id = c.id WHERE c.device IN (?))", bun.List(filter.Device))

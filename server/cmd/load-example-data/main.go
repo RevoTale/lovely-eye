@@ -297,10 +297,10 @@ func seedData(ctx context.Context, db *bun.DB, siteID int64, defs []*models.Even
 			SiteID:     siteID,
 			Hash:       hash,
 			Country:    pickString(rng, []string{"US", "GB", "DE", "FR", "CA", "NL"}),
-			Device:     pickString(rng, []string{"desktop", "mobile", "tablet"}),
-			Browser:    pickString(rng, []string{"Chrome", "Safari", "Firefox", "Edge"}),
-			OS:         pickString(rng, []string{"Windows", "macOS", "Linux", "iOS", "Android"}),
-			ScreenSize: pickString(rng, []string{"1920x1080", "1366x768", "390x844", "1440x900"}),
+			Device:     pickString(rng, []string{"desktop", "mobile", "tablet", "smart-tv", "console", "watch"}),
+			Browser:    pickString(rng, []string{"Chrome", "Safari", "Firefox", "Edge", "Opera", "Samsung Internet", "Android WebView"}),
+			OS:         pickString(rng, []string{"Windows", "macOS", "Linux", "ChromeOS", "iOS", "iPadOS", "Android", "watchOS", "Wear OS"}),
+			ScreenSize: pickString(rng, []string{"watch", "1920x1080", "1366x768", "390x844", "1440x900"}),
 		}
 
 		if _, err := db.NewInsert().Model(client).Exec(ctx); err != nil {

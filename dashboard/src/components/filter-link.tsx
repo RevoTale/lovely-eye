@@ -2,7 +2,7 @@
 import { Link } from '@/router';
 import { addFilterValue } from '@/lib/filter-utils';
 
-type FilterKey = 'referrer' | 'device' | 'os' | 'page' | 'country' | 'eventName' | 'eventPath';
+type FilterKey = 'referrer' | 'browser' | 'device' | 'os' | 'page' | 'country' | 'eventName' | 'eventPath';
 
 interface FilterLinkProps {
   siteId: string;

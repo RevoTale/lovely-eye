@@ -143,6 +143,21 @@ func TestDashboardFiltering(t *testing.T) {
 		require.True(t, foundAbout, "should find /about page in mobile traffic")
 	})
 
+	t.Run("filter by browser", func(t *testing.T) {
+		filter := &operations.FilterInput{
+			Browser: []string{"Chrome"},
+		}
+
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		require.NoError(t, err)
+
+		require.Equal(t, 3, resp.Dashboard.PageViews, "should only count Chrome page views")
+		require.Len(t, resp.Dashboard.TopPages.Items, 1, "should only show the page visited from Chrome")
+		require.Equal(t, "/home", resp.Dashboard.TopPages.Items[0].Path)
+		require.Len(t, resp.Dashboard.Browsers, 1, "should only show Chrome in the browser breakdown")
+		require.Equal(t, "Chrome", resp.Dashboard.Browsers[0].Browser)
+	})
+
 	t.Run("filter by operating system", func(t *testing.T) {
 		filter := &operations.FilterInput{
 			Os: []string{"iOS"},
