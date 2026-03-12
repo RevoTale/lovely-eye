@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.7.0](https://github.com/RevoTale/lovely-eye/compare/v1.6.0...v1.7.0) (2026-03-12)
+
+
+### Features
+
+* fix the inital user creation.  Disable the registration form when registration not allowed and disable login fomr when there are no users. Handle the redirects. ([758420e](https://github.com/RevoTale/lovely-eye/commit/758420e057897d4319ba55d3f5e985e89880160d))
+* fix the inital user creation.  Disable the registration form when registration not allowed and disable login fomr when there are no users. Handle the redirects. ([aa49209](https://github.com/RevoTale/lovely-eye/commit/aa4920992a1f0353d1c17bcb6f047ddaf41f4418))
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([0662367](https://github.com/RevoTale/lovely-eye/commit/066236716deee369a59705e7872390e806313f37))
+* **deps:** update all non-major dependencies ([17900ed](https://github.com/RevoTale/lovely-eye/commit/17900ede913edfb19bdb8a6bd5498b4e2f10bf10))
+
 ## [1.6.0](https://github.com/RevoTale/lovely-eye/compare/v1.5.1...v1.6.0) (2026-03-09)
 
 
