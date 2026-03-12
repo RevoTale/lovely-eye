@@ -526,6 +526,19 @@ func (r *queryResolver) Me(ctx context.Context) (*model.User, error) {
 	}, nil
 }
 
+// RegistrationStatus is the resolver for the registrationStatus field.
+func (r *queryResolver) RegistrationStatus(ctx context.Context) (*model.RegistrationStatus, error) {
+	status, err := r.AuthService.RegistrationStatus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get registration status: %w", err)
+	}
+
+	return &model.RegistrationStatus{
+		HasUsers:          status.HasUsers,
+		AllowRegistration: status.AllowRegistration,
+	}, nil
+}
+
 // Sites is the resolver for the sites field.
 func (r *queryResolver) Sites(ctx context.Context, paging model.PagingInput) ([]*model.Site, error) {
 	claims := auth.GetUserFromContext(ctx)

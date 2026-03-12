@@ -40,7 +40,8 @@ tasks:
   generate:
     desc: Generate Go code and static tracker asset
     cmds:
-      - "{{.GO}} generate ./..."
+      - "{{.GO}} run github.com/99designs/gqlgen generate"
+      - "{{.GO}} generate ./e2e"
       - task: static:build
 
   migrate-init:

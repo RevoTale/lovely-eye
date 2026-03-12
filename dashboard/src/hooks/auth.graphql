@@ -2,6 +2,10 @@ query Me($sitesPaging: PagingInput!) {
   me {
     ...AuthUserDetailsFields
   }
+  registrationStatus {
+    hasUsers
+    allowRegistration
+  }
 }
 
 mutation Login($input: LoginInput!) {

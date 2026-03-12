@@ -3,11 +3,11 @@ import { createFileRoute, redirect, lazyRouteComponent } from '@tanstack/react-r
 export const Route = createFileRoute('/_auth')({
   beforeLoad: async ({ context }) => {
     await Promise.resolve();
-    if (context.auth.isLoading) {
+    if (context.auth.isLoading || context.auth.bootstrapError !== null) {
       return;
     }
     if (!context.auth.isAuthenticated) {
-      throw redirect({ to: '/login' });
+      throw redirect({ to: context.auth.unauthenticatedRoute });
     }
   },
   component: lazyRouteComponent(async () => {

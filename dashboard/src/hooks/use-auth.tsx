@@ -13,14 +13,19 @@ import {
 import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 
 type AuthUser = AuthUserDetailsFieldsFragment;
+export type AuthMode = 'register-only' | 'login-only' | 'login-and-register';
 
 const SITES_PAGE_SIZE = 100;
 const SITES_PAGE_OFFSET = 0;
+const AUTH_STATUS_ERROR_MESSAGE = 'Unable to load authentication status. Refresh the page and try again.';
 
 export interface AuthContextType {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  authMode: AuthMode;
+  bootstrapError: string | null;
+  unauthenticatedRoute: '/login' | '/register';
   login: (input: LoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
@@ -37,7 +42,7 @@ export const AuthProvider = ({ children, authErrorHandlerRef }: AuthProviderProp
   const authErrorHandledRef = useRef(false);
   const client = useApolloClient();
 
-  const { loading: meLoading, data: meData, refetch } = useQuery(MeDocument, {
+  const { loading: meLoading, data: meData, error: meError, refetch } = useQuery(MeDocument, {
     variables: {
       sitesPaging: {
         limit: SITES_PAGE_SIZE,
@@ -45,7 +50,7 @@ export const AuthProvider = ({ children, authErrorHandlerRef }: AuthProviderProp
       },
     },
     fetchPolicy: 'network-only',
-    errorPolicy: 'ignore',
+    errorPolicy: 'all',
   });
 
   const [loginMutation] = useMutation(LoginDocument);
@@ -90,11 +95,24 @@ export const AuthProvider = ({ children, authErrorHandlerRef }: AuthProviderProp
     userData !== null && userData !== undefined
       ? getFragmentData(AuthUserDetailsFieldsFragmentDoc, userData)
       : null;
+  const registrationStatus = meData?.registrationStatus;
+  const authMode =
+    registrationStatus !== null && registrationStatus !== undefined
+      ? getAuthMode(registrationStatus.hasUsers, registrationStatus.allowRegistration)
+      : 'login-only';
+  const bootstrapError =
+    !meLoading && registrationStatus == null && meError !== undefined
+      ? AUTH_STATUS_ERROR_MESSAGE
+      : null;
+  const unauthenticatedRoute = getUnauthenticatedRoute(authMode);
 
   const value: AuthContextType = {
     user,
     isLoading: meLoading,
     isAuthenticated: user !== null,
+    authMode,
+    bootstrapError,
+    unauthenticatedRoute,
     login,
     register,
     logout,
@@ -109,4 +127,21 @@ export function useAuth(): AuthContextType {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+}
+
+function getAuthMode(hasUsers: boolean, allowRegistration: boolean): AuthMode {
+  if (!hasUsers) {
+    return 'register-only';
+  }
+  if (!allowRegistration) {
+    return 'login-only';
+  }
+  return 'login-and-register';
+}
+
+function getUnauthenticatedRoute(authMode: AuthMode): '/login' | '/register' {
+  if (authMode === 'register-only') {
+    return '/register';
+  }
+  return '/login';
 }

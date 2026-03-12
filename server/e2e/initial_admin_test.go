@@ -98,16 +98,11 @@ func TestInitialAdminFromConfig(t *testing.T) {
 
 func TestInitialAdminFromEnvironment(t *testing.T) {
 	t.Run("loads credentials from environment variables", func(t *testing.T) {
-
 		t.Setenv("INITIAL_ADMIN_USERNAME", "envadmin")
 		t.Setenv("INITIAL_ADMIN_PASSWORD", "envpassword123")
+		t.Setenv("ALLOW_REGISTRATION", "")
 
-		cfg := config.Load()
-		cfg.Database.Driver = "sqlite"
-		cfg.Database.DSN = "file::memory:?cache=shared"
-		cfg.Auth.AllowRegistration = true
-		cfg.TrackerJS = []byte(`console.log("mock")`)
-
+		cfg := loadEnvTestConfig()
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
@@ -119,19 +114,25 @@ func TestInitialAdminFromEnvironment(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "envadmin", resp.Login.User.Username)
 		assert.Equal(t, "admin", resp.Login.User.Role)
+
+		statusResp, err := operations.RegistrationStatus(ctx, ts.graphqlClient())
+		require.NoError(t, err)
+		assert.True(t, statusResp.RegistrationStatus.HasUsers)
+		assert.False(t, statusResp.RegistrationStatus.AllowRegistration)
+
+		_, err = operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
+			Username: "newuser",
+			Password: "password123",
+		})
+		require.Error(t, err, "registration should be disabled when initial admin config is present and ALLOW_REGISTRATION is unset")
 	})
 
 	t.Run("empty env vars result in no initial admin", func(t *testing.T) {
-
 		t.Setenv("INITIAL_ADMIN_USERNAME", "")
 		t.Setenv("INITIAL_ADMIN_PASSWORD", "")
+		t.Setenv("ALLOW_REGISTRATION", "")
 
-		cfg := config.Load()
-		cfg.Database.Driver = "sqlite"
-		cfg.Database.DSN = "file::memory:?cache=shared"
-		cfg.Auth.AllowRegistration = true
-		cfg.TrackerJS = []byte(`console.log("mock")`)
-
+		cfg := loadEnvTestConfig()
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
@@ -142,6 +143,72 @@ func TestInitialAdminFromEnvironment(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, "admin", resp.Register.User.Role)
+
+		secondResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
+			Username: "seconduser",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "user", secondResp.Register.User.Role)
+	})
+
+	t.Run("explicit allow registration overrides initial admin default", func(t *testing.T) {
+		t.Setenv("INITIAL_ADMIN_USERNAME", "envadmin")
+		t.Setenv("INITIAL_ADMIN_PASSWORD", "envpassword123")
+		t.Setenv("ALLOW_REGISTRATION", "true")
+
+		cfg := loadEnvTestConfig()
+		ts := newTestServerWithConfig(t, cfg)
+		ctx := context.Background()
+
+		statusResp, err := operations.RegistrationStatus(ctx, ts.graphqlClient())
+		require.NoError(t, err)
+		assert.True(t, statusResp.RegistrationStatus.HasUsers)
+		assert.True(t, statusResp.RegistrationStatus.AllowRegistration)
+
+		resp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
+			Username: "newuser",
+			Password: "password123",
+		})
+		require.NoError(t, err)
+		assert.Equal(t, "user", resp.Register.User.Role)
+	})
+}
+
+func TestRegistrationStatus(t *testing.T) {
+	t.Run("reports register-only mode when no users exist", func(t *testing.T) {
+		cfg := testConfig()
+		ts := newTestServerWithConfig(t, cfg)
+		ctx := context.Background()
+
+		resp, err := operations.RegistrationStatus(ctx, ts.graphqlClient())
+		require.NoError(t, err)
+		assert.False(t, resp.RegistrationStatus.HasUsers)
+		assert.True(t, resp.RegistrationStatus.AllowRegistration)
+	})
+
+	t.Run("reports login-only mode when users exist and registration is disabled", func(t *testing.T) {
+		cfg := testConfigWithInitialAdmin("admin", "password123")
+		cfg.Auth.AllowRegistration = false
+		ts := newTestServerWithConfig(t, cfg)
+		ctx := context.Background()
+
+		resp, err := operations.RegistrationStatus(ctx, ts.graphqlClient())
+		require.NoError(t, err)
+		assert.True(t, resp.RegistrationStatus.HasUsers)
+		assert.False(t, resp.RegistrationStatus.AllowRegistration)
+	})
+
+	t.Run("reports login-and-register mode when users exist and registration is enabled", func(t *testing.T) {
+		cfg := testConfigWithInitialAdmin("admin", "password123")
+		cfg.Auth.AllowRegistration = true
+		ts := newTestServerWithConfig(t, cfg)
+		ctx := context.Background()
+
+		resp, err := operations.RegistrationStatus(ctx, ts.graphqlClient())
+		require.NoError(t, err)
+		assert.True(t, resp.RegistrationStatus.HasUsers)
+		assert.True(t, resp.RegistrationStatus.AllowRegistration)
 	})
 }
 
@@ -319,6 +386,14 @@ func newTestServerWithConfig(t *testing.T, cfg config.Config) *testServer {
 	}
 }
 
+func loadEnvTestConfig() config.Config {
+	cfg := config.Load()
+	cfg.Database.Driver = "sqlite"
+	cfg.Database.DSN = "file::memory:?cache=shared"
+	cfg.TrackerJS = []byte(`console.log("mock")`)
+	return cfg
+}
+
 func TestInitialAdminWithUnsetEnvVars(t *testing.T) {
 
 	origUsername := os.Getenv("INITIAL_ADMIN_USERNAME")
@@ -343,12 +418,7 @@ func TestInitialAdminWithUnsetEnvVars(t *testing.T) {
 	err = os.Unsetenv("INITIAL_ADMIN_PASSWORD")
 	require.NoError(t, err)
 
-	cfg := config.Load()
-	cfg.Database.Driver = "sqlite"
-	cfg.Database.DSN = "file::memory:?cache=shared"
-	cfg.Auth.AllowRegistration = true
-	cfg.TrackerJS = []byte(`console.log("mock")`)
-
+	cfg := loadEnvTestConfig()
 	ts := newTestServerWithConfig(t, cfg)
 	ctx := context.Background()
 
@@ -359,4 +429,11 @@ func TestInitialAdminWithUnsetEnvVars(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "admin", resp.Register.User.Role)
+
+	secondResp, err := operations.Register(ctx, ts.graphqlClient(), operations.RegisterInput{
+		Username: "seconduser",
+		Password: "password",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "user", secondResp.Register.User.Role)
 }

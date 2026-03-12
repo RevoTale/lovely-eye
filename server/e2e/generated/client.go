@@ -690,6 +690,31 @@ type RegisterResponse struct {
 // GetRegister returns RegisterResponse.Register, and is useful for accessing the field via an interface.
 func (v *RegisterResponse) GetRegister() RegisterRegisterAuthPayload { return v.Register }
 
+// RegistrationStatusRegistrationStatus includes the requested fields of the GraphQL type RegistrationStatus.
+type RegistrationStatusRegistrationStatus struct {
+	HasUsers bool `json:"hasUsers"`
+	// Resolved registration policy after the first user exists
+	AllowRegistration bool `json:"allowRegistration"`
+}
+
+// GetHasUsers returns RegistrationStatusRegistrationStatus.HasUsers, and is useful for accessing the field via an interface.
+func (v *RegistrationStatusRegistrationStatus) GetHasUsers() bool { return v.HasUsers }
+
+// GetAllowRegistration returns RegistrationStatusRegistrationStatus.AllowRegistration, and is useful for accessing the field via an interface.
+func (v *RegistrationStatusRegistrationStatus) GetAllowRegistration() bool {
+	return v.AllowRegistration
+}
+
+// RegistrationStatusResponse is returned by RegistrationStatus on success.
+type RegistrationStatusResponse struct {
+	RegistrationStatus RegistrationStatusRegistrationStatus `json:"registrationStatus"`
+}
+
+// GetRegistrationStatus returns RegistrationStatusResponse.RegistrationStatus, and is useful for accessing the field via an interface.
+func (v *RegistrationStatusResponse) GetRegistrationStatus() RegistrationStatusRegistrationStatus {
+	return v.RegistrationStatus
+}
+
 // SiteResponse is returned by Site on success.
 type SiteResponse struct {
 	Site SiteSite `json:"site"`
@@ -1348,6 +1373,37 @@ func Register(
 	}
 
 	data_ = &RegisterResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
+// The query executed by RegistrationStatus.
+const RegistrationStatus_Operation = `
+query RegistrationStatus {
+	registrationStatus {
+		hasUsers
+		allowRegistration
+	}
+}
+`
+
+func RegistrationStatus(
+	ctx_ context.Context,
+	client_ graphql.Client,
+) (data_ *RegistrationStatusResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "RegistrationStatus",
+		Query:  RegistrationStatus_Operation,
+	}
+
+	data_ = &RegistrationStatusResponse{}
 	resp_ := &graphql.Response{Data: data_}
 
 	err_ = client_.MakeRequest(

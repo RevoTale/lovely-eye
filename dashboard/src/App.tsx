@@ -2,11 +2,19 @@ import { ApolloProvider } from '@apollo/client/react';
 import { RouterProvider } from '@tanstack/react-router';
 import { useRef, useMemo } from 'react';
 import { createApolloClient } from '@/lib/apollo';
+import { AuthShell } from '@/components/auth-shell';
 import { AuthProvider, useAuth } from '@/hooks';
 import { router } from '@/router';
 
 const InnerApp = (): React.ReactNode => {
   const auth = useAuth();
+  if (auth.isLoading) {
+    return (
+      <AuthShell title="Loading dashboard" description="Checking authentication status.">
+        <p className="text-center text-sm text-muted-foreground">Please wait...</p>
+      </AuthShell>
+    );
+  }
   return <RouterProvider router={router} context={{ auth }} />;
 }
 
