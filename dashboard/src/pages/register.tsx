@@ -1,8 +1,8 @@
-import { useState, type FormEvent, type ReactElement } from 'react';
+import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { useAuth } from '@/hooks';
+import { AuthShell } from '@/components/auth-shell';
 import { Link, useNavigate } from '@/router';
-import { Button, Input, Label, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
-import { Logo } from '@/components/logo';
+import { Button, Input, Label } from '@/components/ui';
 
 export const RegisterPage = (): ReactElement => {
   const MIN_PASSWORD_LENGTH = 8;
@@ -10,9 +10,22 @@ export const RegisterPage = (): ReactElement => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const { register } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { register, isLoading, isAuthenticated, authMode, bootstrapError } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isLoading || bootstrapError !== null) {
+      return;
+    }
+    if (isAuthenticated) {
+      void navigate({ to: '/' });
+      return;
+    }
+    if (authMode === 'login-only') {
+      void navigate({ to: '/login' });
+    }
+  }, [authMode, bootstrapError, isAuthenticated, isLoading, navigate]);
 
   const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
@@ -28,7 +41,7 @@ export const RegisterPage = (): ReactElement => {
       return;
     }
 
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     void register({ username, password })
       .then(() => {
@@ -38,82 +51,102 @@ export const RegisterPage = (): ReactElement => {
         setError(err instanceof Error ? err.message : 'Registration failed');
       })
       .finally(() => {
-        setIsLoading(false);
+        setIsSubmitting(false);
       });
   };
 
   const hasError = error !== null && error !== '';
+  const isInitialSetup = authMode === 'register-only';
+
+  if (isLoading) {
+    return (
+      <AuthShell title="Loading dashboard" description="Checking authentication status.">
+        <p className="text-center text-sm text-muted-foreground">Please wait...</p>
+      </AuthShell>
+    );
+  }
+
+  if (bootstrapError !== null) {
+    return (
+      <AuthShell title="Authentication unavailable" description={bootstrapError}>
+        <p className="text-center text-sm text-muted-foreground">Refresh the page to retry.</p>
+      </AuthShell>
+    );
+  }
+
+  if (authMode === 'login-only') {
+    return (
+      <AuthShell title="Redirecting to sign in" description="Registration is currently disabled.">
+        <p className="text-center text-sm text-muted-foreground">Please wait...</p>
+      </AuthShell>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="flex items-center gap-2">
-              <Logo size={32} />
-              <span className="text-2xl font-bold">Lovely Eye</span>
-            </div>
-          </div>
-          <CardTitle className="text-2xl">Create an account</CardTitle>
-          <CardDescription>
-            Register to start tracking your websites
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {hasError ? (
-              <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
-                {error}
-              </div>
-            ) : null}
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="Choose a username"
-                value={username}
-                onChange={(e) => { setUsername(e.target.value); }}
-                required
-                autoComplete="username"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Create a password"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); }}
-                required
-                autoComplete="new-password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                value={confirmPassword}
-                onChange={(e) => { setConfirmPassword(e.target.value); }}
-                required
-                autoComplete="new-password"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Creating account...' : 'Create account'}
-            </Button>
-          </form>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
+    <AuthShell
+      title={isInitialSetup ? 'Create the initial admin account' : 'Create an account'}
+      description={
+        isInitialSetup
+          ? 'No users exist yet. This first account will become the admin.'
+          : 'Register to start tracking your websites'
+      }
+      footer={
+        authMode === 'login-and-register' ? (
+          <>
             Already have an account?{' '}
             <Link to="/login" className="text-primary hover:underline">
               Sign in
             </Link>
+          </>
+        ) : undefined
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {hasError ? (
+          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+            {error}
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : null}
+        <div className="space-y-2">
+          <Label htmlFor="username">Username</Label>
+          <Input
+            id="username"
+            type="text"
+            placeholder="Choose a username"
+            value={username}
+            onChange={(e) => { setUsername(e.target.value); }}
+            required
+            autoComplete="username"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="Create a password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); }}
+            required
+            autoComplete="new-password"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            placeholder="Confirm your password"
+            value={confirmPassword}
+            onChange={(e) => { setConfirmPassword(e.target.value); }}
+            required
+            autoComplete="new-password"
+          />
+        </div>
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? 'Creating account...' : 'Create account'}
+        </Button>
+      </form>
+    </AuthShell>
   );
 }

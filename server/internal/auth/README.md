@@ -34,13 +34,15 @@ No CSRF tokens needed. See [discussion](https://www.reddit.com/r/node/comments/1
 | `JWT_REFRESH_DAYS` | `7` | Refresh token lifetime in days |
 | `SECURE_COOKIES` | `true` | Set to `true` in production (requires HTTPS) |
 | `COOKIE_DOMAIN` | (empty) | Cookie domain (leave empty for current domain) |
-| `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
+| `ALLOW_REGISTRATION` | `auto` | Post-bootstrap registration policy. Defaults to `false` when both `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are set, otherwise defaults to `true`. The first registration is still available whenever no users exist. |
+| `INITIAL_ADMIN_USERNAME` | (empty) | Optional initial admin username. Takes effect only when `INITIAL_ADMIN_PASSWORD` is also set. |
+| `INITIAL_ADMIN_PASSWORD` | (empty) | Optional initial admin password. Takes effect only when `INITIAL_ADMIN_USERNAME` is also set. |
 
 `ANALYTICS_IDENTITY_SECRET` is used by analytics tracking, not dashboard auth. It is documented here because it falls back to `JWT_SECRET` when unset.
 
 ## Roles
 
-- `admin` - Full access (first user only)
+- `admin` - Full access (initial admin or first self-registered user when no initial admin is configured)
 - `user` - Site ownership required
 
-Set initial admin via `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` env vars.
+If both `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are set, Lovely Eye creates that admin on startup and keeps registration disabled by default. If either value is missing, the first self-registered user becomes admin and registration stays enabled by default unless `ALLOW_REGISTRATION` is explicitly set.

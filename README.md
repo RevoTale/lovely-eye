@@ -113,9 +113,11 @@ Requires Go 1.26+.
 cd server
 go run ./cmd/server
 ```
-Server starts at http://localhost:8080. The first registered user becomes admin. SQLite by default.
+Server starts at http://localhost:8080. SQLite by default.
 If `JWT_SECRET` is unset, the server generates one at startup and dashboard sessions do not survive restarts.
 If `ANALYTICS_IDENTITY_SECRET` is unset, analytics identity falls back to `JWT_SECRET`.
+
+Registration defaults depend on initial-admin config. If both `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are set, Lovely Eye creates that admin on startup and keeps registration disabled unless `ALLOW_REGISTRATION=true` is explicitly set. If either initial-admin value is missing, the first self-registered user becomes admin and registration stays enabled by default.
 
 ### Next Step. Install the tracking script.
 
@@ -139,7 +141,9 @@ After you started your containers:
 | `JWT_SECRET` | generated at startup if empty | JWT signing key. Must be at least 32 chars when set. Set it explicitly in production or multi-instance deployments. |
 | `ANALYTICS_IDENTITY_SECRET` | falls back to `JWT_SECRET` | Optional dedicated secret for analytics visitor identity. Must be at least 32 chars when set. Helps reduce the impact of database-only leaks by making visitor IDs harder to recompute. |
 | `SECURE_COOKIES` | `true` | Use secure cookies (requires HTTPS). Set to `false` for local dev |
-| `ALLOW_REGISTRATION` | `false` | Allow new user registration after first user |
+| `ALLOW_REGISTRATION` | `auto` | Post-bootstrap registration policy. Defaults to `false` when both `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are set, otherwise defaults to `true`. The first registration is still available whenever no users exist. |
+| `INITIAL_ADMIN_USERNAME` | (empty) | Optional initial admin username. Takes effect only when `INITIAL_ADMIN_PASSWORD` is also set. |
+| `INITIAL_ADMIN_PASSWORD` | (empty) | Optional initial admin password. Takes effect only when `INITIAL_ADMIN_USERNAME` is also set. |
 | `GEOIP_DB_PATH` | `/data/GeoLite2-Country.mmdb` | Path to GeoLite2-Country.mmdb for country stats |
 | `GEOIP_DOWNLOAD_URL` | `https://download.db-ip.com/free/dbip-country-lite.mmdb.gz` | Default GeoIP download URL (mmdb, gz, or tar.gz) |
 | `GEOIP_MAXMIND_LICENSE_KEY` | - | MaxMind license key for GeoLite2 auto-download |

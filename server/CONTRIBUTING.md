@@ -3,10 +3,11 @@
 ## Authentication
 
 - User email is optional, username is required
-- First registered user automatically becomes admin
-- Subsequent user registration is disabled by default
-- Admin can enable registration via `ALLOW_REGISTRATION=true` environment variable
-- Initial admin can be created via `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` environment variables
+- If both `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are set, the server creates that admin on startup
+- If either initial-admin value is missing, the first self-registered user becomes admin
+- `ALLOW_REGISTRATION` defaults to `false` when both initial-admin values are set, otherwise defaults to `true`
+- `ALLOW_REGISTRATION=true` explicitly keeps registration open after the first user exists
+- The first registration remains available whenever the database has no users
 
 ## API Structure
 

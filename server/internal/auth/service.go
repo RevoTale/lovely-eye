@@ -165,6 +165,18 @@ func (s *jwtService) GetUserByID(ctx context.Context, id int64) (*User, error) {
 	}, nil
 }
 
+func (s *jwtService) RegistrationStatus(ctx context.Context) (*RegistrationStatus, error) {
+	isFirstUser, err := s.isFirstUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RegistrationStatus{
+		HasUsers:          !isFirstUser,
+		AllowRegistration: s.allowRegistration,
+	}, nil
+}
+
 func (s *jwtService) CreateInitialAdmin(ctx context.Context, username, password string) error {
 	if username == "" || password == "" {
 		return nil

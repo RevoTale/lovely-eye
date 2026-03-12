@@ -26,7 +26,7 @@ type FilterInput struct {
 	Referrer []string `json:"referrer,omitempty"`
 	// Filter by browser type
 	Browser []string `json:"browser,omitempty"`
-	// Filter by device type (desktop, mobile, tablet, smart-tv, console)
+	// Filter by device type (desktop, mobile, tablet, smart-tv, console, watch)
 	Device []string `json:"device,omitempty"`
 	// Filter by operating system
 	Os []string `json:"os,omitempty"`
@@ -89,6 +89,12 @@ type PagingInput struct {
 }
 
 type Query struct {
+}
+
+type RegistrationStatus struct {
+	HasUsers bool `json:"hasUsers"`
+	// Resolved registration policy after the first user exists
+	AllowRegistration bool `json:"allowRegistration"`
 }
 
 type Session struct {

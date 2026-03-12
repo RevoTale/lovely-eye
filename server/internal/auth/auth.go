@@ -16,6 +16,8 @@ type Service interface {
 
 	GetUserByID(ctx context.Context, id int64) (*User, error)
 
+	RegistrationStatus(ctx context.Context) (*RegistrationStatus, error)
+
 	CreateInitialAdmin(ctx context.Context, username, password string) error
 
 	SetAuthCookies(w http.ResponseWriter, tokens *Tokens)
@@ -41,6 +43,11 @@ type User struct {
 	ID       int64
 	Username string
 	Role     string
+}
+
+type RegistrationStatus struct {
+	HasUsers          bool
+	AllowRegistration bool
 }
 
 type Claims struct {

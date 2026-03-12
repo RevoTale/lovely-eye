@@ -146,6 +146,14 @@ type Session {
   id: ID!
 }
 
+type RegistrationStatus {
+  hasUsers: Boolean!
+  """
+  Resolved registration policy after the first user exists
+  """
+  allowRegistration: Boolean!
+}
+
 type RealtimeStats {
   """
   Visitors active in last 5 minutes
@@ -323,6 +331,7 @@ scalar Time
 
 type Query {
   me: User
+  registrationStatus: RegistrationStatus!
   sites(paging: PagingInput!): [Site!]!
   site(id: ID!): Site
   dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!

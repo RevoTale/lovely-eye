@@ -192,16 +192,17 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Dashboard        func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) int
-		EventCounts      func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) int
-		EventDefinitions func(childComplexity int, siteID string, paging model.PagingInput) int
-		Events           func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) int
-		GeoIPCountries   func(childComplexity int, search *string, codes []string, paging model.PagingInput) int
-		GeoIPStatus      func(childComplexity int) int
-		Me               func(childComplexity int) int
-		Realtime         func(childComplexity int, siteID string) int
-		Site             func(childComplexity int, id string) int
-		Sites            func(childComplexity int, paging model.PagingInput) int
+		Dashboard          func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) int
+		EventCounts        func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) int
+		EventDefinitions   func(childComplexity int, siteID string, paging model.PagingInput) int
+		Events             func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) int
+		GeoIPCountries     func(childComplexity int, search *string, codes []string, paging model.PagingInput) int
+		GeoIPStatus        func(childComplexity int) int
+		Me                 func(childComplexity int) int
+		Realtime           func(childComplexity int, siteID string) int
+		RegistrationStatus func(childComplexity int) int
+		Site               func(childComplexity int, id string) int
+		Sites              func(childComplexity int, paging model.PagingInput) int
 	}
 
 	RealtimeStats struct {
@@ -212,6 +213,11 @@ type ComplexityRoot struct {
 	ReferrerStats struct {
 		Referrer func(childComplexity int) int
 		Visitors func(childComplexity int) int
+	}
+
+	RegistrationStatus struct {
+		AllowRegistration func(childComplexity int) int
+		HasUsers          func(childComplexity int) int
 	}
 
 	Session struct {
@@ -270,6 +276,7 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
+	RegistrationStatus(ctx context.Context) (*model.RegistrationStatus, error)
 	Sites(ctx context.Context, paging model.PagingInput) ([]*model.Site, error)
 	Site(ctx context.Context, id string) (*model.Site, error)
 	Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) (*model.DashboardStats, error)
@@ -978,6 +985,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Query.Realtime(childComplexity, args["siteId"].(string)), true
+	case "Query.registrationStatus":
+		if e.ComplexityRoot.Query.RegistrationStatus == nil {
+			break
+		}
+
+		return e.ComplexityRoot.Query.RegistrationStatus(childComplexity), true
 	case "Query.site":
 		if e.ComplexityRoot.Query.Site == nil {
 			break
@@ -1031,6 +1044,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.ReferrerStats.Visitors(childComplexity), true
+
+	case "RegistrationStatus.allowRegistration":
+		if e.ComplexityRoot.RegistrationStatus.AllowRegistration == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RegistrationStatus.AllowRegistration(childComplexity), true
+	case "RegistrationStatus.hasUsers":
+		if e.ComplexityRoot.RegistrationStatus.HasUsers == nil {
+			break
+		}
+
+		return e.ComplexityRoot.RegistrationStatus.HasUsers(childComplexity), true
 
 	case "Session.id":
 		if e.ComplexityRoot.Session.ID == nil {
@@ -1377,6 +1403,14 @@ type Session {
   id: ID!
 }
 
+type RegistrationStatus {
+  hasUsers: Boolean!
+  """
+  Resolved registration policy after the first user exists
+  """
+  allowRegistration: Boolean!
+}
+
 type RealtimeStats {
   """
   Visitors active in last 5 minutes
@@ -1505,7 +1539,7 @@ input FilterInput {
   """
   browser: [String!]
   """
-  Filter by device type (desktop, mobile, tablet, smart-tv, console)
+  Filter by device type (desktop, mobile, tablet, smart-tv, console, watch)
   """
   device: [String!]
   """
@@ -1554,6 +1588,7 @@ scalar Time
 
 type Query {
   me: User
+  registrationStatus: RegistrationStatus!
   sites(paging: PagingInput!): [Site!]!
   site(id: ID!): Site
   dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
@@ -4944,6 +4979,41 @@ func (ec *executionContext) fieldContext_Query_me(_ context.Context, field graph
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_registrationStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_registrationStatus,
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Query().RegistrationStatus(ctx)
+		},
+		nil,
+		ec.marshalNRegistrationStatus2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐRegistrationStatus,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_registrationStatus(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "hasUsers":
+				return ec.fieldContext_RegistrationStatus_hasUsers(ctx, field)
+			case "allowRegistration":
+				return ec.fieldContext_RegistrationStatus_allowRegistration(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RegistrationStatus", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_sites(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -5648,6 +5718,64 @@ func (ec *executionContext) fieldContext_ReferrerStats_visitors(_ context.Contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RegistrationStatus_hasUsers(ctx context.Context, field graphql.CollectedField, obj *model.RegistrationStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RegistrationStatus_hasUsers,
+		func(ctx context.Context) (any, error) {
+			return obj.HasUsers, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RegistrationStatus_hasUsers(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RegistrationStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RegistrationStatus_allowRegistration(ctx context.Context, field graphql.CollectedField, obj *model.RegistrationStatus) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_RegistrationStatus_allowRegistration,
+		func(ctx context.Context) (any, error) {
+			return obj.AllowRegistration, nil
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_RegistrationStatus_allowRegistration(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RegistrationStatus",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -9525,6 +9653,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "registrationStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_registrationStatus(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "sites":
 			field := field
 
@@ -9844,6 +9994,50 @@ func (ec *executionContext) _ReferrerStats(ctx context.Context, sel ast.Selectio
 			}
 		case "visitors":
 			out.Values[i] = ec._ReferrerStats_visitors(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.ProcessDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var registrationStatusImplementors = []string{"RegistrationStatus"}
+
+func (ec *executionContext) _RegistrationStatus(ctx context.Context, sel ast.SelectionSet, obj *model.RegistrationStatus) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, registrationStatusImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RegistrationStatus")
+		case "hasUsers":
+			out.Values[i] = ec._RegistrationStatus_hasUsers(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "allowRegistration":
+			out.Values[i] = ec._RegistrationStatus_allowRegistration(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -11067,6 +11261,20 @@ func (ec *executionContext) marshalNReferrerStats2ᚖgithubᚗcomᚋlovelyᚑeye
 func (ec *executionContext) unmarshalNRegisterInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐRegisterInput(ctx context.Context, v any) (model.RegisterInput, error) {
 	res, err := ec.unmarshalInputRegisterInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNRegistrationStatus2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐRegistrationStatus(ctx context.Context, sel ast.SelectionSet, v model.RegistrationStatus) graphql.Marshaler {
+	return ec._RegistrationStatus(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRegistrationStatus2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐRegistrationStatus(ctx context.Context, sel ast.SelectionSet, v *model.RegistrationStatus) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RegistrationStatus(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNSite2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite(ctx context.Context, sel ast.SelectionSet, v model.Site) graphql.Marshaler {

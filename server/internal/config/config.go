@@ -75,6 +75,12 @@ func Load() Config {
 	basePath := getEnv("BASE_PATH", "/")
 	downloadURL := getEnv("GEOIP_DOWNLOAD_URL", "")
 	maxMindKey := getEnv("GEOIP_MAXMIND_LICENSE_KEY", "")
+	initialAdminUsername := getEnv("INITIAL_ADMIN_USERNAME", "")
+	initialAdminPassword := getEnv("INITIAL_ADMIN_PASSWORD", "")
+	allowRegistration := defaultAllowRegistration(initialAdminUsername, initialAdminPassword)
+	if explicitAllowRegistration, ok := getOptionalEnvBool("ALLOW_REGISTRATION"); ok {
+		allowRegistration = explicitAllowRegistration
+	}
 	if downloadURL == "" && maxMindKey == "" {
 		downloadURL = defaultIPDBURL
 	}
@@ -100,11 +106,11 @@ func Load() Config {
 			JWTSecret:            authSecret,
 			AccessTokenExpiry:    time.Duration(getEnvInt("JWT_ACCESS_EXPIRY_MINUTES", 15)) * time.Minute,
 			RefreshExpiry:        time.Duration(getEnvInt("JWT_REFRESH_DAYS", 7)) * 24 * time.Hour,
-			AllowRegistration:    getEnvBool("ALLOW_REGISTRATION", false),
+			AllowRegistration:    allowRegistration,
 			SecureCookies:        getEnvBool("SECURE_COOKIES", true),
 			CookieDomain:         getEnv("COOKIE_DOMAIN", ""),
-			InitialAdminUsername: getEnv("INITIAL_ADMIN_USERNAME", ""),
-			InitialAdminPassword: getEnv("INITIAL_ADMIN_PASSWORD", ""),
+			InitialAdminUsername: initialAdminUsername,
+			InitialAdminPassword: initialAdminPassword,
 		},
 		Analytics: AnalyticsConfig{
 			IdentitySecret: getAnalyticsIdentitySecret(authSecret),
@@ -166,6 +172,18 @@ func getEnvBool(key string, defaultValue bool) bool {
 		return value == "true" || value == "1" || value == "yes"
 	}
 	return defaultValue
+}
+
+func getOptionalEnvBool(key string) (bool, bool) {
+	value, ok := os.LookupEnv(key)
+	if !ok || value == "" {
+		return false, false
+	}
+	return value == "true" || value == "1" || value == "yes", true
+}
+
+func defaultAllowRegistration(initialAdminUsername, initialAdminPassword string) bool {
+	return initialAdminUsername == "" || initialAdminPassword == ""
 }
 
 func getEnvLogLevel(key string, defaultValue slog.Level) slog.Level {

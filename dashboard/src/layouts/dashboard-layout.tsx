@@ -1,6 +1,7 @@
 import { useEffect, type ReactElement } from 'react';
 import { Outlet } from '@tanstack/react-router';
 import { useAuth } from '@/hooks';
+import { AuthShell } from '@/components/auth-shell';
 import { Link, useNavigate } from '@/router';
 import {
   Button,
@@ -23,20 +24,43 @@ const USERNAME_INITIALS_START = 0;
 const USERNAME_INITIALS_END = 2;
 
 export const DashboardLayout = (): ReactElement => {
-  const { user, logout, isAuthenticated, isLoading } = useAuth();
+  const {
+    user,
+    logout,
+    isAuthenticated,
+    isLoading,
+    bootstrapError,
+    unauthenticatedRoute,
+  } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = (): void => {
     void logout().then(() => {
-      void navigate({ to: '/login' });
+      void navigate({ to: unauthenticatedRoute });
     });
   };
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      void navigate({ to: '/login' });
+    if (!isLoading && bootstrapError === null && !isAuthenticated) {
+      void navigate({ to: unauthenticatedRoute });
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [bootstrapError, isAuthenticated, isLoading, navigate, unauthenticatedRoute]);
+
+  if (isLoading) {
+    return (
+      <AuthShell title="Loading dashboard" description="Checking authentication status.">
+        <p className="text-center text-sm text-muted-foreground">Please wait...</p>
+      </AuthShell>
+    );
+  }
+
+  if (bootstrapError !== null) {
+    return (
+      <AuthShell title="Authentication unavailable" description={bootstrapError}>
+        <p className="text-center text-sm text-muted-foreground">Refresh the page to retry.</p>
+      </AuthShell>
+    );
+  }
 
   const initials =
     user?.username.slice(USERNAME_INITIALS_START, USERNAME_INITIALS_END).toUpperCase() ?? 'U';
