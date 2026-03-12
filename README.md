@@ -2,21 +2,23 @@
 
 ![Tracker Size Badge](./server/static/dist/tracker-size.svg "Tracker size")
 
-Self-hosted web analytics with a Go backend and React dashboard. Built for low-resource hosts, with Go's small memory footprint and single-binary deployment keeping it lightweight. Supports SQLite or PostgreSQL.
+Self-hosted web analytics with a Go backend and a React dashboard. Lovely Eye tracks page views and allowlisted custom events without analytics cookies or client-side identifiers. It runs on SQLite by default, supports PostgreSQL, and is designed to stay lightweight on small hosts.
 
+## Highlights
 
-## Features
-
-- **Privacy-first**: no analytics cookies, keyed server-side visitor identity with UTC-day-skipped rotation
-- **Bot filtering**: excludes crawlers, scrapers, monitoring bots.
-- **Lightweight**: runtime consumes around ~15MB of RAM on AMD processor.
-- **SQLite and PostgreSQL** supported.
-- **Dashboard**: GraphQL API with React UI deployed as a static assets.
-- **Custom events**: allowlisted event names and fields. Prevents spamming your database with unnecessary data.
+- Cookieless analytics with an identifier computed from minimized request data and keyed with a server-side secret
+- SQLite by default, PostgreSQL when needed
+- Bot filtering and page-view deduplication
+- Allowlisted custom events
+- Optional country tracking
+- Dashboard served as static assets by the Go server
+- Extremely lighweight runtime
 
 ## Quick Start
 
-### Docker (SQLite)
+The Docker Compose examples below are meant to be copied directly. They use `SECURE_COOKIES=false` so dashboard auth works on `http://localhost`. Change it to `true` when you serve Lovely Eye behind HTTPS.
+
+### Docker Compose (SQLite)
 
 ```yaml
 services:
@@ -25,22 +27,15 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Optional for local development. Set a fixed value in production to
-      # preserve dashboard sessions across restarts.
-      - JWT_SECRET=${JWT_SECRET:-}
-      # Optional: dedicated secret for analytics visitor identity. Falls back to
-      # JWT_SECRET when unset. Set a fixed value in production to keep visitor
-      # counting stable across restarts.
-      - ANALYTICS_IDENTITY_SECRET=${ANALYTICS_IDENTITY_SECRET:-}
-      # Dashboard auth uses cookies and requires HTTPS (serve behind a reverse proxy)
-      # Default is true; you can disable it to serve over HTTP.
-      # Tracking is cookieless; this setting only affects dashboard auth.
-      - SECURE_COOKIES=true
-      # Optional: enable country stats with a MaxMind license key (auto-downloads to /data)
-      - GEOIP_MAXMIND_LICENSE_KEY=your-maxmind-license-key
+      - JWT_SECRET=replace-with-a-32-plus-character-secret
+      - ANALYTICS_IDENTITY_SECRET=replace-with-a-second-32-plus-character-secret
+      - SECURE_COOKIES=false
+      # Leave both empty to allow the first registered user to become admin.
+      # Set both to create the initial admin on startup.
+      - INITIAL_ADMIN_USERNAME=
+      - INITIAL_ADMIN_PASSWORD=
     volumes:
       - lovely-eye-data:/app/data
-      # Optional: mount /data once for both SQLite and GeoIP
       - ./data:/data
     restart: unless-stopped
 
@@ -48,62 +43,55 @@ volumes:
   lovely-eye-data:
 ```
 
-### Docker (PostgreSQL)
+```bash
+docker compose up -d
+```
+
+Open `http://localhost:8080/dashboard`.
+
+### Docker Compose (PostgreSQL)
 
 ```yaml
 services:
   lovely-eye:
     image: ghcr.io/revotale/lovely-eye:latest
     ports:
-      - "${PORT:-8080}:8080"
+      - "8080:8080"
     environment:
       - DB_DRIVER=postgres
-      - DB_DSN=postgres://${POSTGRES_USER:-lovely}:${POSTGRES_PASSWORD:-lovely}@lovely-eye-db:5432/${POSTGRES_DB:-lovely_eye}?sslmode=disable
-      # Optional for local development. Set a fixed value in production to
-      # preserve dashboard sessions across restarts.
-      - JWT_SECRET=${JWT_SECRET:-}
-      # Optional: dedicated secret for analytics visitor identity. Falls back to
-      # JWT_SECRET when unset. Set a fixed value in production to keep visitor
-      # counting stable across restarts.
-      - ANALYTICS_IDENTITY_SECRET=${ANALYTICS_IDENTITY_SECRET:-}
-      # Dashboard auth uses cookies and requires HTTPS (serve behind a reverse proxy)
-      # Default is true; you can disable it to serve over HTTP.
-      # Tracking is cookieless; this setting only affects dashboard auth.
-      - SECURE_COOKIES=true
-      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD}
-      - INITIAL_ADMIN_USERNAME=${INITIAL_ADMIN_USERNAME}
+      - DB_DSN=postgres://lovely:lovely@lovely-eye-db:5432/lovely_eye?sslmode=disable
+      - JWT_SECRET=replace-with-a-32-plus-character-secret
+      - ANALYTICS_IDENTITY_SECRET=replace-with-a-second-32-plus-character-secret
+      - SECURE_COOKIES=false
+      - INITIAL_ADMIN_USERNAME=
+      - INITIAL_ADMIN_PASSWORD=
     depends_on:
       lovely-eye-db:
         condition: service_healthy
-    networks:
-      - lovely-eye-net
     restart: unless-stopped
 
   lovely-eye-db:
-    image: postgres:18.1-alpine
+    image: postgres:18.3-alpine
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-lovely}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-lovely}
-      - POSTGRES_DB=${POSTGRES_DB:-lovely_eye}
+      - POSTGRES_USER=lovely
+      - POSTGRES_PASSWORD=lovely
+      - POSTGRES_DB=lovely_eye
     volumes:
-      - lovely-eye-data:/var/lib/postgresql
-    networks:
-      - lovely-eye-net
+      - lovely-eye-postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lovely} -d ${POSTGRES_DB:-lovely_eye}"]
+      test: ["CMD-SHELL", "pg_isready -U lovely -d lovely_eye"]
       interval: 5s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
 volumes:
-  lovely-eye-data:
-
-networks:
-  lovely-eye-net:
-
+  lovely-eye-postgres:
 ```
 
+```bash
+docker compose up -d
+```
 
 ### From Source
 
@@ -113,82 +101,137 @@ Requires Go 1.26+.
 cd server
 go run ./cmd/server
 ```
-Server starts at http://localhost:8080. SQLite by default.
-If `JWT_SECRET` is unset, the server generates one at startup and dashboard sessions do not survive restarts.
-If `ANALYTICS_IDENTITY_SECRET` is unset, analytics identity falls back to `JWT_SECRET`.
 
-Registration defaults depend on initial-admin config. If both `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are set, Lovely Eye creates that admin on startup and keeps registration disabled unless `ALLOW_REGISTRATION=true` is explicitly set. If either initial-admin value is missing, the first self-registered user becomes admin and registration stays enabled by default.
+SQLite is the default database. If `JWT_SECRET` is unset, Lovely Eye generates one at startup and dashboard sessions do not survive restarts. If `ANALYTICS_IDENTITY_SECRET` is unset, analytics falls back to `JWT_SECRET`.
 
-### Next Step. Install the tracking script.
+## Initial Admin And Registration
 
-After you started your containers:
-- login into dashboard.
-- Create "Site" and enter domain you want to track.
-- Open your "Site". You will find the "Settings" button in right top corner. Click it and scroll to the "Tracking Code" section.
-- Copy the tracking code and install into your website via `javascript` or `html`.
-<img width="1060" height="586" alt="Screenshot 2026-01-26 at 20 58 55" src="https://github.com/user-attachments/assets/e4f878dd-fca2-4678-bf49-3dddf04920a2" />
+- If both `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are set, Lovely Eye creates that initial admin on startup.
+- If both initial-admin values are set and `ALLOW_REGISTRATION` is unset or empty, post-bootstrap registration defaults to disabled.
+- If either initial-admin value is missing, no initial admin is created.
+- If either initial-admin value is missing and `ALLOW_REGISTRATION` is unset or empty, registration defaults to enabled.
+- The first registration is always available when the database has no users.
+- A non-empty `ALLOW_REGISTRATION` value explicitly overrides the derived default.
 
+## Privacy And Tracking
 
+- Lovely Eye does not use analytics cookies or local storage by default.
+- The analytics visitor identifier is computed from site ID, truncated IP prefix, browser family, and device class, and keyed with a server-side secret.
+- The analytics visitor identifier is unique per site.
+- The server computes hashes for `today` and `yesterday`.
+- A visitor who returns at least once per UTC day keeps the same analytics client row.
+- A new analytics client row is created only after the visitor skips a full UTC day between visits.
+- Sessions are separate from the analytics visitor identifier and expire after 30 minutes of inactivity.
+- Country tracking is optional and is not part of the analytics visitor identifier.
+- The dedicated `ANALYTICS_IDENTITY_SECRET` helps reduce the impact of database-only leaks because stored analytics rows do not contain enough information to recompute the identifier on their own.
 
-## Configuration
+## Install The Tracker
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SERVER_HOST` | `0.0.0.0` | Server bind address |
-| `SERVER_PORT` | `8080` | Server port |
-| `DB_DRIVER` | `sqlite` | `sqlite` or `postgres` |
+1. Sign in to the dashboard.
+2. Create a site.
+3. Open the site settings.
+4. Copy the generated tracking code.
+5. Add it to the site you want to track.
+
+## Common Configuration
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `DB_DRIVER` | `sqlite` | Database driver: `sqlite` or `postgres` |
 | `DB_DSN` | `file:data/lovely_eye.db?cache=shared&mode=rwc` | Database connection string |
-| `JWT_SECRET` | generated at startup if empty | JWT signing key. Must be at least 32 chars when set. Set it explicitly in production or multi-instance deployments. |
-| `ANALYTICS_IDENTITY_SECRET` | falls back to `JWT_SECRET` | Optional dedicated secret for analytics visitor identity. Must be at least 32 chars when set. Helps reduce the impact of database-only leaks by making visitor IDs harder to recompute. |
-| `SECURE_COOKIES` | `true` | Use secure cookies (requires HTTPS). Set to `false` for local dev |
-| `ALLOW_REGISTRATION` | `auto` | Post-bootstrap registration policy. Defaults to `false` when both `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are set, otherwise defaults to `true`. The first registration is still available whenever no users exist. |
-| `INITIAL_ADMIN_USERNAME` | (empty) | Optional initial admin username. Takes effect only when `INITIAL_ADMIN_PASSWORD` is also set. |
-| `INITIAL_ADMIN_PASSWORD` | (empty) | Optional initial admin password. Takes effect only when `INITIAL_ADMIN_USERNAME` is also set. |
-| `GEOIP_DB_PATH` | `/data/GeoLite2-Country.mmdb` | Path to GeoLite2-Country.mmdb for country stats |
-| `GEOIP_DOWNLOAD_URL` | `https://download.db-ip.com/free/dbip-country-lite.mmdb.gz` | Default GeoIP download URL (mmdb, gz, or tar.gz) |
-| `GEOIP_MAXMIND_LICENSE_KEY` | - | MaxMind license key for GeoLite2 auto-download |
-
-Country tracking downloads the GeoIP database on demand when at least one site enables it. If the download fails, the dashboard will show the error in site settings.
-
-Analytics visitor identity is server-generated and derived from a keyed hash of site ID, truncated IP prefix, browser family, and device class. The hash is computed per UTC day, but the server reuses the same client across `today` and `yesterday`; if only yesterday matches, that row is rewritten to today's hash. Country tracking stays separate from visitor identity, sessions still expire after 30 minutes of inactivity, and the dedicated analytics identity secret helps reduce the impact of database-only leaks because visitor IDs cannot be recomputed from stored analytics data alone.
+| `JWT_SECRET` | generated at startup if empty | Dashboard auth secret. Set it explicitly in production. |
+| `ANALYTICS_IDENTITY_SECRET` | falls back to `JWT_SECRET` | Optional dedicated secret for the analytics visitor identifier |
+| `SECURE_COOKIES` | `true` | Enables secure dashboard auth cookies |
+| `ALLOW_REGISTRATION` | `auto` | Empty means derived from the initial-admin envs |
+| `INITIAL_ADMIN_USERNAME` | empty | Initial admin username. Requires `INITIAL_ADMIN_PASSWORD`. |
+| `INITIAL_ADMIN_PASSWORD` | empty | Initial admin password. Requires `INITIAL_ADMIN_USERNAME`. |
+| `GEOIP_MAXMIND_LICENSE_KEY` | empty | Optional MaxMind license key for country tracking |
 
 ## Custom Events
 
 ```html
 <script>
-  window.lovelyEye?.track('error', {
-    message: 'Checkout failed',
-    code: 'PAYMENT_DECLINED',
+  window.lovelyEye?.track("checkout_failed", {
+    code: "PAYMENT_DECLINED",
+    step: "confirm",
   });
 </script>
 ```
 
-Events must be allowlisted in site settings. Unknown event names or fields are ignored.
-
-## Showcase screenshots
-<img width="1512" height="982" alt="Screenshot 2026-01-26 at 15 21 10" src="https://github.com/user-attachments/assets/a231dad7-02dc-442d-8d7c-2d7dd459c05d" />
-<img width="1512" height="885" alt="Screenshot 2026-01-26 at 15 23 44" src="https://github.com/user-attachments/assets/f7916173-9a92-4502-b055-aca27089205d" />
-
-
+Custom events are recorded only when the event name and fields are allowlisted in site settings. Otherwise, they are discarded silently.
 
 ## Documentation
 
 - [ANALYTICS.md](./ANALYTICS.md) - tracking mechanics
 - [PRIVACY.md](./PRIVACY.md) - privacy handling
+- [dashboard/README.md](./dashboard/README.md) - dashboard development
+- [server/CONTRIBUTING.md](./server/CONTRIBUTING.md) - server development notes
 
-## Authentication
+## Advanced Docker Compose Example
 
-JWT tokens in HttpOnly cookies with SameSite settings:
+This example includes all server environment variables. Start with the quick-start examples unless you need to tune these values explicitly.
 
-- **HttpOnly**: prevents JavaScript access (XSS protection)
-- **Secure**: HTTPS only in production
-- **SameSite=Strict** (production) or **Lax** (development): prevents CSRF
+```yaml
+services:
+  lovely-eye:
+    image: ghcr.io/revotale/lovely-eye:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8080
+      - BASE_PATH=/
+      - DASHBOARD_PATH=dashboard
+      - DB_DRIVER=postgres
+      - DB_DSN=postgres://lovely:lovely@lovely-eye-db:5432/lovely_eye?sslmode=disable
+      - DB_MAX_CONNS=10
+      - DB_MIN_CONNS=1
+      - DB_CONNECT_TIMEOUT=7s
+      - JWT_SECRET=replace-with-a-32-plus-character-secret
+      - JWT_ACCESS_EXPIRY_MINUTES=15
+      - JWT_REFRESH_DAYS=7
+      - SECURE_COOKIES=true
+      - COOKIE_DOMAIN=
+      # Leave empty for the derived default:
+      # false when both INITIAL_ADMIN_* values are set, true otherwise.
+      - ALLOW_REGISTRATION=
+      # Set both or leave both empty.
+      - INITIAL_ADMIN_USERNAME=
+      - INITIAL_ADMIN_PASSWORD=
+      - ANALYTICS_IDENTITY_SECRET=replace-with-a-second-32-plus-character-secret
+      - GEOIP_DB_PATH=/data/GeoLite2-Country.mmdb
+      - GEOIP_DOWNLOAD_URL=https://download.db-ip.com/free/dbip-country-lite.mmdb.gz
+      - GEOIP_MAXMIND_LICENSE_KEY=
+      - LOG_LEVEL=warn
+    depends_on:
+      lovely-eye-db:
+        condition: service_healthy
+    volumes:
+      - lovely-eye-data:/data
+    restart: unless-stopped
 
+  lovely-eye-db:
+    image: postgres:18.3-alpine
+    environment:
+      - POSTGRES_USER=lovely
+      - POSTGRES_PASSWORD=lovely
+      - POSTGRES_DB=lovely_eye
+    volumes:
+      - lovely-eye-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lovely -d lovely_eye"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  lovely-eye-data:
+  lovely-eye-postgres:
+```
+## Banner
+![Lovely Eye Logo Banner](./preview.png "Lovely Eye")
 
 ## License
 
-Copyright 2025 RevoTale
-
-Licensed under [AGPL-3.0](./LICENSE).
-
-![Lovely Eye Logo Banner](./preview.png "Lovely Eye")
+Licensed under [AGPL-3.0-or-later](./LICENSE). See [COPYRIGHT](./COPYRIGHT).
