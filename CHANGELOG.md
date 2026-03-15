@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/RevoTale/lovely-eye/compare/v1.7.0...v1.7.1) (2026-03-15)
+
+
+### Bug Fixes
+
+* **deps:** update module github.com/evanw/esbuild to v0.27.4 ([c98fae7](https://github.com/RevoTale/lovely-eye/commit/c98fae747b46d54b242989272f12a438ade445ae))
+
 ## [1.7.0](https://github.com/RevoTale/lovely-eye/compare/v1.6.0...v1.7.0) (2026-03-12)
 
 
