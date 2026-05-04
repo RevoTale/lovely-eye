@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.7.1](https://github.com/RevoTale/lovely-eye/compare/v1.7.0...v1.7.1) (2026-05-04)
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([eeb603f](https://github.com/RevoTale/lovely-eye/commit/eeb603f2bc1bec79c7a44d5dfaca748003ab7c39))
+* **deps:** update all non-major dependencies ([46b54d0](https://github.com/RevoTale/lovely-eye/commit/46b54d0127e331dbf8f2e33ea050244a5d0daf36))
+* **deps:** update all non-major dependencies ([4ae0299](https://github.com/RevoTale/lovely-eye/commit/4ae0299f3e58524fa8022049e96ad7868f2eedd9))
+* **deps:** update all non-major dependencies ([11f0ec8](https://github.com/RevoTale/lovely-eye/commit/11f0ec88af3fd38ef4523a80a9e918bf06a0eb59))
+* **deps:** update dependency lucide-react to v1 ([e44eace](https://github.com/RevoTale/lovely-eye/commit/e44eacecd1b8070195a6f61962a98c9b34dcb8ec))
+* **deps:** update dependency lucide-react to v1 ([fc226aa](https://github.com/RevoTale/lovely-eye/commit/fc226aa0692a35876d1db2e652b394c47ac526dc))
+* **deps:** update module github.com/evanw/esbuild to v0.27.4 ([c98fae7](https://github.com/RevoTale/lovely-eye/commit/c98fae747b46d54b242989272f12a438ade445ae))
+* **deps:** update module modernc.org/sqlite to v1.47.0 ([b4f1e9b](https://github.com/RevoTale/lovely-eye/commit/b4f1e9b6e60c546469c786f15472ff815a5b7f42))
+* **deps:** update module modernc.org/sqlite to v1.47.0 ([178abfd](https://github.com/RevoTale/lovely-eye/commit/178abfd86d346c3843fcaf85f80b91256381fba1))
+* **deps:** update module modernc.org/sqlite to v1.49.1 ([d26e7ed](https://github.com/RevoTale/lovely-eye/commit/d26e7edb460d0e61155684e342cabf5923741dfb))
+* **deps:** update module modernc.org/sqlite to v1.49.1 ([7e0d1e0](https://github.com/RevoTale/lovely-eye/commit/7e0d1e0a2561fc4f738f17a9df093a4e2d93d9d2))
+
 ## [1.7.0](https://github.com/RevoTale/lovely-eye/compare/v1.6.0...v1.7.0) (2026-03-12)
 
 
