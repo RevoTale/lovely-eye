@@ -32,7 +32,7 @@ jobs:
     if: needs.release-please.outputs.release_created == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Build and push Docker image
         id: push
         uses: revotale/docker-multi-arch-release-action@v1.4.0
