@@ -2,10 +2,10 @@ import type {
   DashboardQueryVariables,
   EventCountsQueryVariables,
   EventsQueryVariables,
+  EventType,
   FilterInput,
   RealtimeQueryVariables,
 } from '@/gql/graphql';
-import { EventType } from '@/gql/graphql';
 
 const EMPTY_COUNT = 0;
 const PAGE_INDEX_OFFSET = 1;
@@ -34,6 +34,7 @@ export const PAGE_SIZES = {
 
 export const DASHBOARD_POLL_INTERVAL_MS = 60000;
 export const REALTIME_POLL_INTERVAL_MS = 5000;
+const PREDEFINED_EVENT_TYPE = 'PREDEFINED' satisfies EventType;
 
 const normalizeFilter = (filter: FilterInput | null): FilterInput | null =>
   filter === null || Object.keys(filter).length === EMPTY_COUNT ? null : filter;
@@ -89,7 +90,7 @@ export const buildEventCountsVariables = (
     page: filter?.page ?? null,
     country: filter?.country ?? null,
     os: filter?.os ?? null,
-    eventType: [EventType.Predefined],
+    eventType: [PREDEFINED_EVENT_TYPE],
     eventDefinitionId: filter?.eventDefinitionId ?? null,
     eventName: filter?.eventName ?? null,
     eventPath: filter?.eventPath ?? null,

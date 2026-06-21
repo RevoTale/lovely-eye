@@ -30,7 +30,6 @@
     "allowUnreachableCode": false,
     "noImplicitThis": true,
     "useUnknownInCatchVariables": true,
-    "alwaysStrict": true,
     "strictBindCallApply": true,
     "strictFunctionTypes": true,
     "strictNullChecks": true,
@@ -38,9 +37,8 @@
     "verbatimModuleSyntax": true,
 
     /* Paths */
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src", "codegen.ts", "vite.config.ts", "tailwind.config.ts", "postcss.config.js"]

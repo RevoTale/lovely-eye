@@ -1,521 +1,97 @@
 /* eslint-disable */
-import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
-export type Maybe<T> = T | null;
-export type InputMaybe<T> = T | null | undefined;
-export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
-export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
-export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
-export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> = { [_ in K]?: never };
+/** Internal type. DO NOT USE DIRECTLY. */
+type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
+/** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
-/** All built-in and custom scalars, mapped to their actual values */
-export type Scalars = {
-  ID: { input: string; output: string; }
-  String: { input: string; output: string; }
-  Boolean: { input: boolean; output: boolean; }
-  Int: { input: number; output: number; }
-  Float: { input: number; output: number; }
-  Time: { input: string; output: string; }
-};
-
-export type ActivePageStats = {
-  __typename: 'ActivePageStats';
-  path: Scalars['String']['output'];
-  /** Number of visitors currently viewing this page */
-  visitors: Scalars['Int']['output'];
-};
-
-export type AuthPayload = {
-  __typename: 'AuthPayload';
-  user: User;
-};
-
-export type BrowserStats = {
-  __typename: 'BrowserStats';
-  browser: Scalars['String']['output'];
-  visitors: Scalars['Int']['output'];
-};
-
-export type Country = {
-  __typename: 'Country';
-  code: Scalars['String']['output'];
-  name: Scalars['String']['output'];
-};
-
-export type CountryStats = {
-  __typename: 'CountryStats';
-  country: Country;
-  visitors: Scalars['Int']['output'];
-};
-
+import type { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/core';
 export type CreateSiteInput = {
-  domains: Array<Scalars['String']['input']>;
-  name: Scalars['String']['input'];
-};
-
-export type DailyStats = {
-  __typename: 'DailyStats';
-  date: Scalars['Time']['output'];
-  pageViews: Scalars['Int']['output'];
-  sessions: Scalars['Int']['output'];
-  visitors: Scalars['Int']['output'];
-};
-
-export type DashboardStats = {
-  __typename: 'DashboardStats';
-  /** Average session duration in seconds */
-  avgDuration: Scalars['Float']['output'];
-  bounceRate: Scalars['Float']['output'];
-  browsers: Array<BrowserStats>;
-  countries: PagedCountryStats;
-  dailyStats: Array<DailyStats>;
-  devices: PagedDeviceStats;
-  operatingSystems: PagedOperatingSystemStats;
-  pageViews: Scalars['Int']['output'];
-  sessions: Scalars['Int']['output'];
-  topPages: PagedPageStats;
-  topReferrers: PagedReferrerStats;
-  visitors: Scalars['Int']['output'];
-};
-
-
-export type DashboardStatsBrowsersArgs = {
-  paging: PagingInput;
-};
-
-
-export type DashboardStatsCountriesArgs = {
-  paging: PagingInput;
-};
-
-
-export type DashboardStatsDailyStatsArgs = {
-  bucket?: InputMaybe<TimeBucket>;
-  limit: InputMaybe<Scalars['Int']['input']>;
-  offset: InputMaybe<Scalars['Int']['input']>;
-};
-
-
-export type DashboardStatsDevicesArgs = {
-  paging: PagingInput;
-};
-
-
-export type DashboardStatsOperatingSystemsArgs = {
-  paging: PagingInput;
-};
-
-
-export type DashboardStatsTopPagesArgs = {
-  paging: PagingInput;
-};
-
-
-export type DashboardStatsTopReferrersArgs = {
-  paging: PagingInput;
+  domains: Array<string>;
+  name: string;
 };
 
 export type DateRangeInput = {
-  from: InputMaybe<Scalars['Time']['input']>;
-  to: InputMaybe<Scalars['Time']['input']>;
-};
-
-export type DeviceStats = {
-  __typename: 'DeviceStats';
-  device: Scalars['String']['output'];
-  visitors: Scalars['Int']['output'];
-};
-
-export type Event = {
-  __typename: 'Event';
-  createdAt: Scalars['Time']['output'];
-  definition: Maybe<EventDefinition>;
-  id: Scalars['ID']['output'];
-  name: Scalars['String']['output'];
-  path: Scalars['String']['output'];
-  /** Key-value properties associated with the event */
-  properties: Array<EventProperty>;
-};
-
-export type EventCount = {
-  __typename: 'EventCount';
-  count: Scalars['Int']['output'];
-  event: Event;
-};
-
-export type EventDefinition = {
-  __typename: 'EventDefinition';
-  createdAt: Scalars['Time']['output'];
-  fields: Array<EventDefinitionField>;
-  id: Scalars['ID']['output'];
-  name: Scalars['String']['output'];
-  updatedAt: Scalars['Time']['output'];
-};
-
-export type EventDefinitionField = {
-  __typename: 'EventDefinitionField';
-  id: Scalars['ID']['output'];
-  key: Scalars['String']['output'];
-  maxLength: Scalars['Int']['output'];
-  required: Scalars['Boolean']['output'];
-  type: EventFieldType;
+  from: string | null | undefined;
+  to: string | null | undefined;
 };
 
 export type EventDefinitionFieldInput = {
-  key: Scalars['String']['input'];
-  maxLength: InputMaybe<Scalars['Int']['input']>;
-  required: Scalars['Boolean']['input'];
+  key: string;
+  maxLength: number | null | undefined;
+  required: boolean;
   type: EventFieldType;
 };
 
 export type EventDefinitionInput = {
   fields: Array<EventDefinitionFieldInput>;
-  name: Scalars['String']['input'];
+  name: string;
 };
 
-export const EventFieldType = {
-  Boolean: 'BOOLEAN',
-  Int: 'INT',
-  String: 'STRING'
-} as const;
+export type EventFieldType =
+  | 'BOOLEAN'
+  | 'INT'
+  | 'STRING';
 
-export type EventFieldType = typeof EventFieldType[keyof typeof EventFieldType];
-export type EventProperty = {
-  __typename: 'EventProperty';
-  key: Scalars['String']['output'];
-  value: Scalars['String']['output'];
-};
-
-export const EventType = {
-  PageView: 'PAGE_VIEW',
-  Predefined: 'PREDEFINED'
-} as const;
-
-export type EventType = typeof EventType[keyof typeof EventType];
-export type EventsResult = {
-  __typename: 'EventsResult';
-  events: Array<Event>;
-  total: Scalars['Int']['output'];
-};
+export type EventType =
+  | 'PAGE_VIEW'
+  | 'PREDEFINED';
 
 export type FilterInput = {
   /** Filter by browser type */
-  browser: InputMaybe<Array<Scalars['String']['input']>>;
+  browser: Array<string> | null | undefined;
   /** Filter by ISO country code */
-  country: InputMaybe<Array<Scalars['String']['input']>>;
+  country: Array<string> | null | undefined;
   /** Filter by device type (desktop, mobile, tablet, smart-tv, console, watch) */
-  device: InputMaybe<Array<Scalars['String']['input']>>;
+  device: Array<string> | null | undefined;
   /** Filter by event definition ID */
-  eventDefinitionId: InputMaybe<Array<Scalars['ID']['input']>>;
+  eventDefinitionId: Array<string | number> | null | undefined;
   /** Filter by event name */
-  eventName: InputMaybe<Array<Scalars['String']['input']>>;
+  eventName: Array<string> | null | undefined;
   /** Filter by event path */
-  eventPath: InputMaybe<Array<Scalars['String']['input']>>;
+  eventPath: Array<string> | null | undefined;
   /** Filter by event type (page view or predefined) */
-  eventType: InputMaybe<Array<EventType>>;
+  eventType: Array<EventType> | null | undefined;
   /** Filter by operating system */
-  os: InputMaybe<Array<Scalars['String']['input']>>;
+  os: Array<string> | null | undefined;
   /** Filter by page path */
-  page: InputMaybe<Array<Scalars['String']['input']>>;
+  page: Array<string> | null | undefined;
   /** Filter by specific referrer */
-  referrer: InputMaybe<Array<Scalars['String']['input']>>;
-};
-
-export type GeoIpStatus = {
-  __typename: 'GeoIPStatus';
-  dbPath: Scalars['String']['output'];
-  lastError: Maybe<Scalars['String']['output']>;
-  source: Maybe<Scalars['String']['output']>;
-  state: Scalars['String']['output'];
-  updatedAt: Maybe<Scalars['Time']['output']>;
+  referrer: Array<string> | null | undefined;
 };
 
 export type LoginInput = {
-  password: Scalars['String']['input'];
-  username: Scalars['String']['input'];
-};
-
-export type Mutation = {
-  __typename: 'Mutation';
-  createSite: Site;
-  deleteEventDefinition: Scalars['Boolean']['output'];
-  /** Deletes site and all analytics data */
-  deleteSite: Scalars['Boolean']['output'];
-  login: AuthPayload;
-  /** Clears auth cookies */
-  logout: Scalars['Boolean']['output'];
-  refreshGeoIPDatabase: GeoIpStatus;
-  refreshToken: TokenPayload;
-  /** Invalidates old tracking scripts */
-  regenerateSiteKey: Site;
-  /** First user becomes admin */
-  register: AuthPayload;
-  updateSite: Site;
-  upsertEventDefinition: EventDefinition;
-};
-
-
-export type MutationCreateSiteArgs = {
-  input: CreateSiteInput;
-};
-
-
-export type MutationDeleteEventDefinitionArgs = {
-  name: Scalars['String']['input'];
-  siteId: Scalars['ID']['input'];
-};
-
-
-export type MutationDeleteSiteArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type MutationLoginArgs = {
-  input: LoginInput;
-};
-
-
-export type MutationRefreshTokenArgs = {
-  refreshToken: Scalars['String']['input'];
-};
-
-
-export type MutationRegenerateSiteKeyArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type MutationRegisterArgs = {
-  input: RegisterInput;
-};
-
-
-export type MutationUpdateSiteArgs = {
-  id: Scalars['ID']['input'];
-  input: UpdateSiteInput;
-};
-
-
-export type MutationUpsertEventDefinitionArgs = {
-  input: EventDefinitionInput;
-  siteId: Scalars['ID']['input'];
-};
-
-export type OperatingSystemStats = {
-  __typename: 'OperatingSystemStats';
-  os: Scalars['String']['output'];
-  visitors: Scalars['Int']['output'];
-};
-
-export type PageStats = {
-  __typename: 'PageStats';
-  path: Scalars['String']['output'];
-  views: Scalars['Int']['output'];
-  visitors: Scalars['Int']['output'];
-};
-
-export type PagedCountryStats = {
-  __typename: 'PagedCountryStats';
-  items: Array<CountryStats>;
-  total: Scalars['Int']['output'];
-  totalVisitors: Scalars['Int']['output'];
-};
-
-export type PagedDeviceStats = {
-  __typename: 'PagedDeviceStats';
-  items: Array<DeviceStats>;
-  total: Scalars['Int']['output'];
-  totalVisitors: Scalars['Int']['output'];
-};
-
-export type PagedOperatingSystemStats = {
-  __typename: 'PagedOperatingSystemStats';
-  items: Array<OperatingSystemStats>;
-  total: Scalars['Int']['output'];
-  totalVisitors: Scalars['Int']['output'];
-};
-
-export type PagedPageStats = {
-  __typename: 'PagedPageStats';
-  items: Array<PageStats>;
-  total: Scalars['Int']['output'];
-};
-
-export type PagedReferrerStats = {
-  __typename: 'PagedReferrerStats';
-  items: Array<ReferrerStats>;
-  total: Scalars['Int']['output'];
+  password: string;
+  username: string;
 };
 
 export type PagingInput = {
-  limit: Scalars['Int']['input'];
-  offset: Scalars['Int']['input'];
-};
-
-export type Query = {
-  __typename: 'Query';
-  dashboard: DashboardStats;
-  /** Get event counts aggregated by event with the most recent occurrence */
-  eventCounts: Array<EventCount>;
-  /** Get event definitions for a site */
-  eventDefinitions: Array<EventDefinition>;
-  /** Get events for a site with pagination */
-  events: EventsResult;
-  geoIPCountries: Array<Country>;
-  geoIPStatus: GeoIpStatus;
-  me: Maybe<User>;
-  realtime: RealtimeStats;
-  registrationStatus: RegistrationStatus;
-  site: Maybe<Site>;
-  sites: Array<Site>;
-};
-
-
-export type QueryDashboardArgs = {
-  dateRange: InputMaybe<DateRangeInput>;
-  filter: InputMaybe<FilterInput>;
-  siteId: Scalars['ID']['input'];
-};
-
-
-export type QueryEventCountsArgs = {
-  dateRange: InputMaybe<DateRangeInput>;
-  filter: InputMaybe<FilterInput>;
-  paging: PagingInput;
-  siteId: Scalars['ID']['input'];
-};
-
-
-export type QueryEventDefinitionsArgs = {
-  paging: PagingInput;
-  siteId: Scalars['ID']['input'];
-};
-
-
-export type QueryEventsArgs = {
-  dateRange: InputMaybe<DateRangeInput>;
-  filter: InputMaybe<FilterInput>;
-  limit: InputMaybe<Scalars['Int']['input']>;
-  offset: InputMaybe<Scalars['Int']['input']>;
-  siteId: Scalars['ID']['input'];
-};
-
-
-export type QueryGeoIpCountriesArgs = {
-  codes: InputMaybe<Array<Scalars['String']['input']>>;
-  paging: PagingInput;
-  search: InputMaybe<Scalars['String']['input']>;
-};
-
-
-export type QueryRealtimeArgs = {
-  siteId: Scalars['ID']['input'];
-};
-
-
-export type QuerySiteArgs = {
-  id: Scalars['ID']['input'];
-};
-
-
-export type QuerySitesArgs = {
-  paging: PagingInput;
-};
-
-export type RealtimeStats = {
-  __typename: 'RealtimeStats';
-  /** Active pages with visitor count */
-  activePages: Array<ActivePageStats>;
-  /** Visitors active in last 5 minutes */
-  visitors: Scalars['Int']['output'];
-};
-
-
-export type RealtimeStatsActivePagesArgs = {
-  paging: PagingInput;
-};
-
-export type ReferrerStats = {
-  __typename: 'ReferrerStats';
-  referrer: Scalars['String']['output'];
-  visitors: Scalars['Int']['output'];
+  limit: number;
+  offset: number;
 };
 
 export type RegisterInput = {
-  password: Scalars['String']['input'];
-  username: Scalars['String']['input'];
+  password: string;
+  username: string;
 };
 
-export type RegistrationStatus = {
-  __typename: 'RegistrationStatus';
-  /** Resolved registration policy after the first user exists */
-  allowRegistration: Scalars['Boolean']['output'];
-  hasUsers: Scalars['Boolean']['output'];
-};
-
-export type Session = {
-  __typename: 'Session';
-  id: Scalars['ID']['output'];
-};
-
-export type Site = {
-  __typename: 'Site';
-  /** ISO country codes blocked from tracking */
-  blockedCountries: Array<Scalars['String']['output']>;
-  /** IP addresses blocked from tracking */
-  blockedIPs: Array<Scalars['String']['output']>;
-  createdAt: Scalars['Time']['output'];
-  /** All tracked domains (includes primary) */
-  domains: Array<Scalars['String']['output']>;
-  id: Scalars['ID']['output'];
-  name: Scalars['String']['output'];
-  /** Used in tracking script */
-  publicKey: Scalars['String']['output'];
-  /** Enable country tracking (requires GeoIP database) */
-  trackCountry: Scalars['Boolean']['output'];
-};
-
-export const TimeBucket = {
-  Daily: 'DAILY',
-  Hourly: 'HOURLY'
-} as const;
-
-export type TimeBucket = typeof TimeBucket[keyof typeof TimeBucket];
-export type TokenPayload = {
-  __typename: 'TokenPayload';
-  accessToken: Scalars['String']['output'];
-  refreshToken: Scalars['String']['output'];
-};
+export type TimeBucket =
+  | 'DAILY'
+  | 'HOURLY';
 
 export type UpdateSiteInput = {
   /** Full list of blocked country codes */
-  blockedCountries: InputMaybe<Array<Scalars['String']['input']>>;
+  blockedCountries: Array<string> | null | undefined;
   /** Full list of blocked IPs */
-  blockedIPs: InputMaybe<Array<Scalars['String']['input']>>;
+  blockedIPs: Array<string> | null | undefined;
   /** Full list of tracked domains (includes primary) */
-  domains: InputMaybe<Array<Scalars['String']['input']>>;
-  name: Scalars['String']['input'];
-  trackCountry: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type User = {
-  __typename: 'User';
-  createdAt: Scalars['Time']['output'];
-  id: Scalars['ID']['output'];
-  role: Scalars['String']['output'];
-  sites: Maybe<Array<Site>>;
-  username: Scalars['String']['output'];
-};
-
-
-export type UserSitesArgs = {
-  paging: PagingInput;
+  domains: Array<string> | null | undefined;
+  name: string;
+  trackCountry: boolean | null | undefined;
 };
 
 export type CountryFieldsFragment = { __typename: 'Country', code: string, name: string } & { ' $fragmentName'?: 'CountryFieldsFragment' };
 
 export type CountriesByCodeQueryVariables = Exact<{
-  codes: InputMaybe<Array<Scalars['String']['input']> | Scalars['String']['input']>;
+  codes?: Array<string> | string | null | undefined;
   paging: PagingInput;
 }>;
 
@@ -536,14 +112,14 @@ export type RefreshGeoIpDatabaseMutation = { __typename: 'Mutation', refreshGeoI
 export type CountryTrackingGeoIpStatusFieldsFragment = { __typename: 'GeoIPStatus', state: string, dbPath: string, source: string | null, lastError: string | null, updatedAt: string | null } & { ' $fragmentName'?: 'CountryTrackingGeoIpStatusFieldsFragment' };
 
 export type DeleteSiteMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
 }>;
 
 
 export type DeleteSiteMutation = { __typename: 'Mutation', deleteSite: boolean };
 
 export type EventDefinitionsQueryVariables = Exact<{
-  siteId: Scalars['ID']['input'];
+  siteId: string | number;
   paging: PagingInput;
 }>;
 
@@ -554,7 +130,7 @@ export type EventDefinitionsQuery = { __typename: 'Query', eventDefinitions: Arr
   )> };
 
 export type UpsertEventDefinitionMutationVariables = Exact<{
-  siteId: Scalars['ID']['input'];
+  siteId: string | number;
   input: EventDefinitionInput;
 }>;
 
@@ -565,8 +141,8 @@ export type UpsertEventDefinitionMutation = { __typename: 'Mutation', upsertEven
   ) };
 
 export type DeleteEventDefinitionMutationVariables = Exact<{
-  siteId: Scalars['ID']['input'];
-  name: Scalars['String']['input'];
+  siteId: string | number;
+  name: string;
 }>;
 
 
@@ -580,7 +156,7 @@ export type EventDefinitionFieldsFragment = { __typename: 'EventDefinition', id:
   )> } & { ' $fragmentName'?: 'EventDefinitionFieldsFragment' };
 
 export type RegenerateSiteKeyMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
 }>;
 
 
@@ -592,7 +168,7 @@ export type RegenerateSiteKeyMutation = { __typename: 'Mutation', regenerateSite
 export type TrackingCodeSiteSummaryFieldsFragment = { __typename: 'Site', id: string, domains: Array<string>, name: string, publicKey: string, createdAt: string } & { ' $fragmentName'?: 'TrackingCodeSiteSummaryFieldsFragment' };
 
 export type GeoIpCountriesQueryVariables = Exact<{
-  search: InputMaybe<Scalars['String']['input']>;
+  search?: string | null | undefined;
   paging: PagingInput;
 }>;
 
@@ -647,9 +223,9 @@ export type AuthUserDetailsFieldsFragment = { __typename: 'User', id: string, us
   )> | null } & { ' $fragmentName'?: 'AuthUserDetailsFieldsFragment' };
 
 export type DashboardQueryVariables = Exact<{
-  siteId: Scalars['ID']['input'];
-  dateRange: InputMaybe<DateRangeInput>;
-  filter: InputMaybe<FilterInput>;
+  siteId: string | number;
+  dateRange?: DateRangeInput | null | undefined;
+  filter?: FilterInput | null | undefined;
   topPagesPaging: PagingInput;
   referrersPaging: PagingInput;
   browsersPaging: PagingInput;
@@ -665,7 +241,7 @@ export type DashboardQuery = { __typename: 'Query', dashboard: (
   ) };
 
 export type RealtimeQueryVariables = Exact<{
-  siteId: Scalars['ID']['input'];
+  siteId: string | number;
   activePagesPaging: PagingInput;
 }>;
 
@@ -676,11 +252,11 @@ export type RealtimeQuery = { __typename: 'Query', realtime: (
   ) };
 
 export type EventsQueryVariables = Exact<{
-  siteId: Scalars['ID']['input'];
-  dateRange: InputMaybe<DateRangeInput>;
-  filter: InputMaybe<FilterInput>;
-  limit: InputMaybe<Scalars['Int']['input']>;
-  offset: InputMaybe<Scalars['Int']['input']>;
+  siteId: string | number;
+  dateRange?: DateRangeInput | null | undefined;
+  filter?: FilterInput | null | undefined;
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
 }>;
 
 
@@ -690,9 +266,9 @@ export type EventsQuery = { __typename: 'Query', events: { __typename: 'EventsRe
     )> } };
 
 export type EventCountsQueryVariables = Exact<{
-  siteId: Scalars['ID']['input'];
-  dateRange: InputMaybe<DateRangeInput>;
-  filter: InputMaybe<FilterInput>;
+  siteId: string | number;
+  dateRange?: DateRangeInput | null | undefined;
+  filter?: FilterInput | null | undefined;
   paging: PagingInput;
 }>;
 
@@ -703,12 +279,12 @@ export type EventCountsQuery = { __typename: 'Query', eventCounts: Array<(
   )> };
 
 export type ChartDataQueryVariables = Exact<{
-  siteId: Scalars['ID']['input'];
-  dateRange: InputMaybe<DateRangeInput>;
-  filter: InputMaybe<FilterInput>;
-  bucket: InputMaybe<TimeBucket>;
-  limit: InputMaybe<Scalars['Int']['input']>;
-  offset: InputMaybe<Scalars['Int']['input']>;
+  siteId: string | number;
+  dateRange?: DateRangeInput | null | undefined;
+  filter?: FilterInput | null | undefined;
+  bucket?: TimeBucket | null | undefined;
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
 }>;
 
 
@@ -792,7 +368,7 @@ export type GeoIpStatusQuery = { __typename: 'Query', geoIPStatus: (
   ) };
 
 export type SiteQueryVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
 }>;
 
 
@@ -802,7 +378,7 @@ export type SiteQuery = { __typename: 'Query', site: (
   ) | null };
 
 export type UpdateSiteMutationVariables = Exact<{
-  id: Scalars['ID']['input'];
+  id: string | number;
   input: UpdateSiteInput;
 }>;
 

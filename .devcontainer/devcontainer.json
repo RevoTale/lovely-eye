@@ -6,7 +6,7 @@
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
   "features": {
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-      "moby" : false
+      "moby": false
     },
     "ghcr.io/rails/devcontainer/features/bun:1.0.2": {},
     "ghcr.io/devcontainers-extra/features/go-task:1": {},

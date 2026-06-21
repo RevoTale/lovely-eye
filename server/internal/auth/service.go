@@ -215,6 +215,7 @@ func (s *jwtService) SetAuthCookies(w http.ResponseWriter, tokens *Tokens) {
 		sameSite = http.SameSiteStrictMode
 	}
 
+	// #nosec G124 -- Secure is configurable for local HTTP/test; production defaults it to true.
 	http.SetCookie(w, &http.Cookie{
 		Name:     accessTokenCookie,
 		Value:    tokens.AccessToken,
@@ -226,6 +227,7 @@ func (s *jwtService) SetAuthCookies(w http.ResponseWriter, tokens *Tokens) {
 		SameSite: sameSite,
 	})
 
+	// #nosec G124 -- Secure is configurable for local HTTP/test; production defaults it to true.
 	http.SetCookie(w, &http.Cookie{
 		Name:     refreshTokenCookie,
 		Value:    tokens.RefreshToken,
@@ -245,6 +247,7 @@ func (s *jwtService) ClearAuthCookies(w http.ResponseWriter) {
 	}
 
 	for _, name := range []string{accessTokenCookie, refreshTokenCookie} {
+		// #nosec G124 -- Secure is configurable for local HTTP/test; production defaults it to true.
 		http.SetCookie(w, &http.Cookie{
 			Name:     name,
 			Value:    "",

@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { MonthCaptionProps } from "react-day-picker";
+import type { MonthCaptionProps } from "@daypicker/react";
 
 // ---------- utils start ----------
 /**
@@ -753,7 +753,7 @@ const DateTimePicker = React.forwardRef<
                 buttonVariants({ variant: "outline" }),
                 "absolute right-5 top-5 h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
               ),
-              table: "w-full border-collapse space-y-1",
+              month_grid: "w-full border-collapse space-y-1",
               weekdays: cn("flex", showWeekNumber && "justify-end"),
               weekday:
                 "text-muted-foreground w-9 rounded-md text-[0.8rem] font-normal",

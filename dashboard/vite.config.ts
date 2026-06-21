@@ -33,7 +33,7 @@ export default defineConfig({
     // Optimize for static serving
     minify: true,
     cssMinify: 'lightningcss',
-    rollupOptions: {
+    rolldownOptions: {
       treeshake: true,
     },
   },
