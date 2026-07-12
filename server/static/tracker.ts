@@ -6,8 +6,6 @@ type TrackInput = {
   name?: string;
   path?: string;
   referrer?: string;
-  screen_width?: number;
-  duration?: number;
   properties?: Record<string, unknown> | string;
   utm_source?: string;
   utm_medium?: string;
@@ -15,21 +13,17 @@ type TrackInput = {
 };
 
 type TrackPayload = {
-  site_key: string;
-  name: string;
+  name?: string;
   path: string;
-  properties: string;
-  referrer: string;
-  screen_width: number;
-  duration: number;
-  utm_source: string;
-  utm_medium: string;
-  utm_campaign: string;
+  properties?: string;
+  referrer?: string;
+  exit?: true;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
 };
 
 type PayloadStringKey = 'name' | 'path' | 'referrer' | 'utm_source' | 'utm_medium' | 'utm_campaign';
-
-type PayloadNumberKey = 'screen_width' | 'duration';
 
 declare global {
   interface Window {
@@ -48,7 +42,7 @@ declare global {
   if (!siteKey || !apiUrl) return;
 
   let lastPath = '';
-  let pageStartTime = Date.now();
+  let exitSent = false;
 
   const getPath = (): string =>
     includeQuery ? window.location.pathname + window.location.search : window.location.pathname;
@@ -75,16 +69,6 @@ declare global {
     }
   };
 
-  const assignNumberOverride = (
-    payload: TrackPayload,
-    key: PayloadNumberKey,
-    value: number | undefined
-  ): void => {
-    if (typeof value === 'number') {
-      payload[key] = value;
-    }
-  };
-
   const getPropertiesValue = (properties: TrackInput['properties']): string | undefined => {
     if (typeof properties === 'string') {
       return properties;
@@ -97,28 +81,31 @@ declare global {
     return undefined;
   };
 
-  const buildPayload = (data?: TrackInput): TrackPayload => {
+  const assignAttribution = (payload: TrackPayload): void => {
     const params = new URLSearchParams(window.location.search);
-    const payload: TrackPayload = {
-      site_key: siteKey,
-      name: '',
-      path: getPath(),
-      properties: '',
-      referrer: getReferrer(),
-      screen_width: window.innerWidth,
-      duration: 0,
-      utm_source: params.get('utm_source') || '',
-      utm_medium: params.get('utm_medium') || '',
-      utm_campaign: params.get('utm_campaign') || '',
-    };
+    const referrer = getReferrer();
+    if (referrer) payload.referrer = referrer;
+
+    const utmSource = params.get('utm_source');
+    const utmMedium = params.get('utm_medium');
+    const utmCampaign = params.get('utm_campaign');
+    if (utmSource) payload.utm_source = utmSource;
+    if (utmMedium) payload.utm_medium = utmMedium;
+    if (utmCampaign) payload.utm_campaign = utmCampaign;
+  };
+
+  const buildPayload = (data?: TrackInput, includeAttribution = false): TrackPayload => {
+    const payload: TrackPayload = { path: getPath() };
+
+    if (includeAttribution) {
+      assignAttribution(payload);
+    }
 
     if (!data) return payload;
 
     assignStringOverride(payload, 'name', data.name);
     assignStringOverride(payload, 'path', data.path);
     assignStringOverride(payload, 'referrer', data.referrer);
-    assignNumberOverride(payload, 'screen_width', data.screen_width);
-    assignNumberOverride(payload, 'duration', data.duration);
     assignStringOverride(payload, 'utm_source', data.utm_source);
     assignStringOverride(payload, 'utm_medium', data.utm_medium);
     assignStringOverride(payload, 'utm_campaign', data.utm_campaign);
@@ -136,12 +123,12 @@ declare global {
     const payload = JSON.stringify(data);
 
     if (navigator.sendBeacon) {
-      const blob = new Blob([payload], { type: 'application/json' });
+      const blob = new Blob([payload], { type: 'text/plain;charset=UTF-8' });
       navigator.sendBeacon(url, blob);
     } else {
       fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
         body: payload,
         keepalive: true,
       }).catch(() => {});
@@ -149,18 +136,19 @@ declare global {
   };
 
   const track = (data?: TrackInput): void => {
-    const payload = buildPayload(data);
-    if (payload.path === lastPath && !payload.name && payload.duration === 0) return;
+    const payload = buildPayload(data, lastPath === '' && !data?.name);
+    if (payload.path === lastPath && !payload.name) return;
     lastPath = payload.path;
+    exitSent = false;
     send('/api/collect', payload);
-    pageStartTime = Date.now();
   };
 
-  const trackLeave = (): void => {
-    const duration = Math.round((Date.now() - pageStartTime) / 1000);
-    if (duration > 0 && duration < 3600) {
-      track({ duration });
-    }
+  const trackExit = (): void => {
+    if (exitSent) return;
+    const path = getPath();
+    if (!path) return;
+    exitSent = true;
+    send('/api/collect', { path, exit: true });
   };
 
   const init = (): void => {
@@ -168,7 +156,9 @@ declare global {
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
-        trackLeave();
+        trackExit();
+      } else {
+        exitSent = false;
       }
     });
 
@@ -187,7 +177,7 @@ declare global {
     window.addEventListener('popstate', () => {
       track();
     });
-    window.addEventListener('beforeunload', trackLeave);
+    window.addEventListener('pagehide', trackExit);
   };
 
   window.lovelyEye = { track };

@@ -25,15 +25,21 @@ import (
 	"golang.org/x/crypto/hkdf"
 )
 
+const (
+	activeSessionWindow              = 30 * time.Minute
+	defaultMaxSinglePageExitDuration = 4 * time.Hour
+)
+
 type AnalyticsService struct {
-	analyticsRepo       *repository.AnalyticsRepository
-	countryService      countrySyncer
-	siteRepo            *repository.SiteRepository
-	eventDefinitionRepo *repository.EventDefinitionRepository
-	botDetector         *BotDetector
-	geoIPService        geoIPProvider
-	identitySecret      []byte
-	now                 func() time.Time
+	analyticsRepo         *repository.AnalyticsRepository
+	countryService        countrySyncer
+	siteRepo              *repository.SiteRepository
+	eventDefinitionRepo   *repository.EventDefinitionRepository
+	botDetector           *BotDetector
+	geoIPService          geoIPProvider
+	identitySecret        []byte
+	maxSinglePageDuration time.Duration
+	now                   func() time.Time
 }
 
 type geoIPProvider interface {
@@ -55,41 +61,58 @@ func NewAnalyticsService(
 	identitySecret string,
 ) *AnalyticsService {
 	return &AnalyticsService{
-		analyticsRepo:       analyticsRepo,
-		countryService:      countryService,
-		siteRepo:            siteRepo,
-		eventDefinitionRepo: eventDefinitionRepo,
-		botDetector:         NewBotDetector(),
-		geoIPService:        geoIPService,
-		identitySecret:      []byte(identitySecret),
-		now:                 time.Now,
+		analyticsRepo:         analyticsRepo,
+		countryService:        countryService,
+		siteRepo:              siteRepo,
+		eventDefinitionRepo:   eventDefinitionRepo,
+		botDetector:           NewBotDetector(),
+		geoIPService:          geoIPService,
+		identitySecret:        []byte(identitySecret),
+		maxSinglePageDuration: defaultMaxSinglePageExitDuration,
+		now:                   time.Now,
 	}
 }
 
+func (s *AnalyticsService) SetMaxSinglePageDuration(duration time.Duration) {
+	if duration <= 0 {
+		duration = defaultMaxSinglePageExitDuration
+	}
+	s.maxSinglePageDuration = duration
+}
+
+func (s *AnalyticsService) sessionLookupWindow(exit bool) time.Duration {
+	if !exit {
+		return activeSessionWindow
+	}
+	if s.maxSinglePageDuration <= 0 {
+		return defaultMaxSinglePageExitDuration
+	}
+	return s.maxSinglePageDuration
+}
+
 type CollectInput struct {
-	SiteKey     string `json:"site_key"`
-	Path        string `json:"path"`
-	Referrer    string `json:"referrer"`
-	ScreenWidth int    `json:"screen_width"`
-	Duration    int    `json:"duration"`
-	UserAgent   string `json:"-"`
-	IP          string `json:"-"`
-	Origin      string `json:"-"`
-	Referer     string `json:"-"`
-	UTMSource   string `json:"utm_source"`
-	UTMMedium   string `json:"utm_medium"`
-	UTMCampaign string `json:"utm_campaign"`
+	SiteKey     string
+	Path        string
+	Exit        bool
+	Referrer    string
+	UserAgent   string
+	IP          string
+	Origin      string
+	Referer     string
+	UTMSource   string
+	UTMMedium   string
+	UTMCampaign string
 }
 
 type EventInput struct {
-	SiteKey    string `json:"site_key"`
-	Name       string `json:"name"`
-	Path       string `json:"path"`
-	Properties string `json:"properties"`
-	UserAgent  string `json:"-"`
-	IP         string `json:"-"`
-	Origin     string `json:"-"`
-	Referer    string `json:"-"`
+	SiteKey    string
+	Name       string
+	Path       string
+	Properties string
+	UserAgent  string
+	IP         string
+	Origin     string
+	Referer    string
 }
 
 func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInput) error {
@@ -112,28 +135,35 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 	device := categorizeDevice(ua)
 	browser := normalizeBrowser(ua)
 	os := normalizeOS(ua)
-	screenSize := categorizeScreenSize(input.ScreenWidth)
+	screenSize := models.ClientScreenSizeUnknown
 	now := s.now()
 	nowUnix := now.Unix()
 
 	country := UnknownCountry
-	if site.TrackCountry && s.geoIPService != nil {
+	if !input.Exit && site.TrackCountry && s.geoIPService != nil {
 		country = s.resolveCountryBestEffort(input.IP)
 	}
-	isDurationOnly := input.Duration > 0 &&
-		input.ScreenWidth == 0 &&
-		input.Referrer == "" &&
-		input.UTMSource == "" &&
-		input.UTMMedium == "" &&
-		input.UTMCampaign == ""
 
 	if err := s.analyticsRepo.RunInTx(ctx, func(ctx context.Context, tx bun.Tx) error {
-		client, err := s.resolveClientWithRotation(ctx, tx, site.ID, input.IP, device, browser, os, screenSize, country.ISOCode, now)
-		if err != nil {
-			return fmt.Errorf("resolve client with rotation: %w", err)
+		var client *models.Client
+		var err error
+		if input.Exit {
+			client, err = s.findClientForExit(ctx, tx, site.ID, input.IP, browser, device, now)
+			if err != nil {
+				return fmt.Errorf("find client for exit: %w", err)
+			}
+			if client == nil {
+				return nil
+			}
+		} else {
+			client, err = s.resolveClientWithRotation(ctx, tx, site.ID, input.IP, device, browser, os, screenSize, country.ISOCode, now)
+			if err != nil {
+				return fmt.Errorf("resolve client with rotation: %w", err)
+			}
 		}
 
-		session, err := s.analyticsRepo.GetActiveSessionTx(ctx, tx, site.ID, client.ID, now.Add(-30*time.Minute).Unix())
+		activeSinceUnix := now.Add(-activeSessionWindow).Unix()
+		session, err := s.analyticsRepo.GetActiveSessionTx(ctx, tx, site.ID, client.ID, now.Add(-s.sessionLookupWindow(input.Exit)).Unix())
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("get active session: %w", err)
 		}
@@ -141,8 +171,10 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 			session = nil
 		}
 
+		// Exit pings are only trusted as lifecycle hints. Same-path exits close
+		// the active path; fresh different-path exits first record the path.
 		if session == nil {
-			if isDurationOnly {
+			if input.Exit {
 				return nil
 			}
 
@@ -168,16 +200,16 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 				return fmt.Errorf("create session: %w", err)
 			}
 		} else {
-			if isDurationOnly {
-				session.ExitTime = nowUnix
-				session.ExitHour = nowUnix / 3600
-				session.ExitDay = nowUnix / 86400
-				if input.Path != "" {
-					session.ExitPath = input.Path
-				}
-				session.Duration = int(nowUnix - session.EnterTime)
+			// The extended exit lookup only closes the same path. A stale exit for
+			// another path is too weak to infer a real pageview after inactivity.
+			if input.Exit && session.ExitTime <= activeSinceUnix && session.ExitPath != input.Path {
+				return nil
+			}
+
+			if input.Exit && session.ExitPath == input.Path {
+				updateSessionExit(session, input.Path, s.singlePageExitUnix(session, nowUnix))
 				if err := s.analyticsRepo.UpdateSessionTx(ctx, tx, session); err != nil {
-					return fmt.Errorf("update duration-only session: %w", err)
+					return fmt.Errorf("update exit session: %w", err)
 				}
 				return nil
 			}
@@ -187,22 +219,20 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 				return fmt.Errorf("get recent pageview event: %w", err)
 			}
 			if err == nil && recentEvent != nil {
+				if input.Exit {
+					updateSessionExit(session, input.Path, s.exitUnixForDuplicateEvent(session, input.Path, nowUnix))
+					if err := s.analyticsRepo.UpdateSessionTx(ctx, tx, session); err != nil {
+						return fmt.Errorf("update duplicate exit session: %w", err)
+					}
+				}
 				return nil
 			}
 
-			session.ExitTime = nowUnix
-			session.ExitHour = nowUnix / 3600
-			session.ExitDay = nowUnix / 86400
-			session.ExitPath = input.Path
-			session.Duration = int(nowUnix - session.EnterTime)
+			updateSessionExit(session, input.Path, nowUnix)
 			session.PageViewCount++
 			if err := s.analyticsRepo.UpdateSessionTx(ctx, tx, session); err != nil {
 				return fmt.Errorf("update session: %w", err)
 			}
-		}
-
-		if isDurationOnly {
-			return nil
 		}
 
 		event := &models.Event{
@@ -222,6 +252,48 @@ func (s *AnalyticsService) CollectPageView(ctx context.Context, input CollectInp
 	}
 
 	return nil
+}
+
+func (s *AnalyticsService) singlePageExitUnix(session *models.Session, nowUnix int64) int64 {
+	if session.PageViewCount > 1 {
+		return nowUnix
+	}
+
+	maxExitUnix := session.EnterTime + s.maxSinglePageDurationSeconds()
+	if nowUnix > maxExitUnix {
+		return maxExitUnix
+	}
+	return nowUnix
+}
+
+func (s *AnalyticsService) exitUnixForDuplicateEvent(session *models.Session, path string, nowUnix int64) int64 {
+	if session.ExitPath == path {
+		return s.singlePageExitUnix(session, nowUnix)
+	}
+	return nowUnix
+}
+
+func (s *AnalyticsService) maxSinglePageDurationSeconds() int64 {
+	duration := s.maxSinglePageDuration
+	if duration <= 0 {
+		duration = defaultMaxSinglePageExitDuration
+	}
+
+	seconds := int64(duration / time.Second)
+	if seconds <= 0 {
+		return int64(defaultMaxSinglePageExitDuration / time.Second)
+	}
+	return seconds
+}
+
+func updateSessionExit(session *models.Session, path string, nowUnix int64) {
+	session.ExitTime = nowUnix
+	session.ExitHour = nowUnix / 3600
+	session.ExitDay = nowUnix / 86400
+	if path != "" {
+		session.ExitPath = path
+	}
+	session.Duration = int(nowUnix - session.EnterTime)
 }
 
 func (s *AnalyticsService) CollectEvent(ctx context.Context, input EventInput) error {
@@ -463,11 +535,26 @@ func (s *AnalyticsService) Close() error {
 }
 
 func (s *AnalyticsService) GetDashboardOverviewWithFilter(ctx context.Context, query AnalyticsQuery) (*DashboardOverview, error) {
-	visitors, _ := s.analyticsRepo.GetVisitorCountWithFilter(ctx, query)
-	pageViews, _ := s.analyticsRepo.GetPageViewCountWithFilter(ctx, query)
-	sessions, _ := s.analyticsRepo.GetSessionCountWithFilter(ctx, query)
-	bounceRate, _ := s.analyticsRepo.GetBounceRateWithFilter(ctx, query)
-	avgDuration, _ := s.analyticsRepo.GetAvgSessionDurationWithFilter(ctx, query)
+	visitors, err := s.analyticsRepo.GetVisitorCountWithFilter(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("get visitor count with filter: %w", err)
+	}
+	pageViews, err := s.analyticsRepo.GetPageViewCountWithFilter(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("get page view count with filter: %w", err)
+	}
+	sessions, err := s.analyticsRepo.GetSessionCountWithFilter(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("get session count with filter: %w", err)
+	}
+	bounceRate, err := s.analyticsRepo.GetBounceRateWithFilter(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("get bounce rate with filter: %w", err)
+	}
+	avgDuration, err := s.analyticsRepo.GetAvgSessionDurationWithFilter(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("get average session duration with filter: %w", err)
+	}
 
 	return &DashboardOverview{
 		Visitors:    visitors,

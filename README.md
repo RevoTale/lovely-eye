@@ -9,6 +9,7 @@ Self-hosted web analytics with a Go backend and a React dashboard. Lovely Eye tr
 - Cookieless analytics with an identifier computed from minimized request data and keyed with a server-side secret
 - SQLite by default, PostgreSQL when needed
 - Bot filtering and page-view deduplication
+- Server-side session timing; client timing fields are ignored
 - Allowlisted custom events
 - Optional country tracking
 - Dashboard served as static assets by the Go server
@@ -116,12 +117,16 @@ SQLite is the default database. If `JWT_SECRET` is unset, Lovely Eye generates o
 ## Privacy And Tracking
 
 - Lovely Eye does not use analytics cookies or local storage by default.
+- The tracker sends a minimal payload. A page view sends `path`; an exit ping sends `path` plus `exit: true`.
+- Timing is computed from server receive time. The client does not send `duration`, `screen_width`, or session state.
+- Single-page exit duration is bounded by `ANALYTICS_MAX_SINGLE_PAGE_DURATION`, which defaults to `4h`; repeated exit pings cannot extend it past that cap.
 - The analytics visitor identifier is computed from site ID, truncated IP prefix, browser family, and device class, and keyed with a server-side secret.
 - The analytics visitor identifier is unique per site.
 - The server computes hashes for `today` and `yesterday`.
 - A visitor who returns at least once per UTC day keeps the same analytics client row.
 - A new analytics client row is created only after the visitor skips a full UTC day between visits.
 - Sessions are separate from the analytics visitor identifier and expire after 30 minutes of inactivity.
+- Exit pings update the active session when they match the current path. If an exit ping names a different path while the session is still inside the 30-minute active window, the server counts that path as a page view before closing the session path; stale different-path exits are ignored.
 - Country tracking is optional and is not part of the analytics visitor identifier.
 - The dedicated `ANALYTICS_IDENTITY_SECRET` helps reduce the impact of database-only leaks because stored analytics rows do not contain enough information to recompute the identifier on their own.
 
@@ -132,6 +137,35 @@ SQLite is the default database. If `JWT_SECRET` is unset, Lovely Eye generates o
 3. Open the site settings.
 4. Copy the generated tracking code.
 5. Add it to the site you want to track.
+
+## Tracker API
+
+The collect endpoint requires the public key in the query string:
+
+```http
+POST /api/collect?site_key=<public_key>
+Content-Type: text/plain;charset=UTF-8
+```
+
+Page view:
+
+```json
+{ "path": "/pricing" }
+```
+
+Exit ping:
+
+```json
+{ "path": "/pricing", "exit": true }
+```
+
+Initial attribution, when present, is sent only on the first page view:
+
+```json
+{ "path": "/pricing", "referrer": "https://google.com", "utm_source": "google" }
+```
+
+The tracker uses `visibilitychange` with `sendBeacon`, with `pagehide` as a fallback. This follows the current MDN and W3C Beacon guidance for small analytics payloads that should not block navigation: [MDN sendBeacon](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/sendBeacon), [MDN visibilitychange](https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event), and [W3C Beacon](https://www.w3.org/TR/beacon/).
 
 ## Common Configuration
 
@@ -146,14 +180,29 @@ SQLite is the default database. If `JWT_SECRET` is unset, Lovely Eye generates o
 | `INITIAL_ADMIN_USERNAME` | empty | Initial admin username. Requires `INITIAL_ADMIN_PASSWORD`. |
 | `INITIAL_ADMIN_PASSWORD` | empty | Initial admin password. Requires `INITIAL_ADMIN_USERNAME`. |
 | `GEOIP_MAXMIND_LICENSE_KEY` | empty | Optional MaxMind license key for country tracking |
+| `ANALYTICS_MAX_BODY_BYTES` | `16384` | Maximum collect request body size. Small because tracker payloads are tiny. |
+| `ANALYTICS_MAX_PROPERTIES_BYTES` | `8192` | Maximum custom-event `properties` JSON string size. |
+| `ANALYTICS_MAX_SINGLE_PAGE_DURATION` | `4h` | Maximum same-path single-page duration accepted from an exit ping. |
+| `ANALYTICS_RATE_LIMIT_ENABLED` | `true` | Enables per-process collect rate limiting. |
+| `ANALYTICS_RATE_LIMIT_PER_MINUTE` | `120` | Refill rate for client IP admission and validated site key plus client IP admission. |
+| `ANALYTICS_RATE_LIMIT_BURST` | `240` | Short burst allowance for the same collect admission keys. |
+| `TRUSTED_PROXY_CIDRS` | private, loopback, and unique-local ranges | CIDRs allowed to supply `X-Forwarded-For` / `X-Real-IP`. Public CDN ranges must be configured explicitly. |
+| `GRAPHQL_MAX_BODY_BYTES` | `1048576` | Maximum GraphQL request body size. |
+| `DASHBOARD_MAX_DAILY_RANGE_DAYS` | `730` | Maximum daily dashboard date range. |
+| `DASHBOARD_MAX_HOURLY_RANGE_DAYS` | `31` | Maximum hourly dashboard date range. |
+| `DASHBOARD_MAX_FILTER_VALUES` | `100` | Maximum values per dashboard filter list. |
+| `DASHBOARD_MAX_FILTER_STRING_LENGTH` | `2048` | Maximum byte length for each dashboard filter string. |
 
 ## Custom Events
 
 ```html
 <script>
-  window.lovelyEye?.track("checkout_failed", {
-    code: "PAYMENT_DECLINED",
-    step: "confirm",
+  window.lovelyEye?.track({
+    name: "checkout_failed",
+    properties: {
+      code: "PAYMENT_DECLINED",
+      step: "confirm",
+    },
   });
 </script>
 ```
@@ -199,6 +248,20 @@ services:
       - INITIAL_ADMIN_USERNAME=
       - INITIAL_ADMIN_PASSWORD=
       - ANALYTICS_IDENTITY_SECRET=replace-with-a-second-32-plus-character-secret
+      - ANALYTICS_MAX_BODY_BYTES=16384
+      - ANALYTICS_MAX_PROPERTIES_BYTES=8192
+      - ANALYTICS_MAX_SINGLE_PAGE_DURATION=4h
+      - ANALYTICS_RATE_LIMIT_ENABLED=true
+      - ANALYTICS_RATE_LIMIT_PER_MINUTE=120
+      - ANALYTICS_RATE_LIMIT_BURST=240
+      # Trust loopback and private network proxies by default.
+      # Add CDN/public reverse-proxy ranges explicitly.
+      - TRUSTED_PROXY_CIDRS=127.0.0.1/32,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7
+      - GRAPHQL_MAX_BODY_BYTES=1048576
+      - DASHBOARD_MAX_DAILY_RANGE_DAYS=730
+      - DASHBOARD_MAX_HOURLY_RANGE_DAYS=31
+      - DASHBOARD_MAX_FILTER_VALUES=100
+      - DASHBOARD_MAX_FILTER_STRING_LENGTH=2048
       - GEOIP_DB_PATH=/data/GeoLite2-Country.mmdb
       - GEOIP_DOWNLOAD_URL=https://download.db-ip.com/free/dbip-country-lite.mmdb.gz
       - GEOIP_MAXMIND_LICENSE_KEY=

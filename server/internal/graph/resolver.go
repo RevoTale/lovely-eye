@@ -11,6 +11,14 @@ type Resolver struct {
 	AnalyticsService *services.AnalyticsService
 	CountryService   *services.CountryService
 	EventDefService  *services.EventDefinitionService
+	DashboardLimits  DashboardLimits
+}
+
+type DashboardLimits struct {
+	MaxDailyRangeDays     int
+	MaxHourlyRangeDays    int
+	MaxFilterValues       int
+	MaxFilterStringLength int
 }
 
 func NewResolver(
@@ -19,12 +27,26 @@ func NewResolver(
 	analyticsService *services.AnalyticsService,
 	countryService *services.CountryService,
 	eventDefService *services.EventDefinitionService,
+	dashboardLimits DashboardLimits,
 ) *Resolver {
+	if dashboardLimits.MaxDailyRangeDays <= 0 {
+		dashboardLimits.MaxDailyRangeDays = 730
+	}
+	if dashboardLimits.MaxHourlyRangeDays <= 0 {
+		dashboardLimits.MaxHourlyRangeDays = 31
+	}
+	if dashboardLimits.MaxFilterValues <= 0 {
+		dashboardLimits.MaxFilterValues = 100
+	}
+	if dashboardLimits.MaxFilterStringLength <= 0 {
+		dashboardLimits.MaxFilterStringLength = 2048
+	}
 	return &Resolver{
 		AuthService:      authService,
 		SiteService:      siteService,
 		AnalyticsService: analyticsService,
 		CountryService:   countryService,
 		EventDefService:  eventDefService,
+		DashboardLimits:  dashboardLimits,
 	}
 }

@@ -115,7 +115,10 @@ export const EventDefinitionsCard = ({
     const properties = fieldEntries.length > EMPTY_COUNT
       ? `{\n  ${fieldEntries.join(',\n  ')}\n}`
       : '{}';
-    return `window.lovelyEye?.track('${eventName}', ${properties});`;
+    return `window.lovelyEye?.track({
+  name: '${eventName}',
+  properties: ${properties},
+});`;
   }, [draftFields, draftName]);
 
   const handleAddField = (): void => {

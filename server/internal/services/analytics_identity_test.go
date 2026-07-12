@@ -221,6 +221,245 @@ func TestAnalyticsService_CollectPageView_DuplicatePageViewDoesNotMutateSession(
 	require.Equal(t, 0, session.Duration)
 }
 
+func TestAnalyticsService_CollectPageView_ExitSamePathUpdatesSessionWithoutPageView(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	db := setupAnalyticsServiceTestDB(t)
+	site := createAnalyticsIdentitySite(t, db)
+	service := newAnalyticsIdentityTestService(db, nil)
+
+	firstTime := time.Date(2026, 3, 9, 10, 0, 0, 0, time.UTC)
+	currentTime := firstTime
+	service.now = func() time.Time { return currentTime }
+
+	input := analyticsIdentityCollectInput(site.PublicKey)
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	currentTime = firstTime.Add(60 * time.Second)
+	input.Exit = true
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	require.Equal(t, 1, countClientsBySite(t, db, site.ID))
+	require.Equal(t, 1, countSessionsBySite(t, db, site.ID))
+	require.Equal(t, 1, countPageViewEventsBySite(t, db, site.ID))
+
+	session := latestSessionBySite(t, db, site.ID)
+	require.Equal(t, 1, session.PageViewCount)
+	require.Equal(t, "/home", session.ExitPath)
+	require.Equal(t, currentTime.Unix(), session.ExitTime)
+	require.Equal(t, 60, session.Duration)
+}
+
+func TestAnalyticsService_CollectPageView_ExitSamePathAfterActiveWindowUpdatesSessionWithoutPageView(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	db := setupAnalyticsServiceTestDB(t)
+	site := createAnalyticsIdentitySite(t, db)
+	service := newAnalyticsIdentityTestService(db, nil)
+
+	firstTime := time.Date(2026, 3, 9, 10, 0, 0, 0, time.UTC)
+	currentTime := firstTime
+	service.now = func() time.Time { return currentTime }
+
+	input := analyticsIdentityCollectInput(site.PublicKey)
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	currentTime = firstTime.Add(2 * time.Hour)
+	input.Exit = true
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	require.Equal(t, 1, countClientsBySite(t, db, site.ID))
+	require.Equal(t, 1, countSessionsBySite(t, db, site.ID))
+	require.Equal(t, 1, countPageViewEventsBySite(t, db, site.ID))
+
+	session := latestSessionBySite(t, db, site.ID)
+	require.Equal(t, 1, session.PageViewCount)
+	require.Equal(t, "/home", session.ExitPath)
+	require.Equal(t, currentTime.Unix(), session.ExitTime)
+	require.Equal(t, int((2 * time.Hour).Seconds()), session.Duration)
+}
+
+func TestAnalyticsService_CollectPageView_ExitSamePathAfterMaxDurationNoOps(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	db := setupAnalyticsServiceTestDB(t)
+	site := createAnalyticsIdentitySite(t, db)
+	service := newAnalyticsIdentityTestService(db, nil)
+
+	firstTime := time.Date(2026, 3, 9, 10, 0, 0, 0, time.UTC)
+	currentTime := firstTime
+	service.now = func() time.Time { return currentTime }
+
+	input := analyticsIdentityCollectInput(site.PublicKey)
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	currentTime = firstTime.Add(4*time.Hour + time.Minute)
+	input.Exit = true
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	require.Equal(t, 1, countClientsBySite(t, db, site.ID))
+	require.Equal(t, 1, countSessionsBySite(t, db, site.ID))
+	require.Equal(t, 1, countPageViewEventsBySite(t, db, site.ID))
+
+	session := latestSessionBySite(t, db, site.ID)
+	require.Equal(t, 1, session.PageViewCount)
+	require.Equal(t, "/home", session.ExitPath)
+	require.Equal(t, firstTime.Unix(), session.ExitTime)
+	require.Equal(t, 0, session.Duration)
+}
+
+func TestAnalyticsService_CollectPageView_RepeatedSamePathExitCapsSinglePageDuration(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	db := setupAnalyticsServiceTestDB(t)
+	site := createAnalyticsIdentitySite(t, db)
+	service := newAnalyticsIdentityTestService(db, nil)
+
+	firstTime := time.Date(2026, 3, 9, 10, 0, 0, 0, time.UTC)
+	currentTime := firstTime
+	service.now = func() time.Time { return currentTime }
+
+	input := analyticsIdentityCollectInput(site.PublicKey)
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	currentTime = firstTime.Add(3*time.Hour + 59*time.Minute)
+	input.Exit = true
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	currentTime = firstTime.Add(7*time.Hour + 58*time.Minute)
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	require.Equal(t, 1, countClientsBySite(t, db, site.ID))
+	require.Equal(t, 1, countSessionsBySite(t, db, site.ID))
+	require.Equal(t, 1, countPageViewEventsBySite(t, db, site.ID))
+
+	session := latestSessionBySite(t, db, site.ID)
+	require.Equal(t, 1, session.PageViewCount)
+	require.Equal(t, "/home", session.ExitPath)
+	require.Equal(t, firstTime.Add(4*time.Hour).Unix(), session.ExitTime)
+	require.Equal(t, int((4 * time.Hour).Seconds()), session.Duration)
+}
+
+func TestAnalyticsService_CollectPageView_ExitDifferentPathCountsPageView(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	db := setupAnalyticsServiceTestDB(t)
+	site := createAnalyticsIdentitySite(t, db)
+	service := newAnalyticsIdentityTestService(db, nil)
+
+	firstTime := time.Date(2026, 3, 9, 10, 0, 0, 0, time.UTC)
+	currentTime := firstTime
+	service.now = func() time.Time { return currentTime }
+
+	input := analyticsIdentityCollectInput(site.PublicKey)
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	currentTime = firstTime.Add(60 * time.Second)
+	input.Path = "/pricing"
+	input.Exit = true
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	require.Equal(t, 1, countClientsBySite(t, db, site.ID))
+	require.Equal(t, 1, countSessionsBySite(t, db, site.ID))
+	require.Equal(t, 2, countPageViewEventsBySite(t, db, site.ID))
+
+	session := latestSessionBySite(t, db, site.ID)
+	require.Equal(t, 2, session.PageViewCount)
+	require.Equal(t, "/pricing", session.ExitPath)
+	require.Equal(t, currentTime.Unix(), session.ExitTime)
+	require.Equal(t, 60, session.Duration)
+}
+
+func TestAnalyticsService_CollectPageView_ExitDifferentPathAfterActiveWindowNoOps(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	db := setupAnalyticsServiceTestDB(t)
+	site := createAnalyticsIdentitySite(t, db)
+	service := newAnalyticsIdentityTestService(db, nil)
+
+	firstTime := time.Date(2026, 3, 9, 10, 0, 0, 0, time.UTC)
+	currentTime := firstTime
+	service.now = func() time.Time { return currentTime }
+
+	input := analyticsIdentityCollectInput(site.PublicKey)
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	currentTime = firstTime.Add(2 * time.Hour)
+	input.Path = "/pricing"
+	input.Exit = true
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	require.Equal(t, 1, countClientsBySite(t, db, site.ID))
+	require.Equal(t, 1, countSessionsBySite(t, db, site.ID))
+	require.Equal(t, 1, countPageViewEventsBySite(t, db, site.ID))
+
+	session := latestSessionBySite(t, db, site.ID)
+	require.Equal(t, 1, session.PageViewCount)
+	require.Equal(t, "/home", session.ExitPath)
+	require.Equal(t, firstTime.Unix(), session.ExitTime)
+	require.Equal(t, 0, session.Duration)
+}
+
+func TestAnalyticsService_CollectPageView_ExitWithoutActiveSessionNoOps(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	db := setupAnalyticsServiceTestDB(t)
+	site := createAnalyticsIdentitySite(t, db)
+	service := newAnalyticsIdentityTestService(db, nil)
+
+	currentTime := time.Date(2026, 3, 9, 10, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return currentTime }
+
+	input := analyticsIdentityCollectInput(site.PublicKey)
+	input.Exit = true
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	require.Equal(t, 0, countClientsBySite(t, db, site.ID))
+	require.Equal(t, 0, countSessionsBySite(t, db, site.ID))
+	require.Equal(t, 0, countPageViewEventsBySite(t, db, site.ID))
+}
+
+func TestAnalyticsService_CollectPageView_ExitWithoutActiveSessionDoesNotRotateClient(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	db := setupAnalyticsServiceTestDB(t)
+	site := createAnalyticsIdentitySite(t, db)
+	service := newAnalyticsIdentityTestService(db, nil)
+
+	firstTime := time.Date(2026, 3, 9, 10, 0, 0, 0, time.UTC)
+	currentTime := firstTime
+	service.now = func() time.Time { return currentTime }
+
+	input := analyticsIdentityCollectInput(site.PublicKey)
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	originalClient := latestClientBySite(t, db, site.ID)
+	originalHash := originalClient.Hash
+
+	currentTime = firstTime.Add(24*time.Hour + time.Minute)
+	input.Exit = true
+	require.NoError(t, service.CollectPageView(ctx, input))
+
+	require.Equal(t, 1, countClientsBySite(t, db, site.ID))
+	require.Equal(t, 1, countSessionsBySite(t, db, site.ID))
+	require.Equal(t, 1, countPageViewEventsBySite(t, db, site.ID))
+
+	persistedClient := clientByID(t, db, originalClient.ID)
+	require.Equal(t, originalHash, persistedClient.Hash)
+
+	session := latestSessionBySite(t, db, site.ID)
+	require.Equal(t, firstTime.Unix(), session.ExitTime)
+	require.Equal(t, 0, session.Duration)
+}
+
 func TestAnalyticsService_CollectPageView_CreatesNewSessionAfterThirtyMinutes(t *testing.T) {
 	t.Parallel()
 
@@ -279,12 +518,11 @@ func TestAnalyticsService_CollectPageView_CountryTrackingDoesNotChangeIdentity(t
 
 func analyticsIdentityCollectInput(siteKey string) CollectInput {
 	return CollectInput{
-		SiteKey:     siteKey,
-		Path:        "/home",
-		ScreenWidth: 1440,
-		UserAgent:   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0",
-		IP:          "203.0.113.42",
-		Origin:      "https://identity.test",
+		SiteKey:   siteKey,
+		Path:      "/home",
+		UserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0",
+		IP:        "203.0.113.42",
+		Origin:    "https://identity.test",
 	}
 }
 

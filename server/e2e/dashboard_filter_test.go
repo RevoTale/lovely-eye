@@ -46,35 +46,32 @@ func TestDashboardFiltering(t *testing.T) {
 	siteID := siteResp.CreateSite.Id
 
 	testData := []struct {
-		path        string
-		referrer    string
-		userAgent   string
-		screenWidth int
-		ip          string
+		path      string
+		referrer  string
+		userAgent string
+		ip        string
 	}{
 
-		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", 1920, "203.0.113.10"},
-		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", 1920, "198.51.100.20"},
+		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", "203.0.113.10"},
+		{"/home", "https://google.com/search", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0", "198.51.100.20"},
 
-		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", 375, "192.0.2.30"},
-		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", 375, "198.18.0.40"},
+		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", "192.0.2.30"},
+		{"/about", "https://facebook.com", "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1", "198.18.0.40"},
 
-		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", 1440, "198.18.1.50"},
-		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", 1440, "198.19.0.60"},
+		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", "198.18.1.50"},
+		{"/products", "", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", "198.19.0.60"},
 
-		{"/home", "https://twitter.com", "Mozilla/5.0 (Android 13; Mobile) Chrome/119.0", 412, "198.19.1.70"},
+		{"/home", "https://twitter.com", "Mozilla/5.0 (Android 13; Mobile) Chrome/119.0", "198.19.1.70"},
 	}
 
 	for _, data := range testData {
 		payload := map[string]interface{}{
-			"site_key":     siteKey,
-			"path":         data.path,
-			"referrer":     data.referrer,
-			"screen_width": data.screenWidth,
+			"path":     data.path,
+			"referrer": data.referrer,
 		}
 		body, _ := json.Marshal(payload)
 
-		req, _ := http.NewRequest("POST", ts.httpServer.URL+"/api/collect", bytes.NewReader(body))
+		req, _ := http.NewRequest("POST", collectURL(ts.httpServer.URL, siteKey), bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Origin", "https://filter-test.com")
 		req.Header.Set("User-Agent", data.userAgent)

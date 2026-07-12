@@ -95,6 +95,27 @@ func (s *AnalyticsService) resolveClientWithRotation(
 	return client, nil
 }
 
+func (s *AnalyticsService) findClientForExit(
+	ctx context.Context,
+	tx bun.Tx,
+	siteID int64,
+	ip string,
+	browser models.ClientBrowser,
+	device models.ClientDevice,
+	now time.Time,
+) (*models.Client, error) {
+	hashes := s.buildClientRotationHashes(siteID, ip, browser, device, now)
+	client, err := s.analyticsRepo.FindClientByHashesTx(ctx, tx, siteID, hashes.Today, hashes.Yesterday)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("find client by rotation hashes: %w", err)
+	}
+
+	return client, nil
+}
+
 func backfillClientAnalyticsDimensions(
 	client *models.Client,
 	device models.ClientDevice,

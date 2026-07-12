@@ -229,6 +229,13 @@ func (r *dashboardStatsResolver) DailyStats(ctx context.Context, obj *model.Dash
 	if limit != nil {
 		pointLimit = clampLimit(*limit, maxTimeSeriesPoints)
 	}
+	maxRangeDays := r.DashboardLimits.MaxDailyRangeDays
+	if selectedBucket == services.TimeBucketHourly {
+		maxRangeDays = r.DashboardLimits.MaxHourlyRangeDays
+	}
+	if err := validateDateRange(obj.From, obj.To, maxRangeDays); err != nil {
+		return nil, err
+	}
 
 	offsetValue := 0
 	if offset != nil {
@@ -597,8 +604,14 @@ func (r *queryResolver) Dashboard(ctx context.Context, siteID string, dateRange 
 		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
-	from, to := parseDateRangeInput(dateRange)
-	filterOpts := parseFilterInput(filter)
+	from, to, err := parseDateRangeInput(dateRange, r.DashboardLimits.MaxDailyRangeDays)
+	if err != nil {
+		return nil, err
+	}
+	filterOpts, err := parseFilterInput(filter, r.DashboardLimits)
+	if err != nil {
+		return nil, err
+	}
 
 	stats, err := r.AnalyticsService.GetDashboardOverviewWithFilter(ctx, services.AnalyticsQuery{
 		SiteID: id,
@@ -709,7 +722,10 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
-	from, to := parseDateRangeInput(dateRange)
+	from, to, err := parseDateRangeInput(dateRange, r.DashboardLimits.MaxDailyRangeDays)
+	if err != nil {
+		return nil, err
+	}
 
 	lim := defaultEventsPage
 	off := 0
@@ -724,7 +740,10 @@ func (r *queryResolver) Events(ctx context.Context, siteID string, dateRange *mo
 		off = 0
 	}
 
-	filterOpts := parseFilterInput(filter)
+	filterOpts, err := parseFilterInput(filter, r.DashboardLimits)
+	if err != nil {
+		return nil, err
+	}
 
 	var events []*models.Event
 	var total int
@@ -764,11 +783,17 @@ func (r *queryResolver) EventCounts(ctx context.Context, siteID string, dateRang
 		return nil, fmt.Errorf("failed to get site: %w", err)
 	}
 
-	from, to := parseDateRangeInput(dateRange)
+	from, to, err := parseDateRangeInput(dateRange, r.DashboardLimits.MaxDailyRangeDays)
+	if err != nil {
+		return nil, err
+	}
 
 	limit, offset := normalizePaging(paging)
 
-	filterOpts := parseFilterInput(filter)
+	filterOpts, err := parseFilterInput(filter, r.DashboardLimits)
+	if err != nil {
+		return nil, err
+	}
 
 	eventCounts, err := r.AnalyticsService.GetEventCounts(ctx, services.AnalyticsQuery{
 		SiteID: id,

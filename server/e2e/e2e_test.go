@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -44,7 +45,8 @@ func testConfig() config.Config {
 			CookieDomain:      "",
 		},
 		Analytics: config.AnalyticsConfig{
-			IdentitySecret: strings.Repeat("a", 32),
+			IdentitySecret:    strings.Repeat("a", 32),
+			TrustedProxyCIDRs: []string{"127.0.0.1/32"},
 		},
 		// Mock tracker.js for testing (avoid file I/O)
 		TrackerJS: []byte(`console.log("mock tracker")`),
@@ -105,6 +107,10 @@ func postJSONWithOrigin(client *http.Client, url string, body []byte, origin str
 		return nil, fmt.Errorf("do request: %w", err)
 	}
 	return resp, nil
+}
+
+func collectURL(baseURL, siteKey string) string {
+	return baseURL + "/api/collect?site_key=" + url.QueryEscape(siteKey)
 }
 
 func (ts *testServer) graphqlClient() graphql.Client {
@@ -222,16 +228,14 @@ func TestStatsCollection(t *testing.T) {
 
 	t.Run("collect page view", func(t *testing.T) {
 		payload := map[string]any{
-			"site_key":     siteKey,
-			"path":         "/home",
-			"referrer":     "https://google.com",
-			"screen_width": 1920,
+			"path":     "/home",
+			"referrer": "https://google.com",
 		}
 		body, _ := json.Marshal(payload)
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://example.com",
 		)
@@ -247,7 +251,6 @@ func TestStatsCollection(t *testing.T) {
 
 	t.Run("collect custom event", func(t *testing.T) {
 		payload := map[string]any{
-			"site_key":   siteKey,
 			"name":       "button_click",
 			"path":       "/home",
 			"properties": `{"button": "signup"}`,
@@ -256,7 +259,7 @@ func TestStatsCollection(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://example.com",
 		)
@@ -431,7 +434,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("valid string:string properties accepted", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "purchase",
 			"path":       "/checkout",
 			"properties": `{"product_id": "123", "price": "29.99", "currency": "USD"}`,
@@ -440,7 +442,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -456,7 +458,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("empty properties accepted", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "page_scroll",
 			"path":       "/home",
 			"properties": "",
@@ -465,7 +466,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -481,7 +482,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("invalid JSON properties rejected", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `{invalid json}`,
@@ -490,7 +490,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -506,7 +506,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("malformed JSON properties rejected", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `{"key": "value"`,
@@ -515,7 +514,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -531,7 +530,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("JSON array rejected (must be object)", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `["item1", "item2"]`,
@@ -540,7 +538,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -556,7 +554,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("JSON string rejected (must be object)", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `"just a string"`,
@@ -565,7 +562,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -581,7 +578,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("JSON number rejected (must be object)", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `123`,
@@ -590,7 +586,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -606,7 +602,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("non-string values rejected (must be string:string)", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `{"key": 123}`,
@@ -615,7 +610,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -631,7 +626,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("nested objects rejected (must be string:string)", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `{"key": {"nested": "value"}}`,
@@ -640,7 +634,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -718,7 +712,6 @@ func TestEventPropertiesStored(t *testing.T) {
 
 		properties := `{"button": "signup", "variant": "blue", "position": "1"}`
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "button_click",
 			"path":       "/landing",
 			"properties": properties,
@@ -727,7 +720,7 @@ func TestEventPropertiesStored(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-storage-test.com",
 		)
@@ -778,7 +771,6 @@ func TestEventPropertiesStored(t *testing.T) {
 
 		for _, ev := range events {
 			payload := map[string]interface{}{
-				"site_key":   siteKey,
 				"name":       ev.name,
 				"path":       ev.path,
 				"properties": ev.properties,
@@ -787,7 +779,7 @@ func TestEventPropertiesStored(t *testing.T) {
 
 			resp, err := postJSONWithOrigin(
 				ts.httpServer.Client(),
-				ts.httpServer.URL+"/api/collect",
+				collectURL(ts.httpServer.URL, siteKey),
 				body,
 				"https://events-storage-test.com",
 			)

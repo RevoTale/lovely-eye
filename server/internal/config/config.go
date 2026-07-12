@@ -17,6 +17,8 @@ const (
 )
 
 const defaultDBDSN string = "file:data/lovely_eye.db?cache=shared&mode=rwc"
+const defaultTrustedProxyCIDRs string = "127.0.0.1/32,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7"
+
 const (
 	DBDriverPG     DBDriver = "postgres"
 	DBDriverSQLite DBDriver = "sqlite"
@@ -29,6 +31,8 @@ type Config struct {
 	Database  DatabaseConfig
 	Auth      AuthConfig
 	Analytics AnalyticsConfig
+	GraphQL   GraphQLConfig
+	Dashboard DashboardConfig
 	GeoIP     GeoIPConfig
 	LogLevel  slog.Level // Log level: DEBUG(-4), INFO(0), WARN(4), ERROR(8) - default: WARN
 	TrackerJS []byte     // Optional: for testing, to avoid loading from file
@@ -61,7 +65,25 @@ type AuthConfig struct {
 }
 
 type AnalyticsConfig struct {
-	IdentitySecret string
+	IdentitySecret        string
+	MaxBodyBytes          int64
+	MaxPropertiesBytes    int
+	MaxSinglePageDuration time.Duration
+	RateLimitEnabled      bool
+	RateLimitPerMinute    int
+	RateLimitBurst        int
+	TrustedProxyCIDRs     []string
+}
+
+type GraphQLConfig struct {
+	MaxBodyBytes int64
+}
+
+type DashboardConfig struct {
+	MaxDailyRangeDays     int
+	MaxHourlyRangeDays    int
+	MaxFilterValues       int
+	MaxFilterStringLength int
 }
 
 type GeoIPConfig struct {
@@ -113,7 +135,23 @@ func Load() Config {
 			InitialAdminPassword: initialAdminPassword,
 		},
 		Analytics: AnalyticsConfig{
-			IdentitySecret: getAnalyticsIdentitySecret(authSecret),
+			IdentitySecret:        getAnalyticsIdentitySecret(authSecret),
+			MaxBodyBytes:          int64(getEnvInt("ANALYTICS_MAX_BODY_BYTES", 16*1024)),
+			MaxPropertiesBytes:    getEnvInt("ANALYTICS_MAX_PROPERTIES_BYTES", 8*1024),
+			MaxSinglePageDuration: getEnvDuration("ANALYTICS_MAX_SINGLE_PAGE_DURATION", 4*time.Hour),
+			RateLimitEnabled:      getEnvBool("ANALYTICS_RATE_LIMIT_ENABLED", true),
+			RateLimitPerMinute:    getEnvInt("ANALYTICS_RATE_LIMIT_PER_MINUTE", 120),
+			RateLimitBurst:        getEnvInt("ANALYTICS_RATE_LIMIT_BURST", 240),
+			TrustedProxyCIDRs:     getEnvCSV("TRUSTED_PROXY_CIDRS", defaultTrustedProxyCIDRs),
+		},
+		GraphQL: GraphQLConfig{
+			MaxBodyBytes: int64(getEnvInt("GRAPHQL_MAX_BODY_BYTES", 1024*1024)),
+		},
+		Dashboard: DashboardConfig{
+			MaxDailyRangeDays:     getEnvInt("DASHBOARD_MAX_DAILY_RANGE_DAYS", 730),
+			MaxHourlyRangeDays:    getEnvInt("DASHBOARD_MAX_HOURLY_RANGE_DAYS", 31),
+			MaxFilterValues:       getEnvInt("DASHBOARD_MAX_FILTER_VALUES", 100),
+			MaxFilterStringLength: getEnvInt("DASHBOARD_MAX_FILTER_STRING_LENGTH", 2048),
 		},
 		GeoIP: GeoIPConfig{
 			DBPath:            getEnv("GEOIP_DB_PATH", defaultIPDBLocalPath),
@@ -156,6 +194,19 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func getEnvCSV(key, defaultValue string) []string {
+	raw := getEnv(key, defaultValue)
+	parts := strings.Split(raw, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		value := strings.TrimSpace(part)
+		if value != "" {
+			values = append(values, value)
+		}
+	}
+	return values
 }
 
 func getEnvInt(key string, defaultValue int) int {

@@ -63,3 +63,14 @@ Separate directories needed because SQLite and PostgreSQL use different syntax (
 - `DB_DSN` - Connection string
 - `JWT_SECRET` - Optional. If unset, the app generates one at startup. Set it explicitly in production because dashboard sessions will not survive restarts.
 - `ANALYTICS_IDENTITY_SECRET` - Optional. Falls back to `JWT_SECRET`. Set it explicitly in production if visitor identity should remain stable across restarts without sharing the auth secret. Analytics uses it for the daily UTC hashes behind UTC-day-skipped rotation, and it also reduces the impact of database-only leaks by making visitor IDs harder to recompute.
+- `ANALYTICS_MAX_BODY_BYTES` - Optional. Defaults to `16384` for small collect payloads.
+- `ANALYTICS_MAX_PROPERTIES_BYTES` - Optional. Defaults to `8192` for custom event properties.
+- `ANALYTICS_RATE_LIMIT_ENABLED` - Optional. Defaults to `true` for the public collect endpoint.
+- `ANALYTICS_RATE_LIMIT_PER_MINUTE` - Optional. Defaults to `120` per site key and client IP.
+- `ANALYTICS_RATE_LIMIT_BURST` - Optional. Defaults to `240` per site key and client IP.
+- `TRUSTED_PROXY_CIDRS` - Optional. Defaults to loopback, private IPv4 ranges, and IPv6 unique-local addresses. Public CDN ranges must be configured explicitly.
+- `GRAPHQL_MAX_BODY_BYTES` - Optional. Defaults to `1048576`.
+- `DASHBOARD_MAX_DAILY_RANGE_DAYS` - Optional. Defaults to `730`.
+- `DASHBOARD_MAX_HOURLY_RANGE_DAYS` - Optional. Defaults to `31`.
+- `DASHBOARD_MAX_FILTER_VALUES` - Optional. Defaults to `100`.
+- `DASHBOARD_MAX_FILTER_STRING_LENGTH` - Optional. Defaults to `2048`.

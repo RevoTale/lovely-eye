@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -169,14 +170,17 @@ func (r *AnalyticsRepository) GetActiveSession(ctx context.Context, siteID, clie
 
 func (r *AnalyticsRepository) GetActiveSessionTx(ctx context.Context, tx bun.IDB, siteID, clientID int64, sinceUnix int64) (*models.Session, error) {
 	session := new(models.Session)
-	err := tx.NewSelect().
+	q := tx.NewSelect().
 		Model(session).
 		Where("site_id = ?", siteID).
 		Where("client_id = ?", clientID).
 		Where("exit_time > ?", sinceUnix).
 		Order("exit_time DESC").
-		Limit(1).
-		Scan(ctx)
+		Limit(1)
+	if r.isPostgres() {
+		q = q.For("UPDATE")
+	}
+	err := q.Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
@@ -184,6 +188,11 @@ func (r *AnalyticsRepository) GetActiveSessionTx(ctx context.Context, tx bun.IDB
 		return nil, fmt.Errorf("get active session: %w", err)
 	}
 	return session, nil
+}
+
+func (r *AnalyticsRepository) isPostgres() bool {
+	dialect := fmt.Sprint(r.db.Dialect().Name())
+	return dialect == "pg" || dialect == "postgres" || dialect == "postgresql"
 }
 
 func (r *AnalyticsRepository) GetRecentPageViewEvent(ctx context.Context, sessionID int64, path string, since int64) (*models.Event, error) {
@@ -537,6 +546,7 @@ func (r *AnalyticsRepository) GetBounceRate(ctx context.Context, siteID int64, f
 		Where("site_id = ?", siteID).
 		Where("enter_time >= ?", fromUnix).
 		Where("enter_time <= ?", toUnix).
+		Where("page_view_count > 0").
 		Scan(ctx, &result)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get bounce rate: %w", err)
@@ -557,7 +567,8 @@ func (r *AnalyticsRepository) GetAvgSessionDuration(ctx context.Context, siteID 
 		Where("site_id = ?", siteID).
 		Where("enter_time >= ?", fromUnix).
 		Where("enter_time <= ?", toUnix).
-		Where("page_view_count > 1").
+		Where("page_view_count > 0").
+		Where("exit_time > enter_time").
 		Scan(ctx, &avg)
 	if err != nil {
 		return 0, fmt.Errorf("failed to get average session duration: %w", err)
@@ -580,7 +591,7 @@ func (r *AnalyticsRepository) GetTopPages(ctx context.Context, siteID int64, fro
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		ColumnExpr("e.path").
 		ColumnExpr("COUNT(*) as views").
-		ColumnExpr("COUNT(DISTINCT e.session_id) as visitors").
+		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		Where("s.site_id = ?", siteID).
 		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", fromUnix).
@@ -717,22 +728,12 @@ type DailyVisitorStats struct {
 }
 
 func (r *AnalyticsRepository) GetDailyStats(ctx context.Context, siteID int64, from, to time.Time) ([]DailyVisitorStats, error) {
-	var stats []DailyVisitorStats
-	fromUnix := from.Unix()
-	toUnix := to.Unix()
-	bucketExpr := r.timeBucketExpression(TimeBucketDaily)
-	err := r.db.NewSelect().
-		Model((*models.Session)(nil)).
-		ColumnExpr(bucketExpr+" as date_bucket").
-		ColumnExpr("COUNT(DISTINCT client_id) as visitors").
-		ColumnExpr("SUM(page_view_count) as page_views").
-		ColumnExpr("COUNT(*) as sessions").
-		Where("site_id = ?", siteID).
-		Where("enter_time >= ?", fromUnix).
-		Where("enter_time <= ?", toUnix).
-		GroupExpr(bucketExpr).
-		Order("date_bucket ASC").
-		Scan(ctx, &stats)
+	stats, err := r.GetTimeSeriesStatsWithFilter(ctx, AnalyticsQuery{
+		SiteID: siteID,
+		From:   from,
+		To:     to,
+		Bucket: TimeBucketDaily,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get daily stats: %w", err)
 	}
@@ -751,7 +752,7 @@ func (r *AnalyticsRepository) GetActivePages(ctx context.Context, siteID int64, 
 		Model((*models.Event)(nil)).
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		ColumnExpr("e.path").
-		ColumnExpr("COUNT(DISTINCT e.session_id) as visitors").
+		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		Where("s.site_id = ?", siteID).
 		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", sinceUnix).
@@ -990,7 +991,8 @@ func (r *AnalyticsRepository) GetBounceRateWithFilter(ctx context.Context, query
 		ColumnExpr(bouncedExpr+" as bounced").
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
-		Where("s.enter_time <= ?", toUnix)
+		Where("s.enter_time <= ?", toUnix).
+		Where("s.page_view_count > 0")
 	q = applySessionFilters(q, query.Filter)
 	err := q.Scan(ctx, &result)
 	if err != nil {
@@ -1012,7 +1014,8 @@ func (r *AnalyticsRepository) GetAvgSessionDurationWithFilter(ctx context.Contex
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix).
-		Where("s.page_view_count > 1")
+		Where("s.page_view_count > 0").
+		Where("s.exit_time > s.enter_time")
 	q = applySessionFilters(q, query.Filter)
 	err := q.Scan(ctx, &avg)
 	if err != nil {
@@ -1030,7 +1033,7 @@ func (r *AnalyticsRepository) GetTopPagesWithFilter(ctx context.Context, query A
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		ColumnExpr("e.path").
 		ColumnExpr("COUNT(*) as views").
-		ColumnExpr("COUNT(DISTINCT e.session_id) as visitors").
+		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		Where("s.site_id = ?", query.SiteID).
 		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", fromUnix).
@@ -1159,7 +1162,7 @@ func (r *AnalyticsRepository) GetTopPagesWithFilterPaged(ctx context.Context, qu
 		Join("INNER JOIN sessions s ON e.session_id = s.id").
 		ColumnExpr("e.path").
 		ColumnExpr("COUNT(*) as views").
-		ColumnExpr("COUNT(DISTINCT e.session_id) as visitors").
+		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
 		Where("s.site_id = ?", query.SiteID).
 		Where("e.definition_id IS NULL").
 		Where("e.time >= ?", fromUnix).
@@ -1411,49 +1414,108 @@ const (
 )
 
 func (r *AnalyticsRepository) GetTimeSeriesStatsWithFilter(ctx context.Context, query AnalyticsQuery) ([]DailyVisitorStats, error) {
-	var stats []DailyVisitorStats
 	fromUnix := query.From.Unix()
 	toUnix := query.To.Unix()
-	bucketExpr := r.timeBucketExpression(query.Bucket)
-	base := r.db.NewSelect().
+	sessionBucketExpr := r.sessionTimeBucketExpression(query.Bucket)
+	eventBucketExpr := r.eventTimeBucketExpression(query.Bucket)
+
+	var sessionStats []struct {
+		DateBucket int64
+		Visitors   int
+		Sessions   int
+	}
+	sessionQuery := r.db.NewSelect().
 		TableExpr("sessions s").
-		ColumnExpr(bucketExpr+" as date_bucket").
+		ColumnExpr(sessionBucketExpr+" as date_bucket").
 		ColumnExpr("COUNT(DISTINCT s.client_id) as visitors").
-		ColumnExpr("SUM(s.page_view_count) as page_views").
 		ColumnExpr("COUNT(*) as sessions").
 		Where("s.site_id = ?", query.SiteID).
 		Where("s.enter_time >= ?", fromUnix).
 		Where("s.enter_time <= ?", toUnix)
-	base = applySessionFilters(base, query.Filter)
-	base = base.GroupExpr(bucketExpr)
-	if query.Limit > 0 {
-		inner := base.Order("date_bucket DESC").Offset(query.Offset).Limit(query.Limit)
-		outer := r.db.NewSelect().
-			TableExpr("(?) as time_series", inner).
-			ColumnExpr("date_bucket, visitors, page_views, sessions").
-			Order("date_bucket ASC")
-		err := outer.Scan(ctx, &stats)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get time series stats with filter: %w", err)
+	sessionQuery = applySessionFilters(sessionQuery, query.Filter)
+	if err := sessionQuery.GroupExpr(sessionBucketExpr).Scan(ctx, &sessionStats); err != nil {
+		return nil, fmt.Errorf("failed to get time series session stats with filter: %w", err)
+	}
+
+	var pageViewStats []struct {
+		DateBucket int64
+		PageViews  int
+	}
+	pageViewQuery := r.db.NewSelect().
+		TableExpr("events e").
+		Join("INNER JOIN sessions s ON e.session_id = s.id").
+		ColumnExpr(eventBucketExpr+" as date_bucket").
+		ColumnExpr("COUNT(*) as page_views").
+		Where("s.site_id = ?", query.SiteID).
+		Where("e.definition_id IS NULL").
+		Where("e.time >= ?", fromUnix).
+		Where("e.time <= ?", toUnix)
+	pageViewQuery = applyEventFilters(pageViewQuery, query.Filter)
+	if err := pageViewQuery.GroupExpr(eventBucketExpr).Scan(ctx, &pageViewStats); err != nil {
+		return nil, fmt.Errorf("failed to get time series pageview stats with filter: %w", err)
+	}
+
+	statsByBucket := make(map[int64]*DailyVisitorStats, len(sessionStats)+len(pageViewStats))
+	for _, stat := range sessionStats {
+		statsByBucket[stat.DateBucket] = &DailyVisitorStats{
+			DateBucket: stat.DateBucket,
+			Visitors:   stat.Visitors,
+			Sessions:   stat.Sessions,
 		}
-		return stats, nil
 	}
-	q := base.Order("date_bucket ASC")
-	if query.Offset > 0 {
-		q = q.Offset(query.Offset)
+	for _, stat := range pageViewStats {
+		merged := statsByBucket[stat.DateBucket]
+		if merged == nil {
+			merged = &DailyVisitorStats{DateBucket: stat.DateBucket}
+			statsByBucket[stat.DateBucket] = merged
+		}
+		merged.PageViews = stat.PageViews
 	}
-	err := q.Scan(ctx, &stats)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get time series stats with filter: %w", err)
+
+	buckets := make([]int64, 0, len(statsByBucket))
+	for bucket := range statsByBucket {
+		buckets = append(buckets, bucket)
+	}
+	sort.Slice(buckets, func(i, j int) bool { return buckets[i] < buckets[j] })
+
+	if query.Limit > 0 {
+		descBuckets := append([]int64(nil), buckets...)
+		sort.Slice(descBuckets, func(i, j int) bool { return descBuckets[i] > descBuckets[j] })
+		offset := max(query.Offset, 0)
+		if offset >= len(descBuckets) {
+			buckets = nil
+		} else {
+			end := min(offset+query.Limit, len(descBuckets))
+			buckets = descBuckets[offset:end]
+			sort.Slice(buckets, func(i, j int) bool { return buckets[i] < buckets[j] })
+		}
+	} else if query.Offset > 0 {
+		if query.Offset >= len(buckets) {
+			buckets = nil
+		} else {
+			buckets = buckets[query.Offset:]
+		}
+	}
+
+	stats := make([]DailyVisitorStats, 0, len(buckets))
+	for _, bucket := range buckets {
+		stats = append(stats, *statsByBucket[bucket])
 	}
 	return stats, nil
 }
 
-func (r *AnalyticsRepository) timeBucketExpression(bucket TimeBucket) string {
-
+func (r *AnalyticsRepository) sessionTimeBucketExpression(bucket TimeBucket) string {
 	if bucket == TimeBucketHourly {
-		return "enter_hour"
+		return "s.enter_hour"
 	}
 
-	return "enter_day"
+	return "s.enter_day"
+}
+
+func (r *AnalyticsRepository) eventTimeBucketExpression(bucket TimeBucket) string {
+	if bucket == TimeBucketHourly {
+		return "e.hour"
+	}
+
+	return "e.day"
 }

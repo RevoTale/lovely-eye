@@ -20,6 +20,7 @@ import (
 	"github.com/lovely-eye/server/internal/middleware"
 	"github.com/lovely-eye/server/internal/repository"
 	"github.com/lovely-eye/server/internal/services"
+	"github.com/lovely-eye/server/pkg/clientip"
 	"github.com/uptrace/bun"
 )
 
@@ -89,6 +90,7 @@ func New(cfg config.Config) (*Server, error) {
 		identitySecret = cfg.Auth.JWTSecret
 	}
 	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo, eventDefinitionRepo, geoIPService, countryService, identitySecret)
+	analyticsService.SetMaxSinglePageDuration(cfg.Analytics.MaxSinglePageDuration)
 	if err := analyticsService.SyncGeoIPRequirement(context.Background()); err != nil {
 		fmt.Printf("Warning: GeoIP database sync failed: %v\n", err)
 	}
@@ -100,12 +102,45 @@ func New(cfg config.Config) (*Server, error) {
 		return nil, fmt.Errorf("create initial admin: %w", err)
 	}
 
-	analyticsHandler := handlers.NewAnalyticsHandler(analyticsService, siteService)
+	ipResolver, err := clientip.NewResolver(cfg.Analytics.TrustedProxyCIDRs)
+	if err != nil {
+		if closeErr := database.Close(db); closeErr != nil {
+			slog.Error("failed to close database after trusted proxy config error", "error", closeErr)
+		}
+		return nil, fmt.Errorf("configure trusted proxies: %w", err)
+	}
+	collectRateLimiter := handlers.NewCollectRateLimiter(
+		cfg.Analytics.RateLimitEnabled,
+		cfg.Analytics.RateLimitPerMinute,
+		cfg.Analytics.RateLimitBurst,
+	)
+	analyticsHandler := handlers.NewAnalyticsHandler(
+		analyticsService,
+		siteService,
+		handlers.AnalyticsHandlerConfig{
+			MaxBodyBytes:       cfg.Analytics.MaxBodyBytes,
+			MaxPropertiesBytes: cfg.Analytics.MaxPropertiesBytes,
+		},
+		ipResolver,
+		collectRateLimiter,
+	)
 
 	// Initialize auth middleware
 	authMiddleware := auth.NewMiddleware(authService)
 
-	resolver := graph.NewResolver(authService, siteService, analyticsService, countryService, eventDefinitionService)
+	resolver := graph.NewResolver(
+		authService,
+		siteService,
+		analyticsService,
+		countryService,
+		eventDefinitionService,
+		graph.DashboardLimits{
+			MaxDailyRangeDays:     cfg.Dashboard.MaxDailyRangeDays,
+			MaxHourlyRangeDays:    cfg.Dashboard.MaxHourlyRangeDays,
+			MaxFilterValues:       cfg.Dashboard.MaxFilterValues,
+			MaxFilterStringLength: cfg.Dashboard.MaxFilterStringLength,
+		},
+	)
 
 	mux := http.NewServeMux()
 
@@ -121,7 +156,7 @@ func New(cfg config.Config) (*Server, error) {
 	// GraphQL endpoint
 	// Auth uses JWT in HttpOnly + Secure cookies with SameSite=Strict/Lax
 	// No CSRF protection needed - see https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
-	graphqlHandler := http.HandlerFunc(graph.Handler(resolver))
+	graphqlHandler := http.HandlerFunc(graph.Handler(resolver, cfg.GraphQL.MaxBodyBytes))
 	graphqlPath := basePath + "/graphql"
 	mux.Handle("POST "+graphqlPath, graphqlHandler)
 	mux.HandleFunc("GET "+graphqlPath, graphqlPlaygroundHandler(graphqlPath))

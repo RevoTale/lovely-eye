@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -11,13 +12,13 @@ import (
 	"github.com/lovely-eye/server/internal/services"
 )
 
-func parseDateRangeInput(input *model.DateRangeInput) (time.Time, time.Time) {
+func parseDateRangeInput(input *model.DateRangeInput, maxRangeDays int) (time.Time, time.Time, error) {
 	now := time.Now()
 	defaultFrom := now.AddDate(0, 0, -30)
 	defaultTo := now
 
 	if input == nil {
-		return defaultFrom, defaultTo
+		return defaultFrom, defaultTo, nil
 	}
 
 	from := defaultFrom
@@ -30,12 +31,32 @@ func parseDateRangeInput(input *model.DateRangeInput) (time.Time, time.Time) {
 		to = *input.To
 	}
 
-	return from, to
+	if err := validateDateRange(from, to, maxRangeDays); err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	return from, to, nil
 }
 
-func parseFilterInput(input *model.FilterInput) services.DashboardFilter {
+func validateDateRange(from, to time.Time, maxRangeDays int) error {
+	if from.After(to) {
+		return fmt.Errorf("date range from must be before to")
+	}
+	if maxRangeDays > 0 && to.Sub(from) > time.Duration(maxRangeDays)*24*time.Hour {
+		return fmt.Errorf("date range exceeds %d days", maxRangeDays)
+	}
+	return nil
+}
+
+func parseFilterInput(input *model.FilterInput, limits DashboardLimits) (services.DashboardFilter, error) {
 	if input == nil {
-		return services.DashboardFilter{}
+		return services.DashboardFilter{}, nil
+	}
+
+	if err := validateStringFilters(limits, input.Referrer, input.Browser, input.Device, input.Os, input.Page, input.Country, input.EventName, input.EventPath, input.EventDefinitionID); err != nil {
+		return services.DashboardFilter{}, err
+	}
+	if limits.MaxFilterValues > 0 && len(input.EventType) > limits.MaxFilterValues {
+		return services.DashboardFilter{}, fmt.Errorf("filter eventType exceeds %d values", limits.MaxFilterValues)
 	}
 
 	referrers := make([]string, 0, len(input.Referrer))
@@ -57,7 +78,24 @@ func parseFilterInput(input *model.FilterInput) services.DashboardFilter {
 		EventName:          input.EventName,
 		EventPath:          input.EventPath,
 		EventDefinitionIDs: parseEventDefinitionIDs(input.EventDefinitionID),
+	}, nil
+}
+
+func validateStringFilters(limits DashboardLimits, groups ...[]string) error {
+	for _, values := range groups {
+		if limits.MaxFilterValues > 0 && len(values) > limits.MaxFilterValues {
+			return fmt.Errorf("filter exceeds %d values", limits.MaxFilterValues)
+		}
+		if limits.MaxFilterStringLength <= 0 {
+			continue
+		}
+		for _, value := range values {
+			if len(value) > limits.MaxFilterStringLength {
+				return fmt.Errorf("filter value exceeds %d bytes", limits.MaxFilterStringLength)
+			}
+		}
 	}
+	return nil
 }
 
 func isFilterEmpty(filter services.DashboardFilter) bool {
