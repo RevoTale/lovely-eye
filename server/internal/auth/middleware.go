@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 )
 
 type contextKey string
@@ -25,27 +24,16 @@ func NewMiddleware(service Service) *Middleware {
 	return &Middleware{service: jwtSvc}
 }
 
-// Authenticate extracts and validates authentication from the request.
-// Supports both cookie-based and header-based authentication.
+// Authenticate extracts and validates HttpOnly cookie authentication.
 func (m *Middleware) Authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var accessToken string
-
 		access, refresh := m.service.getTokensFromRequest(r)
-		accessToken = access
-
-		if accessToken == "" {
-			if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
-				accessToken = strings.TrimPrefix(h, "Bearer ")
-			}
-		}
-
-		if accessToken == "" {
+		if access == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		claims, err := m.service.ValidateAccessToken(accessToken)
+		claims, err := m.service.ValidateAccessToken(access)
 		if err != nil {
 			// Try refresh if access token expired
 			if errors.Is(err, ErrExpiredToken) && refresh != "" {

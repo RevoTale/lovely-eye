@@ -30,7 +30,7 @@ export {
 export { Avatar, AvatarFallback, AvatarImage } from './avatar';
 export { Badge, badgeVariants } from './badge';
 export { Checkbox } from './checkbox';
-export { Skeleton } from './skeleton';
+export { Skeleton, SKELETON_KEYS } from './skeleton';
 export { Separator } from './separator';
 export { Progress } from './progress';
 export { DateTimePicker } from './datetime-picker';

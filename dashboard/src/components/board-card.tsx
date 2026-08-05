@@ -53,21 +53,19 @@ const BoardCard: FunctionComponent<BoardCardProps> = ({
       </CardHeader>
       <CardContent>
         <DashboardCardState state={state} skeleton={skeleton} className={contentClassName} overlayLabel={overlayLabel}>
-          <>
-            {children}
-            {pagination !== undefined ? (
-              <div className={`mt-4 flex min-h-9 ${paginationAlign === 'center' ? 'justify-center' : 'justify-start'}`}>
-                {showPagination ? (
-                  <PaginationControls
-                    page={pagination.page}
-                    pageSize={pagination.pageSize}
-                    total={pagination.total}
-                    onPageChange={pagination.onPageChange}
-                  />
-                ) : null}
-              </div>
-            ) : null}
-          </>
+          {children}
+          {pagination !== undefined ? (
+            <div className={`mt-4 flex min-h-9 ${paginationAlign === 'center' ? 'justify-center' : 'justify-start'}`}>
+              {showPagination ? (
+                <PaginationControls
+                  page={pagination.page}
+                  pageSize={pagination.pageSize}
+                  total={pagination.total}
+                  onPageChange={pagination.onPageChange}
+                />
+              ) : null}
+            </div>
+          ) : null}
         </DashboardCardState>
       </CardContent>
     </Card>

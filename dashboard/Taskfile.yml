@@ -1,6 +1,13 @@
 version: "3"
 
 tasks:
+  lint:
+    desc: Run dashboard Biome, source-size, and TypeScript checks
+    cmds:
+      - bun run lint
+      - bun run lint:size
+      - bun run typecheck
+
   test:
     desc: Run dashboard Biome and TypeScript checks
     cmds:

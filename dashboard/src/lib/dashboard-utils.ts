@@ -54,14 +54,15 @@ interface FilterResult {
 }
 
 export function buildFilters(search: Record<string, string | string[] | undefined>): FilterResult {
-  const referrers = normalizeFilterValue(search['referrer']);
-  const browsers = normalizeFilterValue(search['browser']);
-  const devices = normalizeFilterValue(search['device']);
-  const operatingSystems = normalizeFilterValue(search['os']);
-  const pages = normalizeFilterValue(search['page']);
-  const countries = normalizeFilterValue(search['country']);
-  const eventNames = normalizeFilterValue(search['eventName']);
-  const eventPaths = normalizeFilterValue(search['eventPath']);
+  const getFilter = (key: string): string[] => normalizeFilterValue(search[key]);
+  const referrers = getFilter('referrer');
+  const browsers = getFilter('browser');
+  const devices = getFilter('device');
+  const operatingSystems = getFilter('os');
+  const pages = getFilter('page');
+  const countries = getFilter('country');
+  const eventNames = getFilter('eventName');
+  const eventPaths = getFilter('eventPath');
 
   const decodedSearch = {
     ...search,

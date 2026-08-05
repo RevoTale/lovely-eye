@@ -197,12 +197,12 @@ func (g *GeoIPService) loadDatabase(ctx context.Context, forceRefresh bool) erro
 		}
 
 		if g.lookup.FileExists() {
-			if err := g.lookup.Load(); err == nil {
+			err := g.lookup.Load()
+			if err == nil {
 				g.setReadyStatus(GeoIPSourceFile)
 				return nil
-			} else {
-				loadErr = err
 			}
+			loadErr = err
 		}
 	}
 

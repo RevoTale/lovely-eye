@@ -1,5 +1,5 @@
 
-import { Card, CardContent, CardHeader, Skeleton } from '@/components/ui';
+import { Card, CardContent, CardHeader, Skeleton, SKELETON_KEYS } from '@/components/ui';
 
 const STAT_PLACEHOLDER_COUNT = 4;
 
@@ -10,8 +10,8 @@ export const DashboardLoading = (): React.ReactNode => (
       <Skeleton className="h-4 w-48" />
     </div>
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {Array.from({ length: STAT_PLACEHOLDER_COUNT }, (_, i) => (
-        <Card key={i}>
+      {SKELETON_KEYS.slice(0, STAT_PLACEHOLDER_COUNT).map((key) => (
+        <Card key={key}>
           <CardHeader>
             <Skeleton className="h-4 w-24" />
           </CardHeader>

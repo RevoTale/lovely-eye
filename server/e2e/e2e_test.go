@@ -119,8 +119,6 @@ func (ts *testServer) graphqlClient() graphql.Client {
 
 // authenticatedClient creates a client with a cookie jar and performs login
 // Returns the authenticated client that will use cookies for subsequent requests
-//
-//nolint:unparam
 func (ts *testServer) authenticatedClient(ctx context.Context, t *testing.T, username, password string) graphql.Client {
 	t.Helper()
 	jar, err := cookiejar.New(nil)

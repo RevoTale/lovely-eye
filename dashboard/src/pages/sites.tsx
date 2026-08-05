@@ -3,7 +3,7 @@ import { useQuery } from '@apollo/client/react';
 import { SitesDocument, SiteSummaryFieldsFragmentDoc } from '@/gql/graphql';
 import { useFragment as getFragmentData, type FragmentType } from '@/gql/fragment-masking';
 import { Link } from '@/router';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton, Badge } from '@/components/ui';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Skeleton, Badge, SKELETON_KEYS } from '@/components/ui';
 import { Plus, Globe, ExternalLink, TrendingUp } from 'lucide-react';
 
 type SiteListItem = FragmentType<typeof SiteSummaryFieldsFragmentDoc>;
@@ -36,8 +36,8 @@ export const SitesPage = (): React.ReactNode => {
           <Skeleton className="h-10 w-32" />
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: SKELETON_CARD_COUNT }, (_, i) => (
-            <Card key={i}>
+          {SKELETON_KEYS.slice(0, SKELETON_CARD_COUNT).map((key) => (
+            <Card key={key}>
               <CardHeader>
                 <Skeleton className="h-6 w-32" />
                 <Skeleton className="h-4 w-48" />

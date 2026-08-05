@@ -34,13 +34,7 @@ type Site {
 
 type AuthPayload {
   user: User!
-  # Modern auth: uses HttpOnly cookies with SameSite
-  # See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
-}
-
-type TokenPayload {
-  accessToken: String!
-  refreshToken: String!
+  # Auth tokens are set as HttpOnly cookies and are not returned in the body.
 }
 
 type DashboardStats {
@@ -373,7 +367,6 @@ type Mutation {
   Clears auth cookies
   """
   logout: Boolean!
-  refreshToken(refreshToken: String!): TokenPayload!
   createSite(input: CreateSiteInput!): Site!
   updateSite(id: ID!, input: UpdateSiteInput!): Site!
   """

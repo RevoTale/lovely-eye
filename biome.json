@@ -13,11 +13,11 @@
       "dashboard/components.json",
       "dashboard/index.html",
       "dashboard/package.json",
-      "dashboard/src",
+      "dashboard/src/**",
       "dashboard/tailwind.config.ts",
       "dashboard/tsconfig.json",
       "dashboard/vite.config.ts",
-      "server/e2e/operations",
+      "server/e2e/operations/**",
       "server/schema.graphqls",
       "server/static/tracker.ts",
       "server/static/tsconfig.json"
@@ -49,6 +49,11 @@
       "allowComments": true
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "assist": {
     "enabled": true,
     "actions": {
@@ -59,6 +64,9 @@
   },
   "linter": {
     "enabled": true,
+    "domains": {
+      "react": "recommended"
+    },
     "rules": {
       "preset": "recommended",
       "complexity": {
@@ -98,7 +106,7 @@
   },
   "overrides": [
     {
-      "includes": ["dashboard/src/gql", "dashboard/src/routeTree.gen.ts"],
+      "includes": ["dashboard/src/gql/**", "dashboard/src/routeTree.gen.ts"],
       "assist": {
         "enabled": false
       },
@@ -110,11 +118,21 @@
       }
     },
     {
-      "includes": ["dashboard/src/router.tsx", "dashboard/src/routes"],
+      "includes": ["dashboard/src/router.tsx", "dashboard/src/routes/**"],
       "linter": {
         "rules": {
           "style": {
             "useThrowOnlyError": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["dashboard/src/components/ui/**"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noNamespaceImport": "off"
           }
         }
       }

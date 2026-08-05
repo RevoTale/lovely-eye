@@ -3,7 +3,7 @@ import type { FunctionComponent } from 'react';
 import BoardCard from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
-import { Badge, Progress, Skeleton } from '@/components/ui';
+import { Badge, Progress, Skeleton, SKELETON_KEYS } from '@/components/ui';
 import type { BrowserStatsFieldsFragment } from '@/gql/graphql';
 import type { DashboardLoadState } from '@/lib/dashboard-load-state';
 
@@ -17,7 +17,6 @@ interface BrowserCardProps {
 const EMPTY_COUNT = 0;
 const PERCENT_MULTIPLIER = 100;
 const PERCENT_PRECISION = 1;
-const SKELETON_ROWS = 5;
 
 const BrowserCard: FunctionComponent<BrowserCardProps> = ({ browsers, totalVisitors, siteId, state = 'ready' }) => (
   <BoardCard
@@ -25,7 +24,7 @@ const BrowserCard: FunctionComponent<BrowserCardProps> = ({ browsers, totalVisit
     icon={Compass}
     state={state}
     overlayLabel="Refreshing browsers"
-    skeleton={<div className="space-y-3">{Array.from({ length: SKELETON_ROWS }, (_, index) => <div key={index} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-4 w-28" /><Skeleton className="h-5 w-16" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
+    skeleton={<div className="space-y-3">{SKELETON_KEYS.map((key) => <div key={key} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-4 w-28" /><Skeleton className="h-5 w-16" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
   >
     {browsers.length > EMPTY_COUNT ? (
       <div className="space-y-3">

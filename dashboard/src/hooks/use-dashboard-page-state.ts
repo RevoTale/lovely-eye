@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import type { DatePreset } from '@/lib/date-range';
 import { siteDetailRoute } from '@/router';
@@ -47,24 +47,32 @@ export function useDashboardPageState(): {
   const countriesPage = useMemo(() => parsePage(search.countriesPage), [search.countriesPage]);
   const statsBucket = useMemo(() => normalizeStatsBucket(search.statsBucket), [search.statsBucket]);
   const { referrers, browsers, devices, operatingSystems, pages, countries, eventNames, eventPaths, decodedSearch, filter } = useMemo(() => buildFilters(search), [search]);
-  const filterInput = useMemo<FilterInput | null>(() => Object.keys(filter).length === EMPTY_COUNT ? null : ({
-    referrer: filter['referrer'] ?? null,
-    browser: filter['browser'] ?? null,
-    device: filter['device'] ?? null,
-    os: filter['os'] ?? null,
-    page: filter['page'] ?? null,
-    country: filter['country'] ?? null,
-    eventType: null,
-    eventDefinitionId: filter['eventDefinitionId'] ?? null,
-    eventName: filter['eventName'] ?? null,
-    eventPath: filter['eventPath'] ?? null,
-  }), [filter]);
+  const filterInput = useMemo<FilterInput | null>(() => {
+    if (Object.keys(filter).length === EMPTY_COUNT) return null;
+    const getFilter = (key: string): string[] | null => filter[key] ?? null;
+    return {
+      referrer: getFilter('referrer'),
+      browser: getFilter('browser'),
+      device: getFilter('device'),
+      os: getFilter('os'),
+      page: getFilter('page'),
+      country: getFilter('country'),
+      eventType: null,
+      eventDefinitionId: getFilter('eventDefinitionId'),
+      eventName: getFilter('eventName'),
+      eventPath: getFilter('eventPath'),
+    };
+  }, [filter]);
   const filterKey = useMemo(() => [referrers, browsers, devices, operatingSystems, pages, countries, eventNames, eventPaths].map((value) => value.join(',')).join('|'), [browsers, countries, devices, eventNames, eventPaths, operatingSystems, pages, referrers]);
   const dateRangeForChart = useMemo(() => dateRange === undefined ? null : { from: new Date(dateRange.from), to: new Date(dateRange.to) }, [dateRange]);
+  const paginationScopeKey = `${siteId}|${dateRange?.from ?? ''}|${dateRange?.to ?? ''}|${filterKey}`;
+  const previousPaginationScopeKey = useRef(paginationScopeKey);
 
   useEffect(() => {
+    if (previousPaginationScopeKey.current === paginationScopeKey) return;
+    previousPaginationScopeKey.current = paginationScopeKey;
     void navigate({ to: '/sites/$siteId', params: { siteId }, search: clearPaginationParams });
-  }, [dateRange?.from, dateRange?.to, filterKey, navigate, siteId]);
+  }, [navigate, paginationScopeKey, siteId]);
 
   return {
     siteId,

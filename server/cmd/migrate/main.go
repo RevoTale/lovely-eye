@@ -42,7 +42,7 @@ func main() {
 			{
 				Name:  "init",
 				Usage: "create migration tables in the database",
-				Action: func(ctx context.Context, c *cli.Command) error {
+				Action: func(ctx context.Context, _ *cli.Command) error {
 					if err := migrator.Init(ctx); err != nil {
 						return fmt.Errorf("failed to initialize migrator: %w", err)
 					}
@@ -52,7 +52,7 @@ func main() {
 			{
 				Name:  "up",
 				Usage: "apply all pending migrations",
-				Action: func(ctx context.Context, c *cli.Command) error {
+				Action: func(ctx context.Context, _ *cli.Command) error {
 					if err := migrator.Lock(ctx); err != nil {
 						return fmt.Errorf("failed to acquire lock: %w", err)
 					}
@@ -73,7 +73,7 @@ func main() {
 			{
 				Name:  "down",
 				Usage: "rollback the last migration group",
-				Action: func(ctx context.Context, c *cli.Command) error {
+				Action: func(ctx context.Context, _ *cli.Command) error {
 					if err := migrator.Lock(ctx); err != nil {
 						return fmt.Errorf("failed to acquire lock: %w", err)
 					}
@@ -94,7 +94,7 @@ func main() {
 			{
 				Name:  "status",
 				Usage: "show migration status and history",
-				Action: func(ctx context.Context, c *cli.Command) error {
+				Action: func(ctx context.Context, _ *cli.Command) error {
 					ms, err := migrator.MigrationsWithStatus(ctx)
 					if err != nil {
 						return fmt.Errorf("failed to get migration status: %w", err)

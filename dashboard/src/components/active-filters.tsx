@@ -1,10 +1,10 @@
-
 import { useQuery } from '@apollo/client/react';
+import ActiveFilterChip, { type ActiveFilterField } from '@/components/active-filter-chip';
 import { Badge } from '@/components/ui';
 import { CountryFieldsFragmentDoc, CountriesByCodeDocument } from '@/gql/graphql';
 import { useFragment as getFragmentData } from '@/gql/fragment-masking';
+import { normalizeFilterValue } from '@/lib/filter-utils';
 import { Link } from '@/router';
-import { normalizeFilterValue, removeFilterValue, updateFilterSearch } from '@/lib/filter-utils';
 
 interface FilterSearch {
   referrer?: string | string[] | undefined;
@@ -72,130 +72,37 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
     const normalizedCountryCode = country.trim().toUpperCase();
     return countryNameLookup.get(normalizedCountryCode) ?? country;
   };
+  const filterGroups: Array<{
+    field: ActiveFilterField;
+    label: string;
+    values: string[];
+    displayValue?: (value: string) => string;
+  }> = [
+    { field: 'referrer', label: 'Referrer', values: referrers },
+    { field: 'browser', label: 'Browser', values: browsers },
+    { field: 'device', label: 'Device', values: devices },
+    { field: 'os', label: 'OS', values: operatingSystems },
+    { field: 'page', label: 'Page', values: pages },
+    {
+      field: 'country',
+      label: 'Country',
+      values: countries,
+      displayValue: getCountryDisplayName,
+    },
+    { field: 'eventName', label: 'Event', values: eventNames },
+    { field: 'eventPath', label: 'Event Path', values: eventPaths },
+  ];
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <span className="text-sm text-muted-foreground">Filtered by:</span>
-      {referrers.map((referrer) => (
-        <Link
-          key={`referrer-${referrer}`}
-          to="/sites/$siteId"
-          params={{ siteId }}
-          search={(prev) => ({
-            ...updateFilterSearch(prev, 'referrer', removeFilterValue(prev.referrer, referrer)),
-          })}
-        >
-          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Referrer: {referrer}</span>
-            <span className="ml-1 text-xs">×</span>
-          </Badge>
-        </Link>
-      ))}
-      {browsers.map((browser) => (
-        <Link
-          key={`browser-${browser}`}
-          to="/sites/$siteId"
-          params={{ siteId }}
-          search={(prev) => ({
-            ...updateFilterSearch(prev, 'browser', removeFilterValue(prev.browser, browser)),
-          })}
-        >
-          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Browser: {browser}</span>
-            <span className="ml-1 text-xs">×</span>
-          </Badge>
-        </Link>
-      ))}
-      {devices.map((device) => (
-        <Link
-          key={`device-${device}`}
-          to="/sites/$siteId"
-          params={{ siteId }}
-          search={(prev) => ({
-            ...updateFilterSearch(prev, 'device', removeFilterValue(prev.device, device)),
-          })}
-        >
-          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Device: {device}</span>
-            <span className="ml-1 text-xs">×</span>
-          </Badge>
-        </Link>
-      ))}
-      {operatingSystems.map((os) => (
-        <Link
-          key={`os-${os}`}
-          to="/sites/$siteId"
-          params={{ siteId }}
-          search={(prev) => ({
-            ...updateFilterSearch(prev, 'os', removeFilterValue(prev.os, os)),
-          })}
-        >
-          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">OS: {os}</span>
-            <span className="ml-1 text-xs">×</span>
-          </Badge>
-        </Link>
-      ))}
-      {pages.map((page) => (
-        <Link
-          key={`page-${page}`}
-          to="/sites/$siteId"
-          params={{ siteId }}
-          search={(prev) => ({
-            ...updateFilterSearch(prev, 'page', removeFilterValue(prev.page, page)),
-          })}
-        >
-          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Page: {page}</span>
-            <span className="ml-1 text-xs">×</span>
-          </Badge>
-        </Link>
-      ))}
-      {countries.map((country) => (
-        <Link
-          key={`country-${country}`}
-          to="/sites/$siteId"
-          params={{ siteId }}
-          search={(prev) => ({
-            ...updateFilterSearch(prev, 'country', removeFilterValue(prev.country, country)),
-          })}
-        >
-          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Country: {getCountryDisplayName(country)}</span>
-            <span className="ml-1 text-xs">×</span>
-          </Badge>
-        </Link>
-      ))}
-      {eventNames.map((eventName) => (
-        <Link
-          key={`event-name-${eventName}`}
-          to="/sites/$siteId"
-          params={{ siteId }}
-          search={(prev) => ({
-            ...updateFilterSearch(prev, 'eventName', removeFilterValue(prev.eventName, eventName)),
-          })}
-        >
-          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Event: {eventName}</span>
-            <span className="ml-1 text-xs">×</span>
-          </Badge>
-        </Link>
-      ))}
-      {eventPaths.map((eventPath) => (
-        <Link
-          key={`event-path-${eventPath}`}
-          to="/sites/$siteId"
-          params={{ siteId }}
-          search={(prev) => ({
-            ...updateFilterSearch(prev, 'eventPath', removeFilterValue(prev.eventPath, eventPath)),
-          })}
-        >
-          <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-secondary/80">
-            <span className="text-xs">Event Path: {eventPath}</span>
-            <span className="ml-1 text-xs">×</span>
-          </Badge>
-        </Link>
-      ))}
+      {filterGroups.flatMap(({ displayValue, field, label, values }) =>
+        values.map((value) => (
+          <ActiveFilterChip key={`${field}-${value}`} field={field} label={label} siteId={siteId} value={value}>
+            {displayValue?.(value) ?? value}
+          </ActiveFilterChip>
+        ))
+      )}
       <Link to="/sites/$siteId" params={{ siteId }} search={{}}>
         <Badge variant="outline" className="cursor-pointer hover:bg-accent text-xs">
           Clear all

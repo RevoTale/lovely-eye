@@ -3,7 +3,7 @@ import type { FunctionComponent } from 'react';
 import BoardCard from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
-import { Badge, Progress, Skeleton } from '@/components/ui';
+import { Badge, Progress, Skeleton, SKELETON_KEYS } from '@/components/ui';
 import { CountryFieldsFragmentDoc, type CountryStatsFieldsFragment } from '@/gql/graphql';
 import { useFragment as getFragmentData } from '@/gql/fragment-masking';
 import type { DashboardLoadState } from '@/lib/dashboard-load-state';
@@ -22,7 +22,6 @@ interface CountryCardProps {
 const EMPTY_COUNT = 0;
 const PERCENT_MULTIPLIER = 100;
 const PERCENT_PRECISION = 1;
-const SKELETON_ROWS = 5;
 
 const CountryCard: FunctionComponent<CountryCardProps> = ({ countries, total, totalVisitors, page, pageSize, siteId, onPageChange, state = 'ready' }) => (
   <BoardCard
@@ -31,7 +30,7 @@ const CountryCard: FunctionComponent<CountryCardProps> = ({ countries, total, to
     state={state}
     pagination={{ page, pageSize, total, onPageChange, align: 'center' }}
     overlayLabel="Refreshing countries"
-    skeleton={<div className="space-y-3">{Array.from({ length: SKELETON_ROWS }, (_, index) => <div key={index} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-4 w-28" /><Skeleton className="h-5 w-16" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
+    skeleton={<div className="space-y-3">{SKELETON_KEYS.map((key) => <div key={key} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-4 w-28" /><Skeleton className="h-5 w-16" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
   >
     <div className="space-y-3">
       {countries.length > EMPTY_COUNT ? countries.map((countryStat) => {

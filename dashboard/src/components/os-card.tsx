@@ -3,7 +3,7 @@ import type { FunctionComponent } from 'react';
 import BoardCard from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
-import { Badge, Progress, Skeleton } from '@/components/ui';
+import { Badge, Progress, Skeleton, SKELETON_KEYS } from '@/components/ui';
 import type { OperatingSystemStatsFieldsFragment } from '@/gql/graphql';
 import type { DashboardLoadState } from '@/lib/dashboard-load-state';
 
@@ -29,7 +29,7 @@ const OSCard: FunctionComponent<OSCardProps> = ({ operatingSystems, total, total
     state={state}
     pagination={{ page, pageSize, total, onPageChange }}
     overlayLabel="Refreshing operating systems"
-    skeleton={<div className="space-y-3">{Array.from({ length: 5 }, (_, index) => <div key={index} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-4 w-28" /><Skeleton className="h-5 w-16" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
+    skeleton={<div className="space-y-3">{SKELETON_KEYS.map((key) => <div key={key} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-4 w-28" /><Skeleton className="h-5 w-16" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
   >
     {operatingSystems.length > EMPTY_COUNT ? (
       <div className="space-y-3">

@@ -6,10 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "biome check ..",
+    "lint": "biome lint ..",
+    "lint:size": "bun --bun run scripts/check-source-size.ts",
     "format": "biome check --write ..",
     "preview": "vite preview",
-    "test": "bun --bun run lint && bun --bun run typecheck",
+    "test": "bun --bun run lint && bun --bun run lint:size && bun --bun run typecheck",
     "typecheck": "bun --bun run tsc && bun --bun run tsc:tracker",
     "tsc": "tsc --noEmit",
     "tsc:tracker": "tsc --noEmit -p ../server/static/tsconfig.json",

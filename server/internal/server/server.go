@@ -34,89 +34,155 @@ type Server struct {
 	trackerJS        []byte
 }
 
-func New(cfg config.Config) (*Server, error) {
+type serverDependencies struct {
+	authService            auth.Service
+	siteService            *services.SiteService
+	analyticsService       *services.AnalyticsService
+	countryService         *services.CountryService
+	eventDefinitionService *services.EventDefinitionService
+}
 
-	var trackerJS []byte
-	if len(cfg.TrackerJS) == 0 {
-		trackerPath := filepath.Join("static", "tracker.js")
-		var err error
-		trackerJS, err = os.ReadFile(trackerPath) // #nosec G304 -- trackerPath is constructed from static directory constant
-		if err != nil {
-			return nil, fmt.Errorf("failed to load tracker.js: %w", err)
-		}
-	} else {
-		trackerJS = cfg.TrackerJS
+func New(cfg config.Config) (*Server, error) {
+	trackerJS, err := loadTrackerJS(cfg)
+	if err != nil {
+		return nil, err
 	}
 
+	db, err := openMigratedDatabase(cfg)
+	if err != nil {
+		return nil, err
+	}
+	closeOnError := true
+	defer func() {
+		if closeOnError {
+			if closeErr := database.Close(db); closeErr != nil {
+				slog.Error("failed to close database after server init error", "error", closeErr)
+			}
+		}
+	}()
+
+	deps, err := buildServerDependencies(cfg, db)
+	if err != nil {
+		return nil, err
+	}
+
+	ipResolver, err := clientip.NewResolver(cfg.Analytics.TrustedProxyCIDRs)
+	if err != nil {
+		return nil, fmt.Errorf("configure trusted proxies: %w", err)
+	}
+	handler := buildHTTPHandler(cfg, db, trackerJS, deps, ipResolver)
+	addr := cfg.Server.Host + ":" + cfg.Server.Port
+	httpServer := newHTTPServer(addr, handler)
+	closeOnError = false
+
+	return &Server{
+		DB:               db,
+		AuthService:      deps.authService,
+		SiteService:      deps.siteService,
+		AnalyticsService: deps.analyticsService,
+		Handler:          handler,
+		HTTPServer:       httpServer,
+		trackerJS:        trackerJS,
+	}, nil
+}
+
+func loadTrackerJS(cfg config.Config) ([]byte, error) {
+	if len(cfg.TrackerJS) != 0 {
+		return cfg.TrackerJS, nil
+	}
+	trackerPath := filepath.Join("static", "tracker.js")
+	trackerJS, err := os.ReadFile(trackerPath) // #nosec G304 -- trackerPath is constructed from static directory constant
+	if err != nil {
+		return nil, fmt.Errorf("failed to load tracker.js: %w", err)
+	}
+	return trackerJS, nil
+}
+
+func openMigratedDatabase(cfg config.Config) (*bun.DB, error) {
 	db, err := database.New(cfg.Database)
 	if err != nil {
 		return nil, fmt.Errorf("create database connection: %w", err)
 	}
-
 	if err := database.Migrate(context.Background(), db); err != nil {
 		if closeErr := database.Close(db); closeErr != nil {
 			slog.Error("failed to close database after migration error", "error", closeErr)
 		}
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
+	return db, nil
+}
 
+func buildServerDependencies(cfg config.Config, db *bun.DB) (serverDependencies, error) {
 	userRepo := repository.NewUserRepository(db)
 	siteRepo := repository.NewSiteRepository(db)
 	analyticsRepo := repository.NewAnalyticsRepository(db)
 	countryRepo := repository.NewCountryRepository(db)
 	eventDefinitionRepo := repository.NewEventDefinitionRepository(db)
+	authService := auth.NewService(userRepo, authConfig(cfg))
+	geoIPService := services.NewGeoIPService(services.GeoIPConfig{
+		DBPath:            cfg.GeoIP.DBPath,
+		DownloadURL:       cfg.GeoIP.DownloadURL,
+		MaxMindLicenseKey: cfg.GeoIP.MaxMindLicenseKey,
+	})
+	siteService := services.NewSiteService(siteRepo)
+	countryService := services.NewCountryService(countryRepo, geoIPService)
+	analyticsService := services.NewAnalyticsService(
+		analyticsRepo,
+		siteRepo,
+		eventDefinitionRepo,
+		geoIPService,
+		countryService,
+		analyticsIdentitySecret(cfg),
+	)
+	analyticsService.SetMaxSinglePageDuration(cfg.Analytics.MaxSinglePageDuration)
+	if err := analyticsService.SyncGeoIPRequirement(context.Background()); err != nil {
+		fmt.Printf("Warning: GeoIP database sync failed: %v\n", err)
+	}
+	if err := authService.CreateInitialAdmin(context.Background(), cfg.Auth.InitialAdminUsername, cfg.Auth.InitialAdminPassword); err != nil {
+		return serverDependencies{}, fmt.Errorf("create initial admin: %w", err)
+	}
+	return serverDependencies{
+		authService:            authService,
+		siteService:            siteService,
+		analyticsService:       analyticsService,
+		countryService:         countryService,
+		eventDefinitionService: services.NewEventDefinitionService(eventDefinitionRepo),
+	}, nil
+}
 
-	// Initialize auth service
-	authService := auth.NewService(userRepo, auth.Config{
+func authConfig(cfg config.Config) auth.Config {
+	return auth.Config{
 		JWTSecret:         cfg.Auth.JWTSecret,
 		AccessTokenExpiry: cfg.Auth.AccessTokenExpiry,
 		RefreshExpiry:     cfg.Auth.RefreshExpiry,
 		AllowRegistration: cfg.Auth.AllowRegistration,
 		SecureCookies:     cfg.Auth.SecureCookies,
 		CookieDomain:      cfg.Auth.CookieDomain,
-	})
-
-	geoIPService := services.NewGeoIPService(services.GeoIPConfig{
-		DBPath:            cfg.GeoIP.DBPath,
-		DownloadURL:       cfg.GeoIP.DownloadURL,
-		MaxMindLicenseKey: cfg.GeoIP.MaxMindLicenseKey,
-	})
-
-	siteService := services.NewSiteService(siteRepo)
-	eventDefinitionService := services.NewEventDefinitionService(eventDefinitionRepo)
-	countryService := services.NewCountryService(countryRepo, geoIPService)
-	identitySecret := cfg.Analytics.IdentitySecret
-	if identitySecret == "" {
-		identitySecret = cfg.Auth.JWTSecret
 	}
-	analyticsService := services.NewAnalyticsService(analyticsRepo, siteRepo, eventDefinitionRepo, geoIPService, countryService, identitySecret)
-	analyticsService.SetMaxSinglePageDuration(cfg.Analytics.MaxSinglePageDuration)
-	if err := analyticsService.SyncGeoIPRequirement(context.Background()); err != nil {
-		fmt.Printf("Warning: GeoIP database sync failed: %v\n", err)
-	}
+}
 
-	if err := authService.CreateInitialAdmin(context.Background(), cfg.Auth.InitialAdminUsername, cfg.Auth.InitialAdminPassword); err != nil {
-		if closeErr := database.Close(db); closeErr != nil {
-			slog.Error("failed to close database after admin creation error", "error", closeErr)
-		}
-		return nil, fmt.Errorf("create initial admin: %w", err)
+func analyticsIdentitySecret(cfg config.Config) string {
+	if cfg.Analytics.IdentitySecret != "" {
+		return cfg.Analytics.IdentitySecret
 	}
+	return cfg.Auth.JWTSecret
+}
 
-	ipResolver, err := clientip.NewResolver(cfg.Analytics.TrustedProxyCIDRs)
-	if err != nil {
-		if closeErr := database.Close(db); closeErr != nil {
-			slog.Error("failed to close database after trusted proxy config error", "error", closeErr)
-		}
-		return nil, fmt.Errorf("configure trusted proxies: %w", err)
-	}
+func buildHTTPHandler(
+	cfg config.Config,
+	db *bun.DB,
+	trackerJS []byte,
+	deps serverDependencies,
+	ipResolver *clientip.Resolver,
+) http.Handler {
 	collectRateLimiter := handlers.NewCollectRateLimiter(
 		cfg.Analytics.RateLimitEnabled,
 		cfg.Analytics.RateLimitPerMinute,
 		cfg.Analytics.RateLimitBurst,
 	)
 	analyticsHandler := handlers.NewAnalyticsHandler(
-		analyticsService,
-		siteService,
+		deps.analyticsService,
+		deps.siteService,
 		handlers.AnalyticsHandlerConfig{
 			MaxBodyBytes:       cfg.Analytics.MaxBodyBytes,
 			MaxPropertiesBytes: cfg.Analytics.MaxPropertiesBytes,
@@ -125,15 +191,12 @@ func New(cfg config.Config) (*Server, error) {
 		collectRateLimiter,
 	)
 
-	// Initialize auth middleware
-	authMiddleware := auth.NewMiddleware(authService)
-
 	resolver := graph.NewResolver(
-		authService,
-		siteService,
-		analyticsService,
-		countryService,
-		eventDefinitionService,
+		deps.authService,
+		deps.siteService,
+		deps.analyticsService,
+		deps.countryService,
+		deps.eventDefinitionService,
 		graph.DashboardLimits{
 			MaxDailyRangeDays:     cfg.Dashboard.MaxDailyRangeDays,
 			MaxHourlyRangeDays:    cfg.Dashboard.MaxHourlyRangeDays,
@@ -142,26 +205,28 @@ func New(cfg config.Config) (*Server, error) {
 		},
 	)
 
+	authMiddleware := auth.NewMiddleware(deps.authService)
 	mux := http.NewServeMux()
-
 	basePath := cfg.Server.BasePath
 	if basePath == "/" {
 		basePath = ""
 	}
-
-	// REST API: Only tracking endpoints (public, no auth required)
 	mux.HandleFunc("POST "+basePath+"/api/collect", analyticsHandler.Collect)
 	mux.HandleFunc("OPTIONS "+basePath+"/api/collect", analyticsHandler.Collect)
 
-	// GraphQL endpoint
-	// Auth uses JWT in HttpOnly + Secure cookies with SameSite=Strict/Lax
-	// No CSRF protection needed - see https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
-	graphqlHandler := http.HandlerFunc(graph.Handler(resolver, cfg.GraphQL.MaxBodyBytes))
+	authRateLimiter := middleware.NewAuthRateLimiter(
+		cfg.Auth.RateLimitEnabled,
+		cfg.Auth.RateLimitAttempts,
+		cfg.Auth.RateLimitWindow,
+		cfg.GraphQL.MaxBodyBytes,
+		ipResolver,
+	)
+	graphqlHandler := authRateLimiter.Middleware(graph.Handler(resolver, cfg.GraphQL.MaxBodyBytes))
 	graphqlPath := basePath + "/graphql"
 	mux.Handle("POST "+graphqlPath, graphqlHandler)
 	mux.HandleFunc("GET "+graphqlPath, graphqlPlaygroundHandler(graphqlPath))
 
-	mux.HandleFunc("GET "+basePath+"/tracker.js", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET "+basePath+"/tracker.js", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -182,43 +247,29 @@ func New(cfg config.Config) (*Server, error) {
 	dashboardHandler := dashboard.Handler(dashboardCfg)
 
 	if basePath == "" {
-
 		mux.Handle("GET /", dashboardHandler)
 	} else {
-
 		mux.Handle("GET "+basePath+"/", http.StripPrefix(basePath, dashboardHandler))
-
 		mux.Handle("GET "+basePath, http.RedirectHandler(basePath+"/", http.StatusMovedPermanently))
 	}
 
-	handler := middleware.Logging(
+	return middleware.Logging(
 		middleware.Security(
 			middleware.CORS(
 				authMiddleware.Authenticate(mux),
 			),
 		),
 	)
+}
 
-	addr := cfg.Server.Host + ":" + cfg.Server.Port
-	httpServer := &http.Server{
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
 		Addr:         addr,
 		Handler:      handler,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
-
-	srv := &Server{
-		DB:               db,
-		AuthService:      authService,
-		SiteService:      siteService,
-		AnalyticsService: analyticsService,
-		Handler:          handler,
-		HTTPServer:       httpServer,
-		trackerJS:        trackerJS,
-	}
-
-	return srv, nil
 }
 
 func (s *Server) Close() error {

@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -197,7 +198,11 @@ func (h *AnalyticsHandler) applyAnalyticsCORSForSite(w http.ResponseWriter, r *h
 }
 
 func (h *AnalyticsHandler) loadAnalyticsSite(r *http.Request, siteKey string) (*models.Site, error) {
-	return h.siteService.GetByPublicKey(r.Context(), siteKey)
+	site, err := h.siteService.GetByPublicKey(r.Context(), siteKey)
+	if err != nil {
+		return nil, fmt.Errorf("get site by public key: %w", err)
+	}
+	return site, nil
 }
 
 func (h *AnalyticsHandler) clientIP(r *http.Request) string {

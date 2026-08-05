@@ -28,19 +28,17 @@ const StatCard: FunctionComponent<StatCardProps> = ({ title, value, icon: Icon, 
       </CardHeader>
       <CardContent>
         <DashboardCardState state={state} skeleton={<Skeleton className="h-8 w-32" />} className="min-h-12" overlayLabel="Refreshing">
-          <>
-            <div className="text-2xl font-bold tracking-tight">
-              {value}
-              {hasSuffix ? <span className="ml-1 text-sm font-normal text-muted-foreground">{suffix}</span> : null}
+          <div className="text-2xl font-bold tracking-tight">
+            {value}
+            {hasSuffix ? <span className="ml-1 text-sm font-normal text-muted-foreground">{suffix}</span> : null}
+          </div>
+          {hasTrend ? (
+            <div className="mt-1 flex items-center gap-1">
+              {trend === 'up' ? <ArrowUpRight className="h-3 w-3 text-green-500" /> : <ArrowDownRight className="h-3 w-3 text-red-500" />}
+              <span className={`text-xs ${trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>{trendValue}</span>
+              <span className="text-xs text-muted-foreground">vs last period</span>
             </div>
-            {hasTrend ? (
-              <div className="mt-1 flex items-center gap-1">
-                {trend === 'up' ? <ArrowUpRight className="h-3 w-3 text-green-500" /> : <ArrowDownRight className="h-3 w-3 text-red-500" />}
-                <span className={`text-xs ${trend === 'up' ? 'text-green-500' : 'text-red-500'}`}>{trendValue}</span>
-                <span className="text-xs text-muted-foreground">vs last period</span>
-              </div>
-            ) : null}
-          </>
+          ) : null}
         </DashboardCardState>
       </CardContent>
     </Card>

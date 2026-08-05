@@ -146,7 +146,6 @@ type ComplexityRoot struct {
 		Login                 func(childComplexity int, input model.LoginInput) int
 		Logout                func(childComplexity int) int
 		RefreshGeoIPDatabase  func(childComplexity int) int
-		RefreshToken          func(childComplexity int, refreshToken string) int
 		RegenerateSiteKey     func(childComplexity int, id string) int
 		Register              func(childComplexity int, input model.RegisterInput) int
 		UpdateSite            func(childComplexity int, id string, input model.UpdateSiteInput) int
@@ -236,11 +235,6 @@ type ComplexityRoot struct {
 		TrackCountry     func(childComplexity int) int
 	}
 
-	TokenPayload struct {
-		AccessToken  func(childComplexity int) int
-		RefreshToken func(childComplexity int) int
-	}
-
 	User struct {
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
@@ -270,7 +264,6 @@ type MutationResolver interface {
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthPayload, error)
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error)
 	Logout(ctx context.Context) (bool, error)
-	RefreshToken(ctx context.Context, refreshToken string) (*model.TokenPayload, error)
 	CreateSite(ctx context.Context, input model.CreateSiteInput) (*model.Site, error)
 	UpdateSite(ctx context.Context, id string, input model.UpdateSiteInput) (*model.Site, error)
 	DeleteSite(ctx context.Context, id string) (bool, error)
@@ -744,17 +737,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.Mutation.RefreshGeoIPDatabase(childComplexity), true
-	case "Mutation.refreshToken":
-		if e.ComplexityRoot.Mutation.RefreshToken == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_refreshToken_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.Mutation.RefreshToken(childComplexity, args["refreshToken"].(string)), true
 	case "Mutation.regenerateSiteKey":
 		if e.ComplexityRoot.Mutation.RegenerateSiteKey == nil {
 			break
@@ -1123,19 +1105,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.Site.TrackCountry(childComplexity), true
 
-	case "TokenPayload.accessToken":
-		if e.ComplexityRoot.TokenPayload.AccessToken == nil {
-			break
-		}
-
-		return e.ComplexityRoot.TokenPayload.AccessToken(childComplexity), true
-	case "TokenPayload.refreshToken":
-		if e.ComplexityRoot.TokenPayload.RefreshToken == nil {
-			break
-		}
-
-		return e.ComplexityRoot.TokenPayload.RefreshToken(childComplexity), true
-
 	case "User.createdAt":
 		if e.ComplexityRoot.User.CreatedAt == nil {
 			break
@@ -1300,13 +1269,7 @@ type Site {
 
 type AuthPayload {
   user: User!
-  # Modern auth: uses HttpOnly cookies with SameSite
-  # See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
-}
-
-type TokenPayload {
-  accessToken: String!
-  refreshToken: String!
+  # Auth tokens are set as HttpOnly cookies and are not returned in the body.
 }
 
 type DashboardStats {
@@ -1639,7 +1602,6 @@ type Mutation {
   Clears auth cookies
   """
   logout: Boolean!
-  refreshToken(refreshToken: String!): TokenPayload!
   createSite(input: CreateSiteInput!): Site!
   updateSite(id: ID!, input: UpdateSiteInput!): Site!
   """
@@ -1990,16 +1952,6 @@ func (ec *executionContext) childFields_Site(ctx context.Context, field graphql.
 	return nil, fmt.Errorf("no field named %q was found under type Site", field.Name)
 }
 
-func (ec *executionContext) childFields_TokenPayload(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-	switch field.Name {
-	case "accessToken":
-		return ec.fieldContext_TokenPayload_accessToken(ctx, field)
-	case "refreshToken":
-		return ec.fieldContext_TokenPayload_refreshToken(ctx, field)
-	}
-	return nil, fmt.Errorf("no field named %q was found under type TokenPayload", field.Name)
-}
-
 func (ec *executionContext) childFields_User(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 	switch field.Name {
 	case "id":
@@ -2307,20 +2259,6 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["input"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_refreshToken_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "refreshToken",
-		func(ctx context.Context, v any) (string, error) {
-			return ec.unmarshalNString2string(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["refreshToken"] = arg0
 	return args, nil
 }
 
@@ -4269,50 +4207,6 @@ func (ec *executionContext) fieldContext_Mutation_logout(_ context.Context, fiel
 	return graphql.NewScalarFieldContext("Mutation", field, true, true, errors.New("field of type Boolean does not have child fields"))
 }
 
-func (ec *executionContext) _Mutation_refreshToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_refreshToken(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().RefreshToken(ctx, fc.Args["refreshToken"].(string))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.TokenPayload) graphql.Marshaler {
-			return ec.marshalNTokenPayload2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐTokenPayload(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_refreshToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_TokenPayload(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_refreshToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Mutation_createSite(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -5956,52 +5850,6 @@ func (ec *executionContext) _Site_createdAt(ctx context.Context, field graphql.C
 }
 func (ec *executionContext) fieldContext_Site_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("Site", field, false, false, errors.New("field of type Time does not have child fields"))
-}
-
-func (ec *executionContext) _TokenPayload_accessToken(ctx context.Context, field graphql.CollectedField, obj *model.TokenPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_TokenPayload_accessToken(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.AccessToken, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_TokenPayload_accessToken(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("TokenPayload", field, false, false, errors.New("field of type String does not have child fields"))
-}
-
-func (ec *executionContext) _TokenPayload_refreshToken(ctx context.Context, field graphql.CollectedField, obj *model.TokenPayload) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_TokenPayload_refreshToken(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.RefreshToken, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_TokenPayload_refreshToken(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("TokenPayload", field, false, false, errors.New("field of type String does not have child fields"))
 }
 
 func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
@@ -8700,13 +8548,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "refreshToken":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_refreshToken(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "createSite":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createSite(ctx, field)
@@ -9644,49 +9485,6 @@ func (ec *executionContext) _Site(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "createdAt":
 			out.Values[i] = ec._Site_createdAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
-
-	ec.ProcessDeferredGroup(graphql.DeferredGroup{
-		Defers:   deferLabelToView,
-		Path:     graphql.GetPath(ctx),
-		FieldSet: deferredFieldSet,
-		Context:  ctx,
-	})
-
-	return out
-}
-
-var tokenPayloadImplementors = []string{"TokenPayload"}
-
-func (ec *executionContext) _TokenPayload(ctx context.Context, sel ast.SelectionSet, obj *model.TokenPayload) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, tokenPayloadImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferredFieldSet := graphql.NewFieldSet(nil)
-	deferLabelToView := make(map[string]*graphql.FieldSetView)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("TokenPayload")
-		case "accessToken":
-			out.Values[i] = ec._TokenPayload_accessToken(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "refreshToken":
-			out.Values[i] = ec._TokenPayload_refreshToken(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -10916,20 +10714,6 @@ func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel as
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) marshalNTokenPayload2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐTokenPayload(ctx context.Context, sel ast.SelectionSet, v model.TokenPayload) graphql.Marshaler {
-	return ec._TokenPayload(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNTokenPayload2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐTokenPayload(ctx context.Context, sel ast.SelectionSet, v *model.TokenPayload) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._TokenPayload(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNUpdateSiteInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐUpdateSiteInput(ctx context.Context, v any) (model.UpdateSiteInput, error) {

@@ -286,8 +286,7 @@ func (r *mutationResolver) Register(ctx context.Context, input model.RegisterInp
 		return nil, fmt.Errorf("failed to register user: %w", err)
 	}
 
-	// Set auth cookies - tokens are in HttpOnly cookies, not response body
-	// See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
+	// Set auth cookies; raw tokens are not returned in the GraphQL body.
 	if w := GetResponseWriter(ctx); w != nil {
 		r.AuthService.SetAuthCookies(w, tokens)
 	}
@@ -312,8 +311,7 @@ func (r *mutationResolver) Login(ctx context.Context, input model.LoginInput) (*
 		return nil, fmt.Errorf("failed to login: %w", err)
 	}
 
-	// Set auth cookies - tokens are in HttpOnly cookies, not response body
-	// See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
+	// Set auth cookies; raw tokens are not returned in the GraphQL body.
 	if w := GetResponseWriter(ctx); w != nil {
 		r.AuthService.SetAuthCookies(w, tokens)
 	}
@@ -334,24 +332,6 @@ func (r *mutationResolver) Logout(ctx context.Context) (bool, error) {
 		r.AuthService.ClearAuthCookies(w)
 	}
 	return true, nil
-}
-
-// RefreshToken is the resolver for the refreshToken field.
-func (r *mutationResolver) RefreshToken(ctx context.Context, refreshToken string) (*model.TokenPayload, error) {
-	tokens, err := r.AuthService.RefreshTokens(ctx, refreshToken)
-	if err != nil {
-		return nil, fmt.Errorf("failed to refresh tokens: %w", err)
-	}
-
-	// Set auth cookies
-	if w := GetResponseWriter(ctx); w != nil {
-		r.AuthService.SetAuthCookies(w, tokens)
-	}
-
-	return &model.TokenPayload{
-		AccessToken:  tokens.AccessToken,
-		RefreshToken: tokens.RefreshToken,
-	}, nil
 }
 
 // CreateSite is the resolver for the createSite field.

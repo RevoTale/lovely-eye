@@ -33,6 +33,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           working-directory: server
+          args: ./...
       - name: Test
         run: go test ./...
       - name: Seed example data command
@@ -59,8 +60,10 @@ jobs:
         run: bun run codegen --check
       - name: Lint
         run: bun run lint
+      - name: Source size
+        run: bun run lint:size
       - name: Typecheck
-        run: bun run tsc
+        run: bun run typecheck
 
   validate-static-assets:
     defaults:

@@ -1,6 +1,6 @@
 import type { FunctionComponent } from 'react';
 import { Globe } from 'lucide-react';
-import { Badge, Progress, Skeleton } from '@/components/ui';
+import { Badge, Progress, Skeleton, SKELETON_KEYS } from '@/components/ui';
 import BoardCard from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
@@ -20,7 +20,6 @@ interface TopPagesCardProps {
 const EMPTY_COUNT = 0;
 const FIRST_INDEX = 0;
 const PERCENT_MULTIPLIER = 100;
-const SKELETON_ROWS = 5;
 
 const TopPagesCard: FunctionComponent<TopPagesCardProps> = ({ pages, total, page, pageSize, siteId, onPageChange, state = 'ready' }) => {
   const maxViews = pages.length > EMPTY_COUNT ? pages[FIRST_INDEX]?.views ?? EMPTY_COUNT : EMPTY_COUNT;
@@ -32,7 +31,7 @@ const TopPagesCard: FunctionComponent<TopPagesCardProps> = ({ pages, total, page
       state={state}
       pagination={{ page, pageSize, total, onPageChange }}
       overlayLabel="Refreshing pages"
-      skeleton={<div className="space-y-3">{Array.from({ length: SKELETON_ROWS }, (_, index) => <div key={index} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-5 w-12" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
+      skeleton={<div className="space-y-3">{SKELETON_KEYS.map((key) => <div key={key} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-4 w-32" /><Skeleton className="h-5 w-12" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
     >
       <div className="space-y-3">
         {pages.length > EMPTY_COUNT ? pages.map((pageStat) => (

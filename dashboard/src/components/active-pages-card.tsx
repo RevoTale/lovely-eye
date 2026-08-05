@@ -35,9 +35,9 @@ export const ActivePagesCard = ({ activePages }: ActivePagesCardProps): React.Re
       <CardContent>
         <div className="space-y-3">
           {pageItems.length > EMPTY_COUNT ? (
-            pageItems.map((page, index) => (
+            pageItems.map((page) => (
               <div
-                key={index}
+                key={page.path}
                 className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">

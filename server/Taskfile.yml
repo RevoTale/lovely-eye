@@ -21,15 +21,24 @@ tasks:
     cmds:
       - "{{.GO}} run ./cmd/server"
 
+  lint:
+    desc: Run Go lint checks
+    env:
+      GOCACHE: /tmp/go-build-cache
+      GOLANGCI_LINT_CACHE: /tmp/golangci-lint-cache
+    cmds:
+      - golangci-lint run ./...
+
   test:
     desc: Run server tests, static typecheck, and lint
     env:
       DASHBOARD_PATH: "{{.DASHBOARD_PATH}}"
       GOCACHE: /tmp/go-build-cache
+      GOLANGCI_LINT_CACHE: /tmp/golangci-lint-cache
     cmds:
       - "{{.GO}} test ./... --count=2"
       - task: static:typecheck
-      - golangci-lint run
+      - task: lint
 
   clean:
     desc: Clean build output and local data

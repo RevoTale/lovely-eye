@@ -179,6 +179,9 @@ The tracker uses `visibilitychange` with `sendBeacon`, with `pagehide` as a fall
 | `ALLOW_REGISTRATION` | `auto` | Empty means derived from the initial-admin envs |
 | `INITIAL_ADMIN_USERNAME` | empty | Initial admin username. Requires `INITIAL_ADMIN_PASSWORD`. |
 | `INITIAL_ADMIN_PASSWORD` | empty | Initial admin password. Requires `INITIAL_ADMIN_USERNAME`. |
+| `AUTH_RATE_LIMIT_ENABLED` | `true` | Enables per-process rate limiting for `login` and `register` GraphQL mutations. |
+| `AUTH_RATE_LIMIT_ATTEMPTS` | `10` | Maximum auth mutation attempts per trusted client IP during the window. |
+| `AUTH_RATE_LIMIT_WINDOW` | `15m` | Fixed auth rate-limit window. |
 | `GEOIP_MAXMIND_LICENSE_KEY` | empty | Optional MaxMind license key for country tracking |
 | `ANALYTICS_MAX_BODY_BYTES` | `16384` | Maximum collect request body size. Small because tracker payloads are tiny. |
 | `ANALYTICS_MAX_PROPERTIES_BYTES` | `8192` | Maximum custom-event `properties` JSON string size. |
@@ -208,6 +211,12 @@ The tracker uses `visibilitychange` with `sendBeacon`, with `pagehide` as a fall
 ```
 
 Custom events are recorded only when the event name and fields are allowlisted in site settings. Otherwise, they are discarded silently.
+
+## Development Quality Gates
+
+Run `task test` before handing off changes. It runs dashboard Biome checks, the dashboard source-size guard, TypeScript checks for the dashboard and tracker, Go tests, tracker typecheck, and golangci-lint. Use `task lint` when you only need the lint gates.
+
+The dashboard uses Biome's recommended rules plus a local source-size check. The Go backend uses golangci-lint's standard v2 set plus explicit security, correctness, function-length, complexity, and file-length checks.
 
 ## Documentation
 

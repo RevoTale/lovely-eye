@@ -62,6 +62,9 @@ Separate directories needed because SQLite and PostgreSQL use different syntax (
 - `DB_DRIVER` - `sqlite` (default) or `postgres`
 - `DB_DSN` - Connection string
 - `JWT_SECRET` - Optional. If unset, the app generates one at startup. Set it explicitly in production because dashboard sessions will not survive restarts.
+- `AUTH_RATE_LIMIT_ENABLED` - Optional. Defaults to `true` for `login` and `register` GraphQL mutations.
+- `AUTH_RATE_LIMIT_ATTEMPTS` - Optional. Defaults to `10` per trusted client IP during the window.
+- `AUTH_RATE_LIMIT_WINDOW` - Optional. Defaults to `15m`.
 - `ANALYTICS_IDENTITY_SECRET` - Optional. Falls back to `JWT_SECRET`. Set it explicitly in production if visitor identity should remain stable across restarts without sharing the auth secret. Analytics uses it for the daily UTC hashes behind UTC-day-skipped rotation, and it also reduces the impact of database-only leaks by making visitor IDs harder to recompute.
 - `ANALYTICS_MAX_BODY_BYTES` - Optional. Defaults to `16384` for small collect payloads.
 - `ANALYTICS_MAX_PROPERTIES_BYTES` - Optional. Defaults to `8192` for custom event properties.

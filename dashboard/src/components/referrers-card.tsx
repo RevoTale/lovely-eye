@@ -3,7 +3,7 @@ import type { FunctionComponent } from 'react';
 import BoardCard from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
-import { Badge, Progress, Skeleton } from '@/components/ui';
+import { Badge, Progress, Skeleton, SKELETON_KEYS } from '@/components/ui';
 import type { ReferrerStatsFieldsFragment } from '@/gql/graphql';
 import type { DashboardLoadState } from '@/lib/dashboard-load-state';
 import { formatReferrer, getReferrerIcon } from '@/lib/referrer-utils';
@@ -37,7 +37,7 @@ const ReferrersCard: FunctionComponent<ReferrersCardProps> = ({ referrers, total
       headerRight={<Badge variant="secondary" className="flex items-center gap-1"><TrendingUp className="h-3 w-3" />{totalCount}</Badge>}
       pagination={{ page, pageSize, total: totalCount, onPageChange }}
       overlayLabel="Refreshing referrers"
-      skeleton={<div className="space-y-4">{Array.from({ length: 5 }, (_, index) => <div key={index} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-16" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
+      skeleton={<div className="space-y-4">{SKELETON_KEYS.map((key) => <div key={key} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-16" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
     >
       <div className="space-y-4">
         {referrers.length > EMPTY_COUNT ? referrers.map((ref) => {

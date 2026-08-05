@@ -52,7 +52,7 @@ func Handler(cfg Config) http.Handler {
 	indexHTML, err := os.ReadFile(indexPath) // #nosec G304 -- indexPath is constructed from validated DashboardPath config
 	if err != nil {
 
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			http.Error(w, "Dashboard not available", http.StatusServiceUnavailable)
 		})
 	}

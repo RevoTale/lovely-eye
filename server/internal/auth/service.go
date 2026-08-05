@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/lovely-eye/server/internal/models"
 	"github.com/lovely-eye/server/internal/repository"
@@ -16,11 +18,16 @@ var (
 	ErrUserExists           = errors.New("user already exists")
 	ErrUserNotFound         = errors.New("user not found")
 	ErrRegistrationDisabled = errors.New("registration is disabled")
+	ErrInvalidUsername      = errors.New("invalid username")
+	ErrInvalidPassword      = errors.New("invalid password")
 )
 
 const (
 	accessTokenCookie  = "le_access"
 	refreshTokenCookie = "le_refresh"
+	minPasswordBytes   = 8
+	maxPasswordBytes   = 72
+	maxUsernameBytes   = 128
 )
 
 type Config struct {
@@ -57,18 +64,12 @@ func NewService(userRepo *repository.UserRepository, cfg Config) Service {
 }
 
 func (s *jwtService) Register(ctx context.Context, input RegisterInput) (*User, *Tokens, error) {
-	isFirstUser, err := s.isFirstUser(ctx)
+	username, err := normalizeUsername(input.Username)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	if !isFirstUser && !s.allowRegistration {
-		return nil, nil, ErrRegistrationDisabled
-	}
-
-	existing, _ := s.userRepo.GetByUsername(ctx, input.Username)
-	if existing != nil {
-		return nil, nil, ErrUserExists
+	if err := validatePassword(input.Password); err != nil {
+		return nil, nil, err
 	}
 
 	hashedPassword, err := hashPassword(input.Password)
@@ -76,18 +77,18 @@ func (s *jwtService) Register(ctx context.Context, input RegisterInput) (*User, 
 		return nil, nil, err
 	}
 
-	role := "user"
-	if isFirstUser {
-		role = "admin"
-	}
-
 	dbUser := &models.User{
-		Username:     input.Username,
+		Username:     username,
 		PasswordHash: hashedPassword,
-		Role:         role,
 	}
 
-	if err := s.userRepo.Create(ctx, dbUser); err != nil {
+	if err := s.userRepo.CreateForRegistration(ctx, dbUser, s.allowRegistration); err != nil {
+		if errors.Is(err, repository.ErrUserAlreadyExists) {
+			return nil, nil, ErrUserExists
+		}
+		if errors.Is(err, repository.ErrUserRegistrationDisabled) {
+			return nil, nil, ErrRegistrationDisabled
+		}
 		return nil, nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -106,7 +107,15 @@ func (s *jwtService) Register(ctx context.Context, input RegisterInput) (*User, 
 }
 
 func (s *jwtService) Login(ctx context.Context, input LoginInput) (*User, *Tokens, error) {
-	dbUser, err := s.userRepo.GetByUsername(ctx, input.Username)
+	username, err := normalizeUsername(input.Username)
+	if err != nil {
+		return nil, nil, ErrInvalidCredentials
+	}
+	if err := validatePassword(input.Password); err != nil {
+		return nil, nil, ErrInvalidCredentials
+	}
+
+	dbUser, err := s.userRepo.GetByUsername(ctx, username)
 	if err != nil {
 		return nil, nil, ErrInvalidCredentials
 	}
@@ -182,12 +191,12 @@ func (s *jwtService) CreateInitialAdmin(ctx context.Context, username, password 
 		return nil
 	}
 
-	isFirst, err := s.isFirstUser(ctx)
+	normalizedUsername, err := normalizeUsername(username)
 	if err != nil {
 		return err
 	}
-	if !isFirst {
-		return nil
+	if err := validatePassword(password); err != nil {
+		return err
 	}
 
 	hashedPassword, err := hashPassword(password)
@@ -196,20 +205,17 @@ func (s *jwtService) CreateInitialAdmin(ctx context.Context, username, password 
 	}
 
 	user := &models.User{
-		Username:     username,
+		Username:     normalizedUsername,
 		PasswordHash: hashedPassword,
-		Role:         "admin",
 	}
 
-	if err := s.userRepo.Create(ctx, user); err != nil {
+	if _, err := s.userRepo.CreateInitialAdminIfNoUsers(ctx, user); err != nil {
 		return fmt.Errorf("failed to create initial admin user: %w", err)
 	}
 	return nil
 }
 
 func (s *jwtService) SetAuthCookies(w http.ResponseWriter, tokens *Tokens) {
-	// Modern auth: JWT in HttpOnly + Secure cookies with SameSite=Strict/Lax
-	// No CSRF tokens needed - see https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
 	sameSite := http.SameSiteLaxMode
 	if s.secureCookies {
 		sameSite = http.SameSiteStrictMode
@@ -294,4 +300,26 @@ func (s *jwtService) generateTokens(user *User) (*Tokens, error) {
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}, nil
+}
+
+func normalizeUsername(username string) (string, error) {
+	username = strings.TrimSpace(username)
+	if username == "" || len([]byte(username)) > maxUsernameBytes {
+		return "", ErrInvalidUsername
+	}
+	if strings.ContainsFunc(username, unicode.IsControl) {
+		return "", ErrInvalidUsername
+	}
+	return username, nil
+}
+
+func validatePassword(password string) error {
+	passwordBytes := len([]byte(password))
+	if passwordBytes < minPasswordBytes || passwordBytes > maxPasswordBytes {
+		return ErrInvalidPassword
+	}
+	if strings.ContainsRune(password, '\x00') {
+		return ErrInvalidPassword
+	}
+	return nil
 }

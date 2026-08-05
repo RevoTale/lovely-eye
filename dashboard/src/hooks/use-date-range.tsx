@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import {
   buildDateRange,
@@ -24,51 +24,61 @@ interface DateRangeState extends DateRangeInput {
   applyCustomRange: (range: DateRangeInput) => boolean;
 }
 
+interface DateRangeSearch {
+  preset?: unknown;
+  from?: unknown;
+  to?: unknown;
+  fromTime?: unknown;
+  toTime?: unknown;
+}
+
+const DEFAULT_PRESET: DatePreset = '30d';
+
+const resolveCustomRange = (raw: DateRangeSearch): DateRangeInput | undefined => {
+  const fromDate = typeof raw.from === 'string' ? raw.from : '';
+  const toDate = typeof raw.to === 'string' ? raw.to : '';
+  const fromTime = typeof raw.fromTime === 'string' ? raw.fromTime : '';
+  const toTime = typeof raw.toTime === 'string' ? raw.toTime : '';
+  const hasValidInputs =
+    isValidDateInput(fromDate) &&
+    isValidDateInput(toDate) &&
+    isValidTimeInput(fromTime) &&
+    isValidTimeInput(toTime);
+  if (!hasValidInputs) return undefined;
+
+  const candidate = buildDateRange(fromDate, toDate, fromTime, toTime);
+  if (candidate === undefined || new Date(candidate.from) > new Date(candidate.to)) return undefined;
+
+  return { fromDate, toDate, fromTime, toTime };
+};
+
+const resolveSearchState = (raw: DateRangeSearch): { preset: DatePreset } & DateRangeInput => {
+  const preset = typeof raw.preset === 'string' && isDatePreset(raw.preset) ? raw.preset : DEFAULT_PRESET;
+  if (preset === 'all') {
+    return { preset, fromDate: '', toDate: '', fromTime: '', toTime: '' };
+  }
+
+  if (preset === 'custom') {
+    const customRange = resolveCustomRange(raw);
+    if (customRange !== undefined) return { preset, ...customRange };
+  }
+
+  const presetDates = presetToDates(preset, new Date());
+  return {
+    preset,
+    fromDate: presetDates.fromDate,
+    toDate: presetDates.toDate,
+    fromTime: '00:00',
+    toTime: '23:59',
+  };
+};
+
 export function useDateRange(): DateRangeState {
   const search = useSearch({ from: siteDetailRoute.id });
   const { siteId } = useParams({ from: siteDetailRoute.id });
   const navigate = useNavigate();
-  const defaultPreset: DatePreset = '30d';
 
-  const resolveSearchState = useCallback((raw: typeof search): { preset: DatePreset } & DateRangeInput => {
-    const presetValue = isDatePreset(raw.preset) ? raw.preset : defaultPreset;
-    if (presetValue === 'all') {
-      return {
-        preset: 'all',
-        fromDate: '',
-        toDate: '',
-        fromTime: '',
-        toTime: '',
-      };
-    }
-    if (presetValue === 'custom') {
-      const fromDate = typeof raw.from === 'string' ? raw.from : '';
-      const toDate = typeof raw.to === 'string' ? raw.to : '';
-      const fromTime = typeof raw.fromTime === 'string' ? raw.fromTime : '';
-      const toTime = typeof raw.toTime === 'string' ? raw.toTime : '';
-      const hasValidInputs =
-        isValidDateInput(fromDate) &&
-        isValidDateInput(toDate) &&
-        isValidTimeInput(fromTime) &&
-        isValidTimeInput(toTime);
-      if (hasValidInputs) {
-        const candidate = buildDateRange(fromDate, toDate, fromTime, toTime);
-        if (candidate !== undefined && new Date(candidate.from) <= new Date(candidate.to)) {
-          return { preset: 'custom', fromDate, toDate, fromTime, toTime };
-        }
-      }
-    }
-    const presetDates = presetToDates(presetValue, new Date());
-    return {
-      preset: presetValue,
-      fromDate: presetDates.fromDate,
-      toDate: presetDates.toDate,
-      fromTime: '00:00',
-      toTime: '23:59',
-    };
-  }, [defaultPreset]);
-
-  const resolvedState = useMemo(() => resolveSearchState(search), [resolveSearchState, search]);
+  const resolvedState = useMemo(() => resolveSearchState(search), [search]);
 
   const { preset, fromDate, toDate, fromTime, toTime } = resolvedState;
 
@@ -85,7 +95,7 @@ export function useDateRange(): DateRangeState {
 
   const setPreset = (value: DatePreset): void => {
     if (value === 'custom') {
-      const fallbackDates = presetToDates(defaultPreset, new Date());
+      const fallbackDates = presetToDates(DEFAULT_PRESET, new Date());
       const nextFromDate = isValidDateInput(fromDate) ? fromDate : fallbackDates.fromDate;
       const nextToDate = isValidDateInput(toDate) ? toDate : fallbackDates.toDate;
       const nextFromTime = isValidTimeInput(fromTime) ? fromTime : '00:00';

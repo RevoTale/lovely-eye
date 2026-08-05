@@ -32,6 +32,12 @@ tasks:
         vars:
           DASHBOARD_PATH: ../dashboard/dist
 
+  lint:
+    desc: Run dashboard and server linters
+    cmds:
+      - task: dashboard:lint
+      - task: server:lint
+
   generate:
     desc: Generate dashboard and server code/artifacts
     cmds:

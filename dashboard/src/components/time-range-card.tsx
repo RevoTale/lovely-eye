@@ -74,7 +74,7 @@ export const TimeRangeCard = ({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <label className="text-xs text-muted-foreground">Quick presets</label>
+          <span className="text-xs text-muted-foreground">Quick presets</span>
           <div className="flex flex-wrap items-center gap-3">
             <Tabs value={preset} onValueChange={(value) => {
               if (isDatePreset(value)) {

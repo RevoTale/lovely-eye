@@ -294,9 +294,9 @@ func seedData(ctx context.Context, db *bun.DB, siteID int64, defs []*models.Even
 		}
 
 		client := &models.Client{
-			SiteID:     siteID,
-			Hash:       hash,
-			Country:    pickString(rng, []string{"US", "GB", "DE", "FR", "CA", "NL"}),
+			SiteID:  siteID,
+			Hash:    hash,
+			Country: pickString(rng, []string{"US", "GB", "DE", "FR", "CA", "NL"}),
 			Device: pickEnum(rng, []models.ClientDevice{
 				models.ClientDeviceDesktop,
 				models.ClientDeviceMobile,
@@ -523,11 +523,11 @@ func randomStart(rng *mathrand.Rand, now time.Time, recentRemaining *int) time.T
 	return now.Add(-time.Duration(seconds) * time.Second)
 }
 
-func randRange(rng *mathrand.Rand, min, max int) int {
-	if max <= min {
-		return min
+func randRange(rng *mathrand.Rand, minimum, maximum int) int {
+	if maximum <= minimum {
+		return minimum
 	}
-	return rng.Intn(max-min+1) + min
+	return rng.Intn(maximum-minimum+1) + minimum
 }
 
 func pickString(rng *mathrand.Rand, values []string) string {

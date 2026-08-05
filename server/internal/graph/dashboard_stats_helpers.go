@@ -18,16 +18,15 @@ func normalizePaging(paging model.PagingInput) (int, int) {
 	return limit, offset
 }
 
-func clampLimit(value, max int) int {
+func clampLimit(value, maximum int) int {
 	if value <= 0 {
 		return 1
 	}
-	if value > max {
-		return max
+	if value > maximum {
+		return maximum
 	}
 	return value
 }
-
 
 func bucketValueOrDefault(value *model.TimeBucket) model.TimeBucket {
 	if value == nil {

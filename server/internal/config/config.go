@@ -62,6 +62,9 @@ type AuthConfig struct {
 	CookieDomain         string
 	InitialAdminUsername string
 	InitialAdminPassword string // password for initial admin (optional)
+	RateLimitEnabled     bool
+	RateLimitAttempts    int
+	RateLimitWindow      time.Duration
 }
 
 type AnalyticsConfig struct {
@@ -133,6 +136,9 @@ func Load() Config {
 			CookieDomain:         getEnv("COOKIE_DOMAIN", ""),
 			InitialAdminUsername: initialAdminUsername,
 			InitialAdminPassword: initialAdminPassword,
+			RateLimitEnabled:     getEnvBool("AUTH_RATE_LIMIT_ENABLED", true),
+			RateLimitAttempts:    getEnvInt("AUTH_RATE_LIMIT_ATTEMPTS", 10),
+			RateLimitWindow:      getEnvDuration("AUTH_RATE_LIMIT_WINDOW", 15*time.Minute),
 		},
 		Analytics: AnalyticsConfig{
 			IdentitySecret:        getAnalyticsIdentitySecret(authSecret),

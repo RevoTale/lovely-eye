@@ -3,7 +3,7 @@ import type { ElementType, FunctionComponent } from 'react';
 import BoardCard from '@/components/board-card';
 import { FilterLink } from '@/components/filter-link';
 import { ListEmptyState } from '@/components/list-empty-state';
-import { Badge, Progress, Skeleton } from '@/components/ui';
+import { Badge, Progress, Skeleton, SKELETON_KEYS } from '@/components/ui';
 import type { DeviceStatsFieldsFragment } from '@/gql/graphql';
 import type { DashboardLoadState } from '@/lib/dashboard-load-state';
 
@@ -40,7 +40,7 @@ const DevicesCard: FunctionComponent<DevicesCardProps> = ({ devices, total, tota
     state={state}
     pagination={{ page, pageSize, total, onPageChange }}
     overlayLabel="Refreshing devices"
-    skeleton={<div className="grid gap-4 sm:grid-cols-2">{Array.from({ length: 4 }, (_, index) => <div key={index} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-5 w-24" /><Skeleton className="h-5 w-16" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
+    skeleton={<div className="grid gap-4 sm:grid-cols-2">{SKELETON_KEYS.slice(0, 4).map((key) => <div key={key} className="space-y-2"><div className="flex items-center justify-between"><Skeleton className="h-5 w-24" /><Skeleton className="h-5 w-16" /></div><Skeleton className="h-2 w-full" /></div>)}</div>}
   >
     {devices.length > EMPTY_COUNT ? (
       <div className="grid gap-4 sm:grid-cols-2">

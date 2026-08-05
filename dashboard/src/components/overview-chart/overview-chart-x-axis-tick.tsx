@@ -25,7 +25,7 @@ const OverviewChartXAxisTick: FunctionComponent<OverviewChartXAxisTickProps> = (
         className="text-[11px]"
       >
         {lines.map((line, index) => (
-          <tspan key={`${line}-${index}`} x={0} dy={index === 0 ? 0 : 12}>
+          <tspan key={line} x={0} dy={index === 0 ? 0 : 12}>
             {line}
           </tspan>
         ))}

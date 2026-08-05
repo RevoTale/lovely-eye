@@ -26,6 +26,8 @@ import (
 	"github.com/uptrace/bun"
 )
 
+var errExitClientNotFound = errors.New("exit client not found")
+
 type clientRotationHashes struct {
 	Today     string
 	Yesterday string
@@ -108,7 +110,7 @@ func (s *AnalyticsService) findClientForExit(
 	client, err := s.analyticsRepo.FindClientByHashesTx(ctx, tx, siteID, hashes.Today, hashes.Yesterday)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, errExitClientNotFound
 		}
 		return nil, fmt.Errorf("find client by rotation hashes: %w", err)
 	}
