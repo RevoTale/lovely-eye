@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	operations "github.com/lovely-eye/server/e2e/generated"
-	"github.com/lovely-eye/server/internal/config"
-	"github.com/lovely-eye/server/internal/server"
+	"github.com/lovely-eye/server/internal/app"
+	"github.com/lovely-eye/server/internal/platform/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -102,7 +102,7 @@ func TestInitialAdminFromEnvironment(t *testing.T) {
 		t.Setenv("INITIAL_ADMIN_PASSWORD", "envpassword123")
 		t.Setenv("ALLOW_REGISTRATION", "")
 
-		cfg := loadEnvTestConfig()
+		cfg := loadEnvTestConfig(t)
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
@@ -132,7 +132,7 @@ func TestInitialAdminFromEnvironment(t *testing.T) {
 		t.Setenv("INITIAL_ADMIN_PASSWORD", "")
 		t.Setenv("ALLOW_REGISTRATION", "")
 
-		cfg := loadEnvTestConfig()
+		cfg := loadEnvTestConfig(t)
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
@@ -157,7 +157,7 @@ func TestInitialAdminFromEnvironment(t *testing.T) {
 		t.Setenv("INITIAL_ADMIN_PASSWORD", "envpassword123")
 		t.Setenv("ALLOW_REGISTRATION", "true")
 
-		cfg := loadEnvTestConfig()
+		cfg := loadEnvTestConfig(t)
 		ts := newTestServerWithConfig(t, cfg)
 		ctx := context.Background()
 
@@ -367,27 +367,29 @@ func testConfigWithInitialAdmin(username, password string) config.Config {
 func newTestServerWithConfig(t *testing.T, cfg config.Config) *testServer {
 	t.Helper()
 
-	srv, err := server.New(cfg)
+	application, err := app.New(context.Background(), cfg)
 	require.NoError(t, err, "failed to create server")
 
-	httpServer := newTestHTTPServer(srv.Handler)
+	httpServer := newTestHTTPServer(application.Handler)
 
 	t.Cleanup(func() {
 		httpServer.Close()
-		err := srv.Close()
+		err := application.Close()
 		if nil != err {
 			slog.Error("server close failed", "error", err)
 		}
 	})
 
 	return &testServer{
-		Server:     srv,
+		App:        application,
 		httpServer: httpServer,
 	}
 }
 
-func loadEnvTestConfig() config.Config {
-	cfg := config.Load()
+func loadEnvTestConfig(t *testing.T) config.Config {
+	t.Helper()
+	cfg, err := config.Load()
+	require.NoError(t, err)
 	cfg.Database.Driver = "sqlite"
 	cfg.Database.DSN = "file::memory:?cache=shared"
 	cfg.TrackerJS = []byte(`console.log("mock")`)
@@ -418,7 +420,7 @@ func TestInitialAdminWithUnsetEnvVars(t *testing.T) {
 	err = os.Unsetenv("INITIAL_ADMIN_PASSWORD")
 	require.NoError(t, err)
 
-	cfg := loadEnvTestConfig()
+	cfg := loadEnvTestConfig(t)
 	ts := newTestServerWithConfig(t, cfg)
 	ctx := context.Background()
 

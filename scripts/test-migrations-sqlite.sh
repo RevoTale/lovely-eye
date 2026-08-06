@@ -1,13 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+repository_root="$(cd "$(dirname "$0")/.." && pwd)"
+compose_file="$repository_root/docker/docker-compose.migrations-test.yml"
+
+cleanup() {
+  docker compose -f "$compose_file" --profile sqlite down -v
+}
+trap cleanup EXIT
 
 echo "Testing SQLite migrations..."
-docker compose -f docker/docker-compose.migrations-test.yml --profile sqlite run --rm --build test-migrations-sqlite
-EXIT_CODE=$?
-
-echo "Cleaning up..."
-docker compose -f docker/docker-compose.migrations-test.yml --profile sqlite down -v
-
-exit $EXIT_CODE
+docker compose -f "$compose_file" --profile sqlite run --rm --build test-migrations-sqlite

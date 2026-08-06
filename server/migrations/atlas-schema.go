@@ -11,7 +11,11 @@ import (
 	"ariga.io/atlas-provider-bun/bunschema"
 	_ "ariga.io/atlas/sdk/recordriver"
 
-	"github.com/lovely-eye/server/internal/models"
+	analyticspersistence "github.com/lovely-eye/server/internal/analytics/persistence"
+	authpersistence "github.com/lovely-eye/server/internal/auth/persistence"
+	countrypersistence "github.com/lovely-eye/server/internal/country/persistence"
+	eventpersistence "github.com/lovely-eye/server/internal/event/persistence"
+	sitepersistence "github.com/lovely-eye/server/internal/site/persistence"
 )
 
 func main() {
@@ -32,18 +36,18 @@ func main() {
 	}
 
 	stmts, err := bunschema.New(d).Load(
-		&models.User{},
-		&models.Site{},
-		&models.SiteDomain{},
-		&models.SiteBlockedIP{},
-		&models.SiteBlockedCountry{},
-		&models.Country{},
-		&models.Client{},
-		&models.Session{},
-		&models.Event{},
-		&models.EventDefinition{},
-		&models.EventDefinitionField{},
-		&models.EventData{},
+		&authpersistence.User{},
+		&sitepersistence.Site{},
+		&sitepersistence.Domain{},
+		&sitepersistence.BlockedIP{},
+		&sitepersistence.BlockedCountry{},
+		&countrypersistence.Country{},
+		&analyticspersistence.Client{},
+		&analyticspersistence.Session{},
+		&analyticspersistence.Event{},
+		&eventpersistence.Definition{},
+		&eventpersistence.Field{},
+		&analyticspersistence.EventData{},
 	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load schema: %v\n", err)

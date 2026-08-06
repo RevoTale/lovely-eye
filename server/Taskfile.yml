@@ -16,6 +16,11 @@ tasks:
       - "{{.GO}} build -o bin/server ./cmd/server"
       - "{{.GO}} build -o bin/migrate ./cmd/migrate"
 
+  build-check:
+    desc: Compile every Go package without writing binaries to the workspace
+    cmds:
+      - "{{.GO}} build ./..."
+
   run:
     desc: Run the server
     cmds:
@@ -29,6 +34,11 @@ tasks:
     cmds:
       - golangci-lint run ./...
 
+  boundaries:
+    desc: Check Go package ownership boundaries
+    cmds:
+      - bash ../scripts/check-go-boundaries.sh
+
   test:
     desc: Run server tests, static typecheck, and lint
     env:
@@ -38,6 +48,7 @@ tasks:
     cmds:
       - "{{.GO}} test ./... --count=2"
       - task: static:typecheck
+      - task: boundaries
       - task: lint
 
   clean:
@@ -49,9 +60,14 @@ tasks:
   generate:
     desc: Generate Go code and static tracker asset
     cmds:
-      - "{{.GO}} run github.com/99designs/gqlgen generate"
+      - "{{.GO}} tool gqlgen generate"
       - "{{.GO}} generate ./e2e"
       - task: static:build
+
+  vuln:
+    desc: Scan reachable Go code with the module-pinned vulnerability scanner
+    cmds:
+      - "{{.GO}} tool govulncheck ./..."
 
   migrate-init:
     desc: Initialize migration tracking tables

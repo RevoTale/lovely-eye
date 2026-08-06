@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/lovely-eye/server/internal/services"
+	"github.com/lovely-eye/server/internal/analytics"
 )
 
 type DashboardStats struct {
@@ -16,5 +16,5 @@ type DashboardStats struct {
 	SiteID int64
 	From   time.Time
 	To     time.Time
-	Filter services.DashboardFilter
+	Filter analytics.Filter
 }

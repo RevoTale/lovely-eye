@@ -371,6 +371,57 @@ type DeleteSiteResponse struct {
 // GetDeleteSite returns DeleteSiteResponse.DeleteSite, and is useful for accessing the field via an interface.
 func (v *DeleteSiteResponse) GetDeleteSite() bool { return v.DeleteSite }
 
+// EventCountsEventCountsEventCountsResult includes the requested fields of the GraphQL type EventCountsResult.
+type EventCountsEventCountsEventCountsResult struct {
+	Total int                                                      `json:"total"`
+	Items []EventCountsEventCountsEventCountsResultItemsEventCount `json:"items"`
+}
+
+// GetTotal returns EventCountsEventCountsEventCountsResult.Total, and is useful for accessing the field via an interface.
+func (v *EventCountsEventCountsEventCountsResult) GetTotal() int { return v.Total }
+
+// GetItems returns EventCountsEventCountsEventCountsResult.Items, and is useful for accessing the field via an interface.
+func (v *EventCountsEventCountsEventCountsResult) GetItems() []EventCountsEventCountsEventCountsResultItemsEventCount {
+	return v.Items
+}
+
+// EventCountsEventCountsEventCountsResultItemsEventCount includes the requested fields of the GraphQL type EventCount.
+type EventCountsEventCountsEventCountsResultItemsEventCount struct {
+	Count int                                                         `json:"count"`
+	Event EventCountsEventCountsEventCountsResultItemsEventCountEvent `json:"event"`
+}
+
+// GetCount returns EventCountsEventCountsEventCountsResultItemsEventCount.Count, and is useful for accessing the field via an interface.
+func (v *EventCountsEventCountsEventCountsResultItemsEventCount) GetCount() int { return v.Count }
+
+// GetEvent returns EventCountsEventCountsEventCountsResultItemsEventCount.Event, and is useful for accessing the field via an interface.
+func (v *EventCountsEventCountsEventCountsResultItemsEventCount) GetEvent() EventCountsEventCountsEventCountsResultItemsEventCountEvent {
+	return v.Event
+}
+
+// EventCountsEventCountsEventCountsResultItemsEventCountEvent includes the requested fields of the GraphQL type Event.
+type EventCountsEventCountsEventCountsResultItemsEventCountEvent struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// GetId returns EventCountsEventCountsEventCountsResultItemsEventCountEvent.Id, and is useful for accessing the field via an interface.
+func (v *EventCountsEventCountsEventCountsResultItemsEventCountEvent) GetId() string { return v.Id }
+
+// GetName returns EventCountsEventCountsEventCountsResultItemsEventCountEvent.Name, and is useful for accessing the field via an interface.
+func (v *EventCountsEventCountsEventCountsResultItemsEventCountEvent) GetName() string { return v.Name }
+
+// EventCountsResponse is returned by EventCounts on success.
+type EventCountsResponse struct {
+	// Get event counts aggregated by event with the most recent occurrence
+	EventCounts EventCountsEventCountsEventCountsResult `json:"eventCounts"`
+}
+
+// GetEventCounts returns EventCountsResponse.EventCounts, and is useful for accessing the field via an interface.
+func (v *EventCountsResponse) GetEventCounts() EventCountsEventCountsEventCountsResult {
+	return v.EventCounts
+}
+
 type EventDefinitionFieldInput struct {
 	Key       string         `json:"key"`
 	Type      EventFieldType `json:"type"`
@@ -563,9 +614,10 @@ func (v *LoginLoginAuthPayload) GetUser() LoginLoginAuthPayloadUser { return v.U
 
 // LoginLoginAuthPayloadUser includes the requested fields of the GraphQL type User.
 type LoginLoginAuthPayloadUser struct {
-	Id       string `json:"id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	Id        string    `json:"id"`
+	Username  string    `json:"username"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 // GetId returns LoginLoginAuthPayloadUser.Id, and is useful for accessing the field via an interface.
@@ -576,6 +628,9 @@ func (v *LoginLoginAuthPayloadUser) GetUsername() string { return v.Username }
 
 // GetRole returns LoginLoginAuthPayloadUser.Role, and is useful for accessing the field via an interface.
 func (v *LoginLoginAuthPayloadUser) GetRole() string { return v.Role }
+
+// GetCreatedAt returns LoginLoginAuthPayloadUser.CreatedAt, and is useful for accessing the field via an interface.
+func (v *LoginLoginAuthPayloadUser) GetCreatedAt() time.Time { return v.CreatedAt }
 
 // LoginResponse is returned by Login on success.
 type LoginResponse struct {
@@ -596,9 +651,10 @@ func (v *LogoutResponse) GetLogout() bool { return v.Logout }
 
 // MeMeUser includes the requested fields of the GraphQL type User.
 type MeMeUser struct {
-	Id       *string `json:"id"`
-	Username *string `json:"username"`
-	Role     *string `json:"role"`
+	Id        *string    `json:"id"`
+	Username  *string    `json:"username"`
+	Role      *string    `json:"role"`
+	CreatedAt *time.Time `json:"createdAt"`
 }
 
 // GetId returns MeMeUser.Id, and is useful for accessing the field via an interface.
@@ -609,6 +665,9 @@ func (v *MeMeUser) GetUsername() *string { return v.Username }
 
 // GetRole returns MeMeUser.Role, and is useful for accessing the field via an interface.
 func (v *MeMeUser) GetRole() *string { return v.Role }
+
+// GetCreatedAt returns MeMeUser.CreatedAt, and is useful for accessing the field via an interface.
+func (v *MeMeUser) GetCreatedAt() *time.Time { return v.CreatedAt }
 
 // MeResponse is returned by Me on success.
 type MeResponse struct {
@@ -667,9 +726,10 @@ func (v *RegisterRegisterAuthPayload) GetUser() RegisterRegisterAuthPayloadUser 
 
 // RegisterRegisterAuthPayloadUser includes the requested fields of the GraphQL type User.
 type RegisterRegisterAuthPayloadUser struct {
-	Id       string `json:"id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	Id        string    `json:"id"`
+	Username  string    `json:"username"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 // GetId returns RegisterRegisterAuthPayloadUser.Id, and is useful for accessing the field via an interface.
@@ -680,6 +740,9 @@ func (v *RegisterRegisterAuthPayloadUser) GetUsername() string { return v.Userna
 
 // GetRole returns RegisterRegisterAuthPayloadUser.Role, and is useful for accessing the field via an interface.
 func (v *RegisterRegisterAuthPayloadUser) GetRole() string { return v.Role }
+
+// GetCreatedAt returns RegisterRegisterAuthPayloadUser.CreatedAt, and is useful for accessing the field via an interface.
+func (v *RegisterRegisterAuthPayloadUser) GetCreatedAt() time.Time { return v.CreatedAt }
 
 // RegisterResponse is returned by Register on success.
 type RegisterResponse struct {
@@ -869,7 +932,7 @@ type __DashboardInput struct {
 	OsPaging         PagingInput     `json:"osPaging"`
 	CountriesPaging  PagingInput     `json:"countriesPaging"`
 	DailyStatsBucket *TimeBucket     `json:"dailyStatsBucket"`
-	DailyStatsLimit  *int            `json:"dailyStatsLimit"`
+	DailyStatsPaging PagingInput     `json:"dailyStatsPaging"`
 }
 
 // GetSiteId returns __DashboardInput.SiteId, and is useful for accessing the field via an interface.
@@ -902,8 +965,8 @@ func (v *__DashboardInput) GetCountriesPaging() PagingInput { return v.Countries
 // GetDailyStatsBucket returns __DashboardInput.DailyStatsBucket, and is useful for accessing the field via an interface.
 func (v *__DashboardInput) GetDailyStatsBucket() *TimeBucket { return v.DailyStatsBucket }
 
-// GetDailyStatsLimit returns __DashboardInput.DailyStatsLimit, and is useful for accessing the field via an interface.
-func (v *__DashboardInput) GetDailyStatsLimit() *int { return v.DailyStatsLimit }
+// GetDailyStatsPaging returns __DashboardInput.DailyStatsPaging, and is useful for accessing the field via an interface.
+func (v *__DashboardInput) GetDailyStatsPaging() PagingInput { return v.DailyStatsPaging }
 
 // __DeleteSiteInput is used internally by genqlient
 type __DeleteSiteInput struct {
@@ -913,12 +976,23 @@ type __DeleteSiteInput struct {
 // GetId returns __DeleteSiteInput.Id, and is useful for accessing the field via an interface.
 func (v *__DeleteSiteInput) GetId() string { return v.Id }
 
+// __EventCountsInput is used internally by genqlient
+type __EventCountsInput struct {
+	SiteId string      `json:"siteId"`
+	Paging PagingInput `json:"paging"`
+}
+
+// GetSiteId returns __EventCountsInput.SiteId, and is useful for accessing the field via an interface.
+func (v *__EventCountsInput) GetSiteId() string { return v.SiteId }
+
+// GetPaging returns __EventCountsInput.Paging, and is useful for accessing the field via an interface.
+func (v *__EventCountsInput) GetPaging() PagingInput { return v.Paging }
+
 // __EventsInput is used internally by genqlient
 type __EventsInput struct {
 	SiteId    string          `json:"siteId"`
 	DateRange *DateRangeInput `json:"dateRange"`
-	Limit     *int            `json:"limit"`
-	Offset    *int            `json:"offset"`
+	Paging    PagingInput     `json:"paging"`
 }
 
 // GetSiteId returns __EventsInput.SiteId, and is useful for accessing the field via an interface.
@@ -927,11 +1001,8 @@ func (v *__EventsInput) GetSiteId() string { return v.SiteId }
 // GetDateRange returns __EventsInput.DateRange, and is useful for accessing the field via an interface.
 func (v *__EventsInput) GetDateRange() *DateRangeInput { return v.DateRange }
 
-// GetLimit returns __EventsInput.Limit, and is useful for accessing the field via an interface.
-func (v *__EventsInput) GetLimit() *int { return v.Limit }
-
-// GetOffset returns __EventsInput.Offset, and is useful for accessing the field via an interface.
-func (v *__EventsInput) GetOffset() *int { return v.Offset }
+// GetPaging returns __EventsInput.Paging, and is useful for accessing the field via an interface.
+func (v *__EventsInput) GetPaging() PagingInput { return v.Paging }
 
 // __LoginInput is used internally by genqlient
 type __LoginInput struct {
@@ -1024,7 +1095,7 @@ func CreateSite(
 
 // The query executed by Dashboard.
 const Dashboard_Operation = `
-query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $topPagesPaging: PagingInput!, $referrersPaging: PagingInput!, $browsersPaging: PagingInput!, $devicesPaging: PagingInput!, $osPaging: PagingInput!, $countriesPaging: PagingInput!, $dailyStatsBucket: TimeBucket, $dailyStatsLimit: Int) {
+query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput, $topPagesPaging: PagingInput!, $referrersPaging: PagingInput!, $browsersPaging: PagingInput!, $devicesPaging: PagingInput!, $osPaging: PagingInput!, $countriesPaging: PagingInput!, $dailyStatsBucket: TimeBucket, $dailyStatsPaging: PagingInput!) {
 	dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
 		visitors
 		pageViews
@@ -1077,7 +1148,7 @@ query Dashboard ($siteId: ID!, $dateRange: DateRangeInput, $filter: FilterInput,
 				visitors
 			}
 		}
-		dailyStats(bucket: $dailyStatsBucket, limit: $dailyStatsLimit) {
+		dailyStats(bucket: $dailyStatsBucket, paging: $dailyStatsPaging) {
 			date
 			visitors
 			pageViews
@@ -1100,7 +1171,7 @@ func Dashboard(
 	osPaging PagingInput,
 	countriesPaging PagingInput,
 	dailyStatsBucket *TimeBucket,
-	dailyStatsLimit *int,
+	dailyStatsPaging PagingInput,
 ) (data_ *DashboardResponse, err_ error) {
 	req_ := &graphql.Request{
 		OpName: "Dashboard",
@@ -1116,7 +1187,7 @@ func Dashboard(
 			OsPaging:         osPaging,
 			CountriesPaging:  countriesPaging,
 			DailyStatsBucket: dailyStatsBucket,
-			DailyStatsLimit:  dailyStatsLimit,
+			DailyStatsPaging: dailyStatsPaging,
 		},
 	}
 
@@ -1164,10 +1235,53 @@ func DeleteSite(
 	return data_, err_
 }
 
+// The query executed by EventCounts.
+const EventCounts_Operation = `
+query EventCounts ($siteId: ID!, $paging: PagingInput!) {
+	eventCounts(siteId: $siteId, paging: $paging) {
+		total
+		items {
+			count
+			event {
+				id
+				name
+			}
+		}
+	}
+}
+`
+
+func EventCounts(
+	ctx_ context.Context,
+	client_ graphql.Client,
+	siteId string,
+	paging PagingInput,
+) (data_ *EventCountsResponse, err_ error) {
+	req_ := &graphql.Request{
+		OpName: "EventCounts",
+		Query:  EventCounts_Operation,
+		Variables: &__EventCountsInput{
+			SiteId: siteId,
+			Paging: paging,
+		},
+	}
+
+	data_ = &EventCountsResponse{}
+	resp_ := &graphql.Response{Data: data_}
+
+	err_ = client_.MakeRequest(
+		ctx_,
+		req_,
+		resp_,
+	)
+
+	return data_, err_
+}
+
 // The query executed by Events.
 const Events_Operation = `
-query Events ($siteId: ID!, $dateRange: DateRangeInput, $limit: Int, $offset: Int) {
-	events(siteId: $siteId, dateRange: $dateRange, limit: $limit, offset: $offset) {
+query Events ($siteId: ID!, $dateRange: DateRangeInput, $paging: PagingInput!) {
+	events(siteId: $siteId, dateRange: $dateRange, paging: $paging) {
 		events {
 			id
 			name
@@ -1188,8 +1302,7 @@ func Events(
 	client_ graphql.Client,
 	siteId string,
 	dateRange *DateRangeInput,
-	limit *int,
-	offset *int,
+	paging PagingInput,
 ) (data_ *EventsResponse, err_ error) {
 	req_ := &graphql.Request{
 		OpName: "Events",
@@ -1197,8 +1310,7 @@ func Events(
 		Variables: &__EventsInput{
 			SiteId:    siteId,
 			DateRange: dateRange,
-			Limit:     limit,
-			Offset:    offset,
+			Paging:    paging,
 		},
 	}
 
@@ -1222,6 +1334,7 @@ mutation Login ($input: LoginInput!) {
 			id
 			username
 			role
+			createdAt
 		}
 	}
 }
@@ -1287,6 +1400,7 @@ query Me {
 		id
 		username
 		role
+		createdAt
 	}
 }
 `
@@ -1354,6 +1468,7 @@ mutation Register ($input: RegisterInput!) {
 			id
 			username
 			role
+			createdAt
 		}
 	}
 }

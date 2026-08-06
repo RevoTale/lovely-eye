@@ -7,9 +7,6 @@ import (
 const (
 	maxPageSize         = 100
 	maxTimeSeriesPoints = 1000
-	defaultDailyPoints  = 365
-	defaultHourlyPoints = 168
-	defaultEventsPage   = 50
 )
 
 func normalizePaging(paging model.PagingInput) (int, int) {

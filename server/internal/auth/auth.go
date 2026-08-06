@@ -2,27 +2,17 @@ package auth
 
 import (
 	"context"
-	"net/http"
+	"time"
 )
 
-type Service interface {
-	Register(ctx context.Context, input RegisterInput) (*User, *Tokens, error)
-
-	Login(ctx context.Context, input LoginInput) (*User, *Tokens, error)
-
-	RefreshTokens(ctx context.Context, refreshToken string) (*Tokens, error)
-
-	ValidateAccessToken(token string) (*Claims, error)
-
-	GetUserByID(ctx context.Context, id int64) (*User, error)
-
-	RegistrationStatus(ctx context.Context) (*RegistrationStatus, error)
-
-	CreateInitialAdmin(ctx context.Context, username, password string) error
-
-	SetAuthCookies(w http.ResponseWriter, tokens *Tokens)
-
-	ClearAuthCookies(w http.ResponseWriter)
+// UserStore is the persistence contract required by authentication.
+// Adapters own database details and translate storage failures into auth errors.
+type UserStore interface {
+	CreateForRegistration(ctx context.Context, user *StoredUser, allowRegistration bool) error
+	CreateInitialAdminIfNoUsers(ctx context.Context, user *StoredUser) (bool, error)
+	GetByID(ctx context.Context, id int64) (*StoredUser, error)
+	GetByUsername(ctx context.Context, username string) (*StoredUser, error)
+	HasUsers(ctx context.Context) (bool, error)
 }
 
 type RegisterInput struct {
@@ -40,9 +30,20 @@ type Tokens struct {
 	RefreshToken string
 }
 type User struct {
-	ID       int64
-	Username string
-	Role     string
+	ID        int64
+	Username  string
+	Role      string
+	CreatedAt time.Time
+}
+
+// StoredUser contains the authentication data that persistence must retain.
+// PasswordHash intentionally never crosses the public auth service boundary.
+type StoredUser struct {
+	ID           int64
+	Username     string
+	PasswordHash string
+	Role         string
+	CreatedAt    time.Time
 }
 
 type RegistrationStatus struct {

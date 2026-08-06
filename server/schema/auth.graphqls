@@ -1,0 +1,46 @@
+type User {
+  id: ID!
+  username: String!
+  role: String!
+  createdAt: Time!
+}
+
+type AuthPayload {
+  user: User!
+  # Auth tokens are set as HttpOnly cookies and are not returned in the body.
+}
+
+type RegistrationStatus {
+  hasUsers: Boolean!
+  """
+  Resolved registration policy after the first user exists
+  """
+  allowRegistration: Boolean!
+}
+
+input RegisterInput {
+  username: String!
+  password: String!
+}
+
+input LoginInput {
+  username: String!
+  password: String!
+}
+
+type Query {
+  me: User
+  registrationStatus: RegistrationStatus!
+}
+
+type Mutation {
+  """
+  First user becomes admin
+  """
+  register(input: RegisterInput!): AuthPayload!
+  login(input: LoginInput!): AuthPayload!
+  """
+  Clears auth cookies
+  """
+  logout: Boolean!
+}

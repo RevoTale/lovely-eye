@@ -5,12 +5,14 @@ import (
 	"time"
 )
 
+type State string
+
 const (
-	StateDisabled    = "disabled"
-	StateMissing     = "missing"
-	StateDownloading = "downloading"
-	StateReady       = "ready"
-	StateError       = "error"
+	StateDisabled    State = "disabled"
+	StateMissing     State = "missing"
+	StateDownloading State = "downloading"
+	StateReady       State = "ready"
+	StateError       State = "error"
 )
 
 type Source string
@@ -34,7 +36,7 @@ type Config struct {
 }
 
 type Status struct {
-	State     string
+	State     State
 	DBPath    string
 	Source    Source
 	LastError string

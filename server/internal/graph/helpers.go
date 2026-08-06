@@ -1,16 +1,25 @@
 package graph
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/lovely-eye/server/internal/analytics"
+	"github.com/lovely-eye/server/internal/auth"
+	"github.com/lovely-eye/server/internal/event"
+	"github.com/lovely-eye/server/internal/geoip"
 	"github.com/lovely-eye/server/internal/graph/model"
-	"github.com/lovely-eye/server/internal/models"
-	"github.com/lovely-eye/server/internal/repository"
-	"github.com/lovely-eye/server/internal/services"
 )
+
+func convertToGraphQLUser(user *auth.User) *model.User {
+	return &model.User{
+		ID:        strconv.FormatInt(user.ID, 10),
+		Username:  user.Username,
+		Role:      user.Role,
+		CreatedAt: user.CreatedAt,
+	}
+}
 
 func parseDateRangeInput(input *model.DateRangeInput, maxRangeDays int) (time.Time, time.Time, error) {
 	now := time.Now()
@@ -39,24 +48,28 @@ func parseDateRangeInput(input *model.DateRangeInput, maxRangeDays int) (time.Ti
 
 func validateDateRange(from, to time.Time, maxRangeDays int) error {
 	if from.After(to) {
-		return fmt.Errorf("date range from must be before to")
+		return badUserInput("date range from must be before to")
 	}
 	if maxRangeDays > 0 && to.Sub(from) > time.Duration(maxRangeDays)*24*time.Hour {
-		return fmt.Errorf("date range exceeds %d days", maxRangeDays)
+		return badUserInputf("date range exceeds %d days", maxRangeDays)
 	}
 	return nil
 }
 
-func parseFilterInput(input *model.FilterInput, limits DashboardLimits) (services.DashboardFilter, error) {
+func parseFilterInput(input *model.FilterInput, limits DashboardLimits) (analytics.Filter, error) {
 	if input == nil {
-		return services.DashboardFilter{}, nil
+		return analytics.Filter{}, nil
 	}
 
 	if err := validateStringFilters(limits, input.Referrer, input.Browser, input.Device, input.Os, input.Page, input.Country, input.EventName, input.EventPath, input.EventDefinitionID); err != nil {
-		return services.DashboardFilter{}, err
+		return analytics.Filter{}, err
 	}
 	if limits.MaxFilterValues > 0 && len(input.EventType) > limits.MaxFilterValues {
-		return services.DashboardFilter{}, fmt.Errorf("filter eventType exceeds %d values", limits.MaxFilterValues)
+		return analytics.Filter{}, badUserInputf("filter eventType exceeds %d values", limits.MaxFilterValues)
+	}
+	eventDefinitionIDs, err := parseEventDefinitionIDs(input.EventDefinitionID)
+	if err != nil {
+		return analytics.Filter{}, err
 	}
 
 	referrers := make([]string, 0, len(input.Referrer))
@@ -67,7 +80,7 @@ func parseFilterInput(input *model.FilterInput, limits DashboardLimits) (service
 		referrers = append(referrers, referrer)
 	}
 
-	return services.DashboardFilter{
+	return analytics.Filter{
 		Referrer:           referrers,
 		Browser:            input.Browser,
 		Device:             input.Device,
@@ -77,28 +90,28 @@ func parseFilterInput(input *model.FilterInput, limits DashboardLimits) (service
 		EventTypes:         parseEventTypes(input.EventType),
 		EventName:          input.EventName,
 		EventPath:          input.EventPath,
-		EventDefinitionIDs: parseEventDefinitionIDs(input.EventDefinitionID),
+		EventDefinitionIDs: eventDefinitionIDs,
 	}, nil
 }
 
 func validateStringFilters(limits DashboardLimits, groups ...[]string) error {
 	for _, values := range groups {
 		if limits.MaxFilterValues > 0 && len(values) > limits.MaxFilterValues {
-			return fmt.Errorf("filter exceeds %d values", limits.MaxFilterValues)
+			return badUserInputf("filter exceeds %d values", limits.MaxFilterValues)
 		}
 		if limits.MaxFilterStringLength <= 0 {
 			continue
 		}
 		for _, value := range values {
 			if len(value) > limits.MaxFilterStringLength {
-				return fmt.Errorf("filter value exceeds %d bytes", limits.MaxFilterStringLength)
+				return badUserInputf("filter value exceeds %d bytes", limits.MaxFilterStringLength)
 			}
 		}
 	}
 	return nil
 }
 
-func isFilterEmpty(filter services.DashboardFilter) bool {
+func isFilterEmpty(filter analytics.Filter) bool {
 	return len(filter.Referrer) == 0 &&
 		len(filter.Browser) == 0 &&
 		len(filter.Device) == 0 &&
@@ -111,7 +124,7 @@ func isFilterEmpty(filter services.DashboardFilter) bool {
 		len(filter.EventDefinitionIDs) == 0
 }
 
-func convertToGraphQLEvent(e *models.Event) *model.Event {
+func convertToGraphQLEvent(e *analytics.Event) *model.Event {
 
 	createdAt := time.Unix(e.Time, 0)
 
@@ -134,13 +147,13 @@ func convertToGraphQLEvent(e *models.Event) *model.Event {
 		ID:         strconv.FormatInt(e.ID, 10),
 		Name:       name,
 		Path:       e.Path,
-		Definition: convertToGraphQLEventDefinition(e.Definition),
+		Definition: convertAnalyticsEventDefinition(e.Definition),
 		Properties: properties,
 		CreatedAt:  createdAt,
 	}
 }
 
-func convertToGraphQLEvents(events []*models.Event, total int) *model.EventsResult {
+func convertToGraphQLEvents(events []*analytics.Event, total int) *model.EventsResult {
 	result := &model.EventsResult{
 		Events: make([]*model.Event, 0, len(events)),
 		Total:  total,
@@ -169,7 +182,7 @@ func convertToGraphQLEvents(events []*models.Event, total int) *model.EventsResu
 			ID:         strconv.FormatInt(e.ID, 10),
 			Name:       name,
 			Path:       e.Path,
-			Definition: convertToGraphQLEventDefinition(e.Definition),
+			Definition: convertAnalyticsEventDefinition(e.Definition),
 			Properties: properties,
 			CreatedAt:  createdAt,
 		}
@@ -179,7 +192,40 @@ func convertToGraphQLEvents(events []*models.Event, total int) *model.EventsResu
 	return result
 }
 
-func convertToGraphQLEventDefinition(def *models.EventDefinition) *model.EventDefinition {
+func convertAnalyticsEventDefinition(definition *analytics.EventDefinition) *model.EventDefinition {
+	if definition == nil {
+		return nil
+	}
+	fields := make([]*model.EventDefinitionField, 0, len(definition.Fields))
+	for _, field := range definition.Fields {
+		if field == nil {
+			continue
+		}
+		fieldType := model.EventFieldTypeString
+		switch field.Type {
+		case analytics.EventFieldTypeInt:
+			fieldType = model.EventFieldTypeInt
+		case analytics.EventFieldTypeBool:
+			fieldType = model.EventFieldTypeBoolean
+		}
+		fields = append(fields, &model.EventDefinitionField{
+			ID:        strconv.FormatInt(field.ID, 10),
+			Key:       field.Key,
+			Type:      fieldType,
+			Required:  field.Required,
+			MaxLength: field.MaxLength,
+		})
+	}
+	return &model.EventDefinition{
+		ID:        strconv.FormatInt(definition.ID, 10),
+		Name:      definition.Name,
+		Fields:    fields,
+		CreatedAt: definition.CreatedAt,
+		UpdatedAt: definition.UpdatedAt,
+	}
+}
+
+func convertToGraphQLEventDefinition(def *event.Definition) *model.EventDefinition {
 	if def == nil {
 		return nil
 	}
@@ -187,11 +233,11 @@ func convertToGraphQLEventDefinition(def *models.EventDefinition) *model.EventDe
 	for _, field := range def.Fields {
 		var fieldTypeStr string
 		switch field.Type {
-		case models.FieldTypeString:
+		case event.FieldTypeString:
 			fieldTypeStr = "STRING"
-		case models.FieldTypeInt:
+		case event.FieldTypeInt:
 			fieldTypeStr = "INT"
-		case models.FieldTypeBool:
+		case event.FieldTypeBool:
 			fieldTypeStr = "BOOLEAN"
 		default:
 			fieldTypeStr = "STRING"
@@ -214,7 +260,7 @@ func convertToGraphQLEventDefinition(def *models.EventDefinition) *model.EventDe
 	}
 }
 
-func convertToGraphQLEventDefinitions(definitions []*models.EventDefinition) []*model.EventDefinition {
+func convertToGraphQLEventDefinitions(definitions []*event.Definition) []*model.EventDefinition {
 	result := make([]*model.EventDefinition, 0, len(definitions))
 	for _, def := range definitions {
 		result = append(result, convertToGraphQLEventDefinition(def))
@@ -222,7 +268,7 @@ func convertToGraphQLEventDefinitions(definitions []*models.EventDefinition) []*
 	return result
 }
 
-func convertToGraphQLGeoIPStatus(status services.GeoIPStatus) *model.GeoIPStatus {
+func convertToGraphQLGeoIPStatus(status geoip.Status) *model.GeoIPStatus {
 	var source *string
 	if status.Source != "" {
 		value := status.Source.String()
@@ -233,11 +279,26 @@ func convertToGraphQLGeoIPStatus(status services.GeoIPStatus) *model.GeoIPStatus
 		lastError = &status.LastError
 	}
 	return &model.GeoIPStatus{
-		State:     status.State,
+		State:     graphQLGeoIPState(status.State),
 		DbPath:    status.DBPath,
 		Source:    source,
 		LastError: lastError,
 		UpdatedAt: status.UpdatedAt,
+	}
+}
+
+func graphQLGeoIPState(state geoip.State) model.GeoIPState {
+	switch state {
+	case geoip.StateMissing:
+		return model.GeoIPStateMissing
+	case geoip.StateDownloading:
+		return model.GeoIPStateDownloading
+	case geoip.StateReady:
+		return model.GeoIPStateReady
+	case geoip.StateError:
+		return model.GeoIPStateError
+	default:
+		return model.GeoIPStateDisabled
 	}
 }
 
@@ -250,32 +311,32 @@ func newGraphQLCountry(code string, name string) *model.Country {
 	return graphQLCountry
 }
 
-func parseEventDefinitionIDs(values []string) []int64 {
+func parseEventDefinitionIDs(values []string) ([]int64, error) {
 	if len(values) == 0 {
-		return nil
+		return nil, nil
 	}
 	ids := make([]int64, 0, len(values))
 	for _, value := range values {
 		id, err := strconv.ParseInt(value, 10, 64)
 		if err != nil {
-			continue
+			return nil, badUserInput("invalid event definition ID")
 		}
 		ids = append(ids, id)
 	}
-	return ids
+	return ids, nil
 }
 
-func parseEventTypes(values []model.EventType) []repository.EventType {
+func parseEventTypes(values []model.EventType) []analytics.EventType {
 	if len(values) == 0 {
 		return nil
 	}
-	types := make([]repository.EventType, 0, len(values))
+	types := make([]analytics.EventType, 0, len(values))
 	for _, value := range values {
 		switch value {
 		case model.EventTypePageView:
-			types = append(types, repository.EventTypePageView)
+			types = append(types, analytics.EventTypePageView)
 		case model.EventTypePredefined:
-			types = append(types, repository.EventTypePredefined)
+			types = append(types, analytics.EventTypePredefined)
 		}
 	}
 	return types

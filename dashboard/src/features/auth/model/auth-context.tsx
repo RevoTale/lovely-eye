@@ -1,0 +1,162 @@
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import {
+  createContext,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+} from 'react';
+import {
+  type AuthUserDetailsFieldsFragment,
+  AuthUserDetailsFieldsFragmentDoc,
+  LoginDocument,
+  type LoginInput,
+  LogoutDocument,
+  MeDocument,
+  RegisterDocument,
+  type RegisterInput,
+} from '@/shared/api/generated/graphql';
+import { readFragment } from '@/shared/api/read-fragment';
+
+type AuthUser = AuthUserDetailsFieldsFragment;
+export type AuthMode = 'register-only' | 'login-only' | 'login-and-register';
+
+const AUTH_STATUS_ERROR_MESSAGE =
+  'Unable to load authentication status. Refresh the page and try again.';
+
+export interface AuthContextValue {
+  user: AuthUser | null;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  authMode: AuthMode;
+  bootstrapError: string | null;
+  unauthenticatedRoute: '/login' | '/register';
+  login: (input: LoginInput) => Promise<void>;
+  register: (input: RegisterInput) => Promise<void>;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+interface AuthProviderProps {
+  children: ReactNode;
+  authErrorHandlerRef?: RefObject<(() => void) | null>;
+}
+
+export const AuthProvider = ({
+  children,
+  authErrorHandlerRef,
+}: AuthProviderProps): React.ReactNode => {
+  const authErrorHandledRef = useRef(false);
+  const client = useApolloClient();
+
+  const {
+    loading: meLoading,
+    data: meData,
+    error: meError,
+    refetch,
+  } = useQuery(MeDocument, {
+    fetchPolicy: 'network-only',
+    errorPolicy: 'all',
+  });
+
+  const [loginMutation] = useMutation(LoginDocument);
+  const [registerMutation] = useMutation(RegisterDocument);
+  const [logoutMutation] = useMutation(LogoutDocument);
+
+  const handleAuthError = useCallback(() => {
+    if (authErrorHandledRef.current) {
+      return;
+    }
+    authErrorHandledRef.current = true;
+    void client.clearStore();
+    void refetch();
+  }, [client, refetch]);
+
+  useEffect(() => {
+    if (authErrorHandlerRef !== undefined) {
+      const nextRef = authErrorHandlerRef;
+      nextRef.current = handleAuthError;
+    }
+  }, [authErrorHandlerRef, handleAuthError]);
+
+  const login = useCallback(
+    async (input: LoginInput) => {
+      await loginMutation({ variables: { input } });
+      authErrorHandledRef.current = false;
+      await refetch();
+    },
+    [loginMutation, refetch]
+  );
+
+  const register = useCallback(
+    async (input: RegisterInput) => {
+      await registerMutation({ variables: { input } });
+      authErrorHandledRef.current = false;
+      await refetch();
+    },
+    [registerMutation, refetch]
+  );
+
+  const logout = useCallback(async () => {
+    await logoutMutation();
+    await refetch();
+  }, [logoutMutation, refetch]);
+
+  const userData = meData?.me;
+  const user =
+    userData !== null && userData !== undefined
+      ? readFragment(AuthUserDetailsFieldsFragmentDoc, userData)
+      : null;
+  const registrationStatus = meData?.registrationStatus;
+  const authMode =
+    registrationStatus !== null && registrationStatus !== undefined
+      ? getAuthMode(registrationStatus.hasUsers, registrationStatus.allowRegistration)
+      : 'login-only';
+  const bootstrapError =
+    !meLoading && registrationStatus == null && meError !== undefined
+      ? AUTH_STATUS_ERROR_MESSAGE
+      : null;
+  const unauthenticatedRoute = getUnauthenticatedRoute(authMode);
+
+  const value: AuthContextValue = {
+    user,
+    isLoading: meLoading,
+    isAuthenticated: user !== null,
+    authMode,
+    bootstrapError,
+    unauthenticatedRoute,
+    login,
+    register,
+    logout,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export function useAuth(): AuthContextValue {
+  const context = useContext(AuthContext);
+  if (context === null) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+
+function getAuthMode(hasUsers: boolean, allowRegistration: boolean): AuthMode {
+  if (!hasUsers) {
+    return 'register-only';
+  }
+  if (!allowRegistration) {
+    return 'login-only';
+  }
+  return 'login-and-register';
+}
+
+function getUnauthenticatedRoute(authMode: AuthMode): '/login' | '/register' {
+  if (authMode === 'register-only') {
+    return '/register';
+  }
+  return '/login';
+}

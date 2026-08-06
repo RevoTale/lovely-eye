@@ -5,6 +5,7 @@ mutation Register($input: RegisterInput!) {
       id
       username
       role
+      createdAt
     }
   }
 }
@@ -16,6 +17,7 @@ mutation Login($input: LoginInput!) {
       id
       username
       role
+      createdAt
     }
   }
 }
@@ -31,6 +33,7 @@ query Me {
     id
     username
     role
+    createdAt
   }
 }
 

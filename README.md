@@ -13,7 +13,21 @@ Self-hosted web analytics with a Go backend and a React dashboard. Lovely Eye tr
 - Allowlisted custom events
 - Optional country tracking
 - Dashboard served as static assets by the Go server
-- Extremely lighweight runtime
+- Lightweight runtime
+
+## Architecture And Stack
+
+- Dashboard: React + strict TypeScript, Vite/SWC, Tailwind CSS v4, shadcn/ui with unified Radix,
+  TanStack Router, Apollo GraphQL, Zod, and Recharts.
+- Server: Go `net/http`, gqlgen, Bun ORM, SQLite or PostgreSQL, JWT/bcrypt authentication, and
+  country-only MaxMind-compatible GeoIP.
+- Tooling: Bun, Biome, Playwright, deterministic GraphQL code generation, Atlas migrations, Go
+  tool directives, and `govulncheck`.
+
+Frontend product ownership is `app` → `features` → `shared`; backend ownership is feature packages
+with private persistence adapters plus edge-owned `graph`, `transport`, and `platform` packages.
+See the [dashboard structure](dashboard/README.md), [server module map](server/internal/README.md),
+and [architecture decisions](docs/decisions/0003-feature-oriented-go-modular-monolith.md).
 
 ## Quick Start
 
@@ -169,6 +183,8 @@ The tracker uses `visibilitychange` with `sendBeacon`, with `pagehide` as a fall
 
 ## Common Configuration
 
+Production and release constraints are maintained in [Security and privacy model](docs/security.md).
+
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `DB_DRIVER` | `sqlite` | Database driver: `sqlite` or `postgres` |
@@ -191,6 +207,7 @@ The tracker uses `visibilitychange` with `sendBeacon`, with `pagehide` as a fall
 | `ANALYTICS_RATE_LIMIT_BURST` | `240` | Short burst allowance for the same collect admission keys. |
 | `TRUSTED_PROXY_CIDRS` | private, loopback, and unique-local ranges | CIDRs allowed to supply `X-Forwarded-For` / `X-Real-IP`. Public CDN ranges must be configured explicitly. |
 | `GRAPHQL_MAX_BODY_BYTES` | `1048576` | Maximum GraphQL request body size. |
+| `GRAPHQL_MAX_COMPLEXITY` | `300` | Maximum calculated GraphQL operation complexity. |
 | `DASHBOARD_MAX_DAILY_RANGE_DAYS` | `730` | Maximum daily dashboard date range. |
 | `DASHBOARD_MAX_HOURLY_RANGE_DAYS` | `31` | Maximum hourly dashboard date range. |
 | `DASHBOARD_MAX_FILTER_VALUES` | `100` | Maximum values per dashboard filter list. |
@@ -214,7 +231,9 @@ Custom events are recorded only when the event name and fields are allowlisted i
 
 ## Development Quality Gates
 
-Run `task test` before handing off changes. It runs dashboard Biome checks, the dashboard source-size guard, TypeScript checks for the dashboard and tracker, Go tests, tracker typecheck, and golangci-lint. Use `task lint` when you only need the lint gates.
+Run `task check` before handing off changes. It runs frontend boundaries, full Biome, strict
+TypeScript, unit tests, Go tests and lint, generated-artifact freshness, and clean production builds.
+Run `task test` when the complete browser matrix is also required. Use `task lint` for lint-only work.
 
 The dashboard uses Biome's recommended rules plus a local source-size check. The Go backend uses golangci-lint's standard v2 set plus explicit security, correctness, function-length, complexity, and file-length checks.
 
@@ -223,6 +242,8 @@ The dashboard uses Biome's recommended rules plus a local source-size check. The
 - [ANALYTICS.md](./ANALYTICS.md) - tracking mechanics
 - [PRIVACY.md](./PRIVACY.md) - privacy handling
 - [dashboard/README.md](./dashboard/README.md) - dashboard development
+- [Architecture normalization plan](./docs/plans/architecture-normalization.md) - living intent, decisions, clarifications, and phased roadmap
+- [ADR-0001](./docs/decisions/0001-runtime-base-path.md) - arbitrary runtime base-path support
 - [server/CONTRIBUTING.md](./server/CONTRIBUTING.md) - server development notes
 
 ## Advanced Docker Compose Example
@@ -267,6 +288,7 @@ services:
       # Add CDN/public reverse-proxy ranges explicitly.
       - TRUSTED_PROXY_CIDRS=127.0.0.1/32,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7
       - GRAPHQL_MAX_BODY_BYTES=1048576
+      - GRAPHQL_MAX_COMPLEXITY=300
       - DASHBOARD_MAX_DAILY_RANGE_DAYS=730
       - DASHBOARD_MAX_HOURLY_RANGE_DAYS=31
       - DASHBOARD_MAX_FILTER_VALUES=100

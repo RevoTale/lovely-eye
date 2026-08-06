@@ -7,7 +7,8 @@ import (
 	"time"
 
 	operations "github.com/lovely-eye/server/e2e/generated"
-	"github.com/lovely-eye/server/internal/models"
+	analyticspersistence "github.com/lovely-eye/server/internal/analytics/persistence"
+	countrypersistence "github.com/lovely-eye/server/internal/country/persistence"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,7 +33,7 @@ func TestDashboardCountryNamesAreResolvedLazily(t *testing.T) {
 	siteID, err := strconv.ParseInt(siteResp.CreateSite.Id, 10, 64)
 	require.NoError(t, err)
 
-	_, err = ts.DB.NewInsert().Model(&models.Country{
+	_, err = ts.DB.NewInsert().Model(&countrypersistence.Country{
 		Code: "US",
 		Name: "United States",
 	}).Exec(ctx)
@@ -41,18 +42,18 @@ func TestDashboardCountryNamesAreResolvedLazily(t *testing.T) {
 	now := time.Now().Unix()
 	countryCodes := []string{"US", "", "ZZ"}
 	for index, countryCode := range countryCodes {
-		dbClient := &models.Client{
+		dbClient := &analyticspersistence.Client{
 			SiteID:  siteID,
 			Hash:    "hash-" + strconv.Itoa(index),
 			Country: countryCode,
-			Device:  models.ClientDeviceDesktop,
-			Browser: models.ClientBrowserChrome,
-			OS:      models.ClientOSLinux,
+			Device:  analyticspersistence.ClientDeviceDesktop,
+			Browser: analyticspersistence.ClientBrowserChrome,
+			OS:      analyticspersistence.ClientOSLinux,
 		}
 		_, err = ts.DB.NewInsert().Model(dbClient).Exec(ctx)
 		require.NoError(t, err)
 
-		session := &models.Session{
+		session := &analyticspersistence.Session{
 			SiteID:        siteID,
 			ClientID:      dbClient.ID,
 			EnterTime:     now,
@@ -83,7 +84,7 @@ func TestDashboardCountryNamesAreResolvedLazily(t *testing.T) {
 		defaultPaging,
 		defaultPaging,
 		nil,
-		nil,
+		defaultPaging,
 	)
 	require.NoError(t, err)
 

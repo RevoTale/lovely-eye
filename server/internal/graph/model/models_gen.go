@@ -21,6 +21,11 @@ type EventCount struct {
 	Count int    `json:"count"`
 }
 
+type EventCountsResult struct {
+	Items []*EventCount `json:"items"`
+	Total int           `json:"total"`
+}
+
 type FilterInput struct {
 	// Filter by specific referrer
 	Referrer []string `json:"referrer,omitempty"`
@@ -45,7 +50,7 @@ type FilterInput struct {
 }
 
 type GeoIPStatus struct {
-	State     string     `json:"state"`
+	State     GeoIPState `json:"state"`
 	DbPath    string     `json:"dbPath"`
 	Source    *string    `json:"source,omitempty"`
 	LastError *string    `json:"lastError,omitempty"`
@@ -97,8 +102,65 @@ type RegistrationStatus struct {
 	AllowRegistration bool `json:"allowRegistration"`
 }
 
-type Session struct {
-	ID string `json:"id"`
+type GeoIPState string
+
+const (
+	GeoIPStateDisabled    GeoIPState = "DISABLED"
+	GeoIPStateMissing     GeoIPState = "MISSING"
+	GeoIPStateDownloading GeoIPState = "DOWNLOADING"
+	GeoIPStateReady       GeoIPState = "READY"
+	GeoIPStateError       GeoIPState = "ERROR"
+)
+
+var AllGeoIPState = []GeoIPState{
+	GeoIPStateDisabled,
+	GeoIPStateMissing,
+	GeoIPStateDownloading,
+	GeoIPStateReady,
+	GeoIPStateError,
+}
+
+func (e GeoIPState) IsValid() bool {
+	switch e {
+	case GeoIPStateDisabled, GeoIPStateMissing, GeoIPStateDownloading, GeoIPStateReady, GeoIPStateError:
+		return true
+	}
+	return false
+}
+
+func (e GeoIPState) String() string {
+	return string(e)
+}
+
+func (e *GeoIPState) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = GeoIPState(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid GeoIPState", str)
+	}
+	return nil
+}
+
+func (e GeoIPState) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *GeoIPState) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e GeoIPState) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }
 
 type TimeBucket string

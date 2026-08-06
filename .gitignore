@@ -16,6 +16,8 @@
 coverage.*
 *.coverprofile
 profile.cov
+dashboard/playwright-report/
+dashboard/test-results/
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -26,6 +28,13 @@ go.work.sum
 
 # env file
 .env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+*.pem
+*.key
 
 # Editor/IDE
 .idea/

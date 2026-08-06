@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/lovely-eye/server/internal/config"
-	"github.com/lovely-eye/server/internal/database"
+	"github.com/lovely-eye/server/internal/platform/config"
+	"github.com/lovely-eye/server/internal/platform/database"
 	"github.com/lovely-eye/server/migrations"
 	"github.com/uptrace/bun/migrate"
 )
@@ -20,14 +20,18 @@ func main() {
 }
 
 func run() int {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("failed to load configuration", "error", err)
+		return 1
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	db, err := database.New(cfg.Database)
+	db, err := database.New(ctx, cfg.Database)
 	if err != nil {
 		slog.Error("failed to connect to database", "error", err)
 		return 1
@@ -44,9 +48,8 @@ func run() int {
 		return 1
 	}
 
-	// TODO fix the migrations tests when https://github.com/uptrace/bun/issues/1318 will be resolved
-	// IMPORTANT: makes "applied" mean "successfully applied".
-	// Without it, Bun may mark a failed migration as applied so you can rollback. :contentReference[oaicite:2]{index=2}
+	// The integration suite treats "applied" as "successfully applied" so a failed
+	// migration remains pending and the rollback/reapply assertions stay accurate.
 	migrator := migrate.NewMigrator(db, migs, migrate.WithMarkAppliedOnSuccess(true))
 
 	dbType := (cfg.Database.Driver)

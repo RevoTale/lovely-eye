@@ -12,6 +12,27 @@ includes:
     dir: ./server
 
 tasks:
+  check:
+    desc: Run the complete non-mutating repository quality gate
+    cmds:
+      - task: dashboard:check
+      - task: server:test
+        vars:
+          DASHBOARD_PATH: ../dashboard/dist
+      - task: generate-check
+      - task: build-check
+
+  generate-check:
+    desc: Verify generated artifacts without changing the workspace
+    cmds:
+      - ./scripts/check-generated.sh
+
+  build-check:
+    desc: Compile the dashboard and all Go packages without workspace artifacts
+    cmds:
+      - task: dashboard:build-check
+      - task: server:build-check
+
   run-example-app:
     desc: Run the example Docker stack (SQLite)
     cmds:

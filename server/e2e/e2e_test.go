@@ -18,8 +18,8 @@ import (
 
 	"github.com/Khan/genqlient/graphql"
 	operations "github.com/lovely-eye/server/e2e/generated"
-	"github.com/lovely-eye/server/internal/config"
-	"github.com/lovely-eye/server/internal/server"
+	"github.com/lovely-eye/server/internal/app"
+	"github.com/lovely-eye/server/internal/platform/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,28 +54,28 @@ func testConfig() config.Config {
 }
 
 type testServer struct {
-	*server.Server
+	*app.App
 	httpServer *httptest.Server
 }
 
 func newTestServer(t *testing.T) *testServer {
 	t.Helper()
 
-	srv, err := server.New(testConfig())
+	application, err := app.New(context.Background(), testConfig())
 	require.NoError(t, err, "failed to create server")
 
-	httpServer := newTestHTTPServer(srv.Handler)
+	httpServer := newTestHTTPServer(application.Handler)
 
 	t.Cleanup(func() {
 		httpServer.Close()
-		err := srv.Close()
+		err := application.Close()
 		if nil != err {
 			slog.Error("Server close failed", "error", err)
 		}
 	})
 
 	return &testServer{
-		Server:     srv,
+		App:        application,
 		httpServer: httpServer,
 	}
 }
@@ -314,13 +314,13 @@ func TestDashboardAuthorization(t *testing.T) {
 	siteID := siteResp.CreateSite.Id
 
 	t.Run("authenticated user can view dashboard", func(t *testing.T) {
-		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, defaultPaging)
 		require.NoError(t, err)
 		require.Equal(t, 0, resp.Dashboard.Visitors)
 	})
 
 	t.Run("unauthenticated user cannot view dashboard", func(t *testing.T) {
-		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, defaultPaging)
 		require.Error(t, err)
 	})
 
@@ -731,7 +731,7 @@ func TestEventPropertiesStored(t *testing.T) {
 		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 
-		eventsResp, err := operations.Events(ctx, client, siteID, nil, nil, nil)
+		eventsResp, err := operations.Events(ctx, client, siteID, nil, defaultPaging)
 		require.NoError(t, err)
 		require.NotEmpty(t, eventsResp.Events.Events, "should have at least one event")
 
@@ -788,7 +788,7 @@ func TestEventPropertiesStored(t *testing.T) {
 			require.Equal(t, http.StatusNoContent, resp.StatusCode)
 		}
 
-		eventsResp, err := operations.Events(ctx, client, siteID, nil, nil, nil)
+		eventsResp, err := operations.Events(ctx, client, siteID, nil, defaultPaging)
 		require.NoError(t, err)
 
 		for _, expected := range events {
@@ -804,15 +804,20 @@ func TestEventPropertiesStored(t *testing.T) {
 	})
 
 	t.Run("events pagination works", func(t *testing.T) {
-		limit := 2
-		eventsResp, err := operations.Events(ctx, client, siteID, nil, &limit, nil)
+		paging := operations.PagingInput{Limit: 2, Offset: 0}
+		eventsResp, err := operations.Events(ctx, client, siteID, nil, paging)
 		require.NoError(t, err)
 		require.LessOrEqual(t, len(eventsResp.Events.Events), 2, "should return at most 2 events")
 		require.GreaterOrEqual(t, eventsResp.Events.Total, 4, "total should include all events")
+
+		countsResp, err := operations.EventCounts(ctx, client, siteID, paging)
+		require.NoError(t, err)
+		require.LessOrEqual(t, len(countsResp.EventCounts.Items), 2)
+		require.GreaterOrEqual(t, countsResp.EventCounts.Total, len(countsResp.EventCounts.Items))
 	})
 
 	t.Run("unauthenticated user cannot access events", func(t *testing.T) {
-		_, err := operations.Events(ctx, ts.graphqlClient(), siteID, nil, nil, nil)
+		_, err := operations.Events(ctx, ts.graphqlClient(), siteID, nil, defaultPaging)
 		require.Error(t, err)
 	})
 }

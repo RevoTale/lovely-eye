@@ -1,0 +1,185 @@
+query Dashboard(
+  $siteId: ID!
+  $dateRange: DateRangeInput
+  $filter: FilterInput
+  $topPagesPaging: PagingInput!
+  $referrersPaging: PagingInput!
+  $browsersPaging: PagingInput!
+  $devicesPaging: PagingInput!
+  $osPaging: PagingInput!
+  $countriesPaging: PagingInput!
+) {
+  dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
+    ...DashboardStatsFields
+  }
+}
+
+query Realtime($siteId: ID!, $activePagesPaging: PagingInput!) {
+  realtime(siteId: $siteId) {
+    ...RealtimeStatsFields
+  }
+}
+
+query Events(
+  $siteId: ID!
+  $dateRange: DateRangeInput
+  $filter: FilterInput
+  $paging: PagingInput!
+) {
+  events(siteId: $siteId, dateRange: $dateRange, filter: $filter, paging: $paging) {
+    total
+    events {
+      ...EventFields
+    }
+  }
+}
+
+query EventCounts(
+  $siteId: ID!
+  $dateRange: DateRangeInput
+  $filter: FilterInput
+  $paging: PagingInput!
+) {
+  eventCounts(siteId: $siteId, dateRange: $dateRange, filter: $filter, paging: $paging) {
+    total
+    items {
+      ...EventCountFields
+    }
+  }
+}
+
+query ChartData(
+  $siteId: ID!
+  $dateRange: DateRangeInput
+  $filter: FilterInput
+  $bucket: TimeBucket
+  $paging: PagingInput!
+) {
+  dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
+    dailyStats(bucket: $bucket, paging: $paging) {
+      ...DailyStatsFields
+    }
+  }
+}
+
+fragment PageStatsFields on PageStats {
+  path
+  views
+  visitors
+}
+
+fragment ReferrerStatsFields on ReferrerStats {
+  referrer
+  visitors
+}
+
+fragment BrowserStatsFields on BrowserStats {
+  browser
+  visitors
+}
+
+fragment DeviceStatsFields on DeviceStats {
+  device
+  visitors
+}
+
+fragment OperatingSystemStatsFields on OperatingSystemStats {
+  os
+  visitors
+}
+
+fragment CountryStatsFields on CountryStats {
+  country {
+    ...CountryFields
+  }
+  visitors
+}
+
+fragment ActivePageStatsFields on ActivePageStats {
+  path
+  visitors
+}
+
+fragment DailyStatsFields on DailyStats {
+  date
+  visitors
+  pageViews
+  sessions
+}
+
+fragment EventPropertyFields on EventProperty {
+  key
+  value
+}
+
+fragment EventFields on Event {
+  id
+  name
+  path
+  definition {
+    id
+    name
+  }
+  createdAt
+  properties {
+    ...EventPropertyFields
+  }
+}
+
+fragment EventCountFields on EventCount {
+  count
+  event {
+    ...EventFields
+  }
+}
+
+fragment RealtimeStatsFields on RealtimeStats {
+  visitors
+  activePages(paging: $activePagesPaging) {
+    ...ActivePageStatsFields
+  }
+}
+
+fragment DashboardStatsFields on DashboardStats {
+  visitors
+  pageViews
+  sessions
+  bounceRate
+  avgDuration
+  topPages(paging: $topPagesPaging) {
+    total
+    items {
+      ...PageStatsFields
+    }
+  }
+  topReferrers(paging: $referrersPaging) {
+    total
+    items {
+      ...ReferrerStatsFields
+    }
+  }
+  browsers(paging: $browsersPaging) {
+    ...BrowserStatsFields
+  }
+  devices(paging: $devicesPaging) {
+    total
+    totalVisitors
+    items {
+      ...DeviceStatsFields
+    }
+  }
+  operatingSystems(paging: $osPaging) {
+    total
+    totalVisitors
+    items {
+      ...OperatingSystemStatsFields
+    }
+  }
+  countries(paging: $countriesPaging) {
+    total
+    totalVisitors
+    items {
+      ...CountryStatsFields
+    }
+  }
+}

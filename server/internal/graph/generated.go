@@ -76,7 +76,7 @@ type ComplexityRoot struct {
 		BounceRate       func(childComplexity int) int
 		Browsers         func(childComplexity int, paging model.PagingInput) int
 		Countries        func(childComplexity int, paging model.PagingInput) int
-		DailyStats       func(childComplexity int, bucket *model.TimeBucket, limit *int, offset *int) int
+		DailyStats       func(childComplexity int, bucket *model.TimeBucket, paging model.PagingInput) int
 		Devices          func(childComplexity int, paging model.PagingInput) int
 		OperatingSystems func(childComplexity int, paging model.PagingInput) int
 		PageViews        func(childComplexity int) int
@@ -103,6 +103,11 @@ type ComplexityRoot struct {
 	EventCount struct {
 		Count func(childComplexity int) int
 		Event func(childComplexity int) int
+	}
+
+	EventCountsResult struct {
+		Items func(childComplexity int) int
+		Total func(childComplexity int) int
 	}
 
 	EventDefinition struct {
@@ -195,7 +200,7 @@ type ComplexityRoot struct {
 		Dashboard          func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) int
 		EventCounts        func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) int
 		EventDefinitions   func(childComplexity int, siteID string, paging model.PagingInput) int
-		Events             func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) int
+		Events             func(childComplexity int, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) int
 		GeoIPCountries     func(childComplexity int, search *string, codes []string, paging model.PagingInput) int
 		GeoIPStatus        func(childComplexity int) int
 		Me                 func(childComplexity int) int
@@ -220,10 +225,6 @@ type ComplexityRoot struct {
 		HasUsers          func(childComplexity int) int
 	}
 
-	Session struct {
-		ID func(childComplexity int) int
-	}
-
 	Site struct {
 		BlockedCountries func(childComplexity int) int
 		BlockedIPs       func(childComplexity int) int
@@ -239,7 +240,6 @@ type ComplexityRoot struct {
 		CreatedAt func(childComplexity int) int
 		ID        func(childComplexity int) int
 		Role      func(childComplexity int) int
-		Sites     func(childComplexity int, paging model.PagingInput) int
 		Username  func(childComplexity int) int
 	}
 }
@@ -258,32 +258,32 @@ type DashboardStatsResolver interface {
 	Devices(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedDeviceStats, error)
 	OperatingSystems(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedOperatingSystemStats, error)
 	Countries(ctx context.Context, obj *model.DashboardStats, paging model.PagingInput) (*model.PagedCountryStats, error)
-	DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, limit *int, offset *int) ([]*model.DailyStats, error)
+	DailyStats(ctx context.Context, obj *model.DashboardStats, bucket *model.TimeBucket, paging model.PagingInput) ([]*model.DailyStats, error)
 }
 type MutationResolver interface {
 	Register(ctx context.Context, input model.RegisterInput) (*model.AuthPayload, error)
 	Login(ctx context.Context, input model.LoginInput) (*model.AuthPayload, error)
 	Logout(ctx context.Context) (bool, error)
+	UpsertEventDefinition(ctx context.Context, siteID string, input model.EventDefinitionInput) (*model.EventDefinition, error)
+	DeleteEventDefinition(ctx context.Context, siteID string, name string) (bool, error)
+	RefreshGeoIPDatabase(ctx context.Context) (*model.GeoIPStatus, error)
 	CreateSite(ctx context.Context, input model.CreateSiteInput) (*model.Site, error)
 	UpdateSite(ctx context.Context, id string, input model.UpdateSiteInput) (*model.Site, error)
 	DeleteSite(ctx context.Context, id string) (bool, error)
 	RegenerateSiteKey(ctx context.Context, id string) (*model.Site, error)
-	RefreshGeoIPDatabase(ctx context.Context) (*model.GeoIPStatus, error)
-	UpsertEventDefinition(ctx context.Context, siteID string, input model.EventDefinitionInput) (*model.EventDefinition, error)
-	DeleteEventDefinition(ctx context.Context, siteID string, name string) (bool, error)
 }
 type QueryResolver interface {
 	Me(ctx context.Context) (*model.User, error)
 	RegistrationStatus(ctx context.Context) (*model.RegistrationStatus, error)
-	Sites(ctx context.Context, paging model.PagingInput) ([]*model.Site, error)
-	Site(ctx context.Context, id string) (*model.Site, error)
 	Dashboard(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput) (*model.DashboardStats, error)
 	Realtime(ctx context.Context, siteID string) (*model.RealtimeStats, error)
+	Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) (*model.EventsResult, error)
+	EventCounts(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) (*model.EventCountsResult, error)
+	EventDefinitions(ctx context.Context, siteID string, paging model.PagingInput) ([]*model.EventDefinition, error)
 	GeoIPStatus(ctx context.Context) (*model.GeoIPStatus, error)
 	GeoIPCountries(ctx context.Context, search *string, codes []string, paging model.PagingInput) ([]*model.Country, error)
-	Events(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, limit *int, offset *int) (*model.EventsResult, error)
-	EventCounts(ctx context.Context, siteID string, dateRange *model.DateRangeInput, filter *model.FilterInput, paging model.PagingInput) ([]*model.EventCount, error)
-	EventDefinitions(ctx context.Context, siteID string, paging model.PagingInput) ([]*model.EventDefinition, error)
+	Sites(ctx context.Context, paging model.PagingInput) ([]*model.Site, error)
+	Site(ctx context.Context, id string) (*model.Site, error)
 }
 type RealtimeStatsResolver interface {
 	ActivePages(ctx context.Context, obj *model.RealtimeStats, paging model.PagingInput) ([]*model.ActivePageStats, error)
@@ -435,7 +435,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.DashboardStats.DailyStats(childComplexity, args["bucket"].(*model.TimeBucket), args["limit"].(*int), args["offset"].(*int)), true
+		return e.ComplexityRoot.DashboardStats.DailyStats(childComplexity, args["bucket"].(*model.TimeBucket), args["paging"].(model.PagingInput)), true
 	case "DashboardStats.devices":
 		if e.ComplexityRoot.DashboardStats.Devices == nil {
 			break
@@ -561,6 +561,19 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.EventCount.Event(childComplexity), true
+
+	case "EventCountsResult.items":
+		if e.ComplexityRoot.EventCountsResult.Items == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EventCountsResult.Items(childComplexity), true
+	case "EventCountsResult.total":
+		if e.ComplexityRoot.EventCountsResult.Total == nil {
+			break
+		}
+
+		return e.ComplexityRoot.EventCountsResult.Total(childComplexity), true
 
 	case "EventDefinition.createdAt":
 		if e.ComplexityRoot.EventDefinition.CreatedAt == nil {
@@ -940,7 +953,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.ComplexityRoot.Query.Events(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput), args["limit"].(*int), args["offset"].(*int)), true
+		return e.ComplexityRoot.Query.Events(childComplexity, args["siteId"].(string), args["dateRange"].(*model.DateRangeInput), args["filter"].(*model.FilterInput), args["paging"].(model.PagingInput)), true
 	case "Query.geoIPCountries":
 		if e.ComplexityRoot.Query.GeoIPCountries == nil {
 			break
@@ -1049,13 +1062,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.ComplexityRoot.RegistrationStatus.HasUsers(childComplexity), true
 
-	case "Session.id":
-		if e.ComplexityRoot.Session.ID == nil {
-			break
-		}
-
-		return e.ComplexityRoot.Session.ID(childComplexity), true
-
 	case "Site.blockedCountries":
 		if e.ComplexityRoot.Site.BlockedCountries == nil {
 			break
@@ -1123,17 +1129,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.ComplexityRoot.User.Role(childComplexity), true
-	case "User.sites":
-		if e.ComplexityRoot.User.Sites == nil {
-			break
-		}
-
-		args, err := ec.field_User_sites_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.ComplexityRoot.User.Sites(childComplexity, args["paging"].(model.PagingInput)), true
 	case "User.username":
 		if e.ComplexityRoot.User.Username == nil {
 			break
@@ -1233,46 +1228,7 @@ func newExecutionContext(
 }
 
 var sources = []*ast.Source{
-	{Name: "../../schema.graphqls", Input: `type User {
-  id: ID!
-  username: String!
-  role: String!
-  createdAt: Time!
-  sites(paging: PagingInput!): [Site!]
-}
-
-type Site {
-  id: ID!
-  """
-  All tracked domains (includes primary)
-  """
-  domains: [String!]!
-  name: String!
-  """
-  Used in tracking script
-  """
-  publicKey: String!
-  """
-  Enable country tracking (requires GeoIP database)
-  """
-  trackCountry: Boolean!
-  """
-  IP addresses blocked from tracking
-  """
-  blockedIPs: [String!]!
-  """
-  ISO country codes blocked from tracking
-  """
-  blockedCountries: [String!]!
-  createdAt: Time!
-}
-
-type AuthPayload {
-  user: User!
-  # Auth tokens are set as HttpOnly cookies and are not returned in the body.
-}
-
-type DashboardStats {
+	{Name: "../../schema/analytics.graphqls", Input: `type DashboardStats {
   visitors: Int!
   pageViews: Int!
   sessions: Int!
@@ -1287,7 +1243,7 @@ type DashboardStats {
   devices(paging: PagingInput!): PagedDeviceStats!
   operatingSystems(paging: PagingInput!): PagedOperatingSystemStats!
   countries(paging: PagingInput!): PagedCountryStats!
-  dailyStats(bucket: TimeBucket = DAILY, limit: Int, offset: Int): [DailyStats!]!
+  dailyStats(bucket: TimeBucket = DAILY, paging: PagingInput!): [DailyStats!]!
 }
 
 type PageStats {
@@ -1314,11 +1270,6 @@ type DeviceStats {
 type OperatingSystemStats {
   os: String!
   visitors: Int!
-}
-
-type Country {
-  code: String!
-  name: String!
 }
 
 type CountryStats {
@@ -1361,26 +1312,9 @@ type PagedCountryStats {
   totalVisitors: Int!
 }
 
-input PagingInput {
-  limit: Int!
-  offset: Int!
-}
-
 enum TimeBucket {
   DAILY
   HOURLY
-}
-
-type Session {
-  id: ID!
-}
-
-type RegistrationStatus {
-  hasUsers: Boolean!
-  """
-  Resolved registration policy after the first user exists
-  """
-  allowRegistration: Boolean!
 }
 
 type RealtimeStats {
@@ -1394,111 +1328,12 @@ type RealtimeStats {
   activePages(paging: PagingInput!): [ActivePageStats!]!
 }
 
-type GeoIPStatus {
-  state: String!
-  dbPath: String!
-  source: String
-  lastError: String
-  updatedAt: Time
-}
-
 type ActivePageStats {
   path: String!
   """
   Number of visitors currently viewing this page
   """
   visitors: Int!
-}
-
-type Event {
-  id: ID!
-  name: String!
-  path: String!
-  definition: EventDefinition
-  """
-  Key-value properties associated with the event
-  """
-  properties: [EventProperty!]!
-  createdAt: Time!
-}
-
-type EventProperty {
-  key: String!
-  value: String!
-}
-
-type EventsResult {
-  events: [Event!]!
-  total: Int!
-}
-
-type EventCount {
-  event: Event!
-  count: Int!
-}
-
-enum EventFieldType {
-  STRING
-  INT
-  BOOLEAN
-}
-
-enum EventType {
-  PAGE_VIEW
-  PREDEFINED
-}
-
-type EventDefinitionField {
-  id: ID!
-  key: String!
-  type: EventFieldType!
-  required: Boolean!
-  maxLength: Int!
-}
-
-type EventDefinition {
-  id: ID!
-  name: String!
-  fields: [EventDefinitionField!]!
-  createdAt: Time!
-  updatedAt: Time!
-}
-
-input RegisterInput {
-  username: String!
-  password: String!
-}
-
-input LoginInput {
-  username: String!
-  password: String!
-}
-
-input CreateSiteInput {
-  domains: [String!]!
-  name: String!
-}
-
-input UpdateSiteInput {
-  name: String!
-  trackCountry: Boolean
-  """
-  Full list of tracked domains (includes primary)
-  """
-  domains: [String!]
-  """
-  Full list of blocked IPs
-  """
-  blockedIPs: [String!]
-  """
-  Full list of blocked country codes
-  """
-  blockedCountries: [String!]
-}
-
-input DateRangeInput {
-  from: Time
-  to: Time
 }
 
 input FilterInput {
@@ -1544,52 +1379,44 @@ input FilterInput {
   eventDefinitionId: [ID!]
 }
 
-input EventDefinitionFieldInput {
-  key: String!
-  type: EventFieldType!
-  required: Boolean!
-  maxLength: Int
+extend type Query {
+  dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
+  realtime(siteId: ID!): RealtimeStats!
+}
+`, BuiltIn: false},
+	{Name: "../../schema/auth.graphqls", Input: `type User {
+  id: ID!
+  username: String!
+  role: String!
+  createdAt: Time!
 }
 
-input EventDefinitionInput {
-  name: String!
-  fields: [EventDefinitionFieldInput!]!
+type AuthPayload {
+  user: User!
+  # Auth tokens are set as HttpOnly cookies and are not returned in the body.
 }
 
-scalar Time
+type RegistrationStatus {
+  hasUsers: Boolean!
+  """
+  Resolved registration policy after the first user exists
+  """
+  allowRegistration: Boolean!
+}
+
+input RegisterInput {
+  username: String!
+  password: String!
+}
+
+input LoginInput {
+  username: String!
+  password: String!
+}
 
 type Query {
   me: User
   registrationStatus: RegistrationStatus!
-  sites(paging: PagingInput!): [Site!]!
-  site(id: ID!): Site
-  dashboard(siteId: ID!, dateRange: DateRangeInput, filter: FilterInput): DashboardStats!
-  realtime(siteId: ID!): RealtimeStats!
-  geoIPStatus: GeoIPStatus!
-  geoIPCountries(search: String, codes: [String!], paging: PagingInput!): [Country!]!
-  """
-  Get events for a site with pagination
-  """
-  events(
-    siteId: ID!
-    dateRange: DateRangeInput
-    filter: FilterInput
-    limit: Int
-    offset: Int
-  ): EventsResult!
-  """
-  Get event counts aggregated by event with the most recent occurrence
-  """
-  eventCounts(
-    siteId: ID!
-    dateRange: DateRangeInput
-    filter: FilterInput
-    paging: PagingInput!
-  ): [EventCount!]!
-  """
-  Get event definitions for a site
-  """
-  eventDefinitions(siteId: ID!, paging: PagingInput!): [EventDefinition!]!
 }
 
 type Mutation {
@@ -1602,6 +1429,205 @@ type Mutation {
   Clears auth cookies
   """
   logout: Boolean!
+}
+`, BuiltIn: false},
+	{Name: "../../schema/common.graphqls", Input: `scalar Time
+
+input PagingInput {
+  limit: Int!
+  offset: Int!
+}
+
+input DateRangeInput {
+  from: Time
+  to: Time
+}
+`, BuiltIn: false},
+	{Name: "../../schema/event.graphqls", Input: `type Event {
+  id: ID!
+  name: String!
+  path: String!
+  definition: EventDefinition
+  """
+  Key-value properties associated with the event
+  """
+  properties: [EventProperty!]!
+  createdAt: Time!
+}
+
+type EventProperty {
+  key: String!
+  value: String!
+}
+
+type EventsResult {
+  events: [Event!]!
+  total: Int!
+}
+
+type EventCount {
+  event: Event!
+  count: Int!
+}
+
+type EventCountsResult {
+  items: [EventCount!]!
+  total: Int!
+}
+
+enum EventFieldType {
+  STRING
+  INT
+  BOOLEAN
+}
+
+enum EventType {
+  PAGE_VIEW
+  PREDEFINED
+}
+
+type EventDefinitionField {
+  id: ID!
+  key: String!
+  type: EventFieldType!
+  required: Boolean!
+  maxLength: Int!
+}
+
+type EventDefinition {
+  id: ID!
+  name: String!
+  fields: [EventDefinitionField!]!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+input EventDefinitionFieldInput {
+  key: String!
+  type: EventFieldType!
+  required: Boolean!
+  maxLength: Int
+}
+
+input EventDefinitionInput {
+  name: String!
+  fields: [EventDefinitionFieldInput!]!
+}
+
+extend type Query {
+  """
+  Get events for a site with pagination
+  """
+  events(
+    siteId: ID!
+    dateRange: DateRangeInput
+    filter: FilterInput
+    paging: PagingInput!
+  ): EventsResult!
+  """
+  Get event counts aggregated by event with the most recent occurrence
+  """
+  eventCounts(
+    siteId: ID!
+    dateRange: DateRangeInput
+    filter: FilterInput
+    paging: PagingInput!
+  ): EventCountsResult!
+  """
+  Get event definitions for a site
+  """
+  eventDefinitions(siteId: ID!, paging: PagingInput!): [EventDefinition!]!
+}
+
+extend type Mutation {
+  upsertEventDefinition(siteId: ID!, input: EventDefinitionInput!): EventDefinition!
+  deleteEventDefinition(siteId: ID!, name: String!): Boolean!
+}
+`, BuiltIn: false},
+	{Name: "../../schema/geoip.graphqls", Input: `type Country {
+  code: String!
+  name: String!
+}
+
+enum GeoIPState {
+  DISABLED
+  MISSING
+  DOWNLOADING
+  READY
+  ERROR
+}
+
+type GeoIPStatus {
+  state: GeoIPState!
+  dbPath: String!
+  source: String
+  lastError: String
+  updatedAt: Time
+}
+
+extend type Query {
+  geoIPStatus: GeoIPStatus!
+  geoIPCountries(search: String, codes: [String!], paging: PagingInput!): [Country!]!
+}
+
+extend type Mutation {
+  refreshGeoIPDatabase: GeoIPStatus!
+}
+`, BuiltIn: false},
+	{Name: "../../schema/site.graphqls", Input: `type Site {
+  id: ID!
+  """
+  All tracked domains (includes primary)
+  """
+  domains: [String!]!
+  name: String!
+  """
+  Used in tracking script
+  """
+  publicKey: String!
+  """
+  Enable country tracking (requires GeoIP database)
+  """
+  trackCountry: Boolean!
+  """
+  IP addresses blocked from tracking
+  """
+  blockedIPs: [String!]!
+  """
+  ISO country codes blocked from tracking
+  """
+  blockedCountries: [String!]!
+  createdAt: Time!
+}
+
+input CreateSiteInput {
+  domains: [String!]!
+  name: String!
+}
+
+input UpdateSiteInput {
+  name: String!
+  trackCountry: Boolean
+  """
+  Full list of tracked domains (includes primary)
+  """
+  domains: [String!]
+  """
+  Full list of blocked IPs
+  """
+  blockedIPs: [String!]
+  """
+  Full list of blocked country codes
+  """
+  blockedCountries: [String!]
+}
+
+extend type Query {
+  sites(paging: PagingInput!): [Site!]!
+  site(id: ID!): Site
+}
+
+extend type Mutation {
   createSite(input: CreateSiteInput!): Site!
   updateSite(id: ID!, input: UpdateSiteInput!): Site!
   """
@@ -1612,9 +1638,6 @@ type Mutation {
   Invalidates old tracking scripts
   """
   regenerateSiteKey(id: ID!): Site!
-  refreshGeoIPDatabase: GeoIPStatus!
-  upsertEventDefinition(siteId: ID!, input: EventDefinitionInput!): EventDefinition!
-  deleteEventDefinition(siteId: ID!, name: String!): Boolean!
 }
 `, BuiltIn: false},
 }
@@ -1752,6 +1775,16 @@ func (ec *executionContext) childFields_EventCount(ctx context.Context, field gr
 		return ec.fieldContext_EventCount_count(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type EventCount", field.Name)
+}
+
+func (ec *executionContext) childFields_EventCountsResult(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+	switch field.Name {
+	case "items":
+		return ec.fieldContext_EventCountsResult_items(ctx, field)
+	case "total":
+		return ec.fieldContext_EventCountsResult_total(ctx, field)
+	}
+	return nil, fmt.Errorf("no field named %q was found under type EventCountsResult", field.Name)
 }
 
 func (ec *executionContext) childFields_EventDefinition(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
@@ -1962,8 +1995,6 @@ func (ec *executionContext) childFields_User(ctx context.Context, field graphql.
 		return ec.fieldContext_User_role(ctx, field)
 	case "createdAt":
 		return ec.fieldContext_User_createdAt(ctx, field)
-	case "sites":
-		return ec.fieldContext_User_sites(ctx, field)
 	}
 	return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 }
@@ -2123,22 +2154,14 @@ func (ec *executionContext) field_DashboardStats_dailyStats_args(ctx context.Con
 		return nil, err
 	}
 	args["bucket"] = arg0
-	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "paging",
+		func(ctx context.Context, v any) (model.PagingInput, error) {
+			return ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["limit"] = arg1
-	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "offset",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["offset"] = arg2
+	args["paging"] = arg1
 	return args, nil
 }
 
@@ -2465,22 +2488,14 @@ func (ec *executionContext) field_Query_events_args(ctx context.Context, rawArgs
 		return nil, err
 	}
 	args["filter"] = arg2
-	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "limit",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "paging",
+		func(ctx context.Context, v any) (model.PagingInput, error) {
+			return ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput(ctx, v)
 		})
 	if err != nil {
 		return nil, err
 	}
-	args["limit"] = arg3
-	arg4, err := graphql.ProcessArgField(ctx, rawArgs, "offset",
-		func(ctx context.Context, v any) (*int, error) {
-			return ec.unmarshalOInt2ᚖint(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["offset"] = arg4
+	args["paging"] = arg3
 	return args, nil
 }
 
@@ -2557,20 +2572,6 @@ func (ec *executionContext) field_Query_sites_args(ctx context.Context, rawArgs 
 }
 
 func (ec *executionContext) field_RealtimeStats_activePages_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "paging",
-		func(ctx context.Context, v any) (model.PagingInput, error) {
-			return ec.unmarshalNPagingInput2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐPagingInput(ctx, v)
-		})
-	if err != nil {
-		return nil, err
-	}
-	args["paging"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_User_sites_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
 	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "paging",
@@ -3350,7 +3351,7 @@ func (ec *executionContext) _DashboardStats_dailyStats(ctx context.Context, fiel
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.DashboardStats().DailyStats(ctx, obj, fc.Args["bucket"].(*model.TimeBucket), fc.Args["limit"].(*int), fc.Args["offset"].(*int))
+			return ec.Resolvers.DashboardStats().DailyStats(ctx, obj, fc.Args["bucket"].(*model.TimeBucket), fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
 		func(ctx context.Context, selections ast.SelectionSet, v []*model.DailyStats) graphql.Marshaler {
@@ -3639,6 +3640,61 @@ func (ec *executionContext) _EventCount_count(ctx context.Context, field graphql
 }
 func (ec *executionContext) fieldContext_EventCount_count(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("EventCount", field, false, false, errors.New("field of type Int does not have child fields"))
+}
+
+func (ec *executionContext) _EventCountsResult_items(ctx context.Context, field graphql.CollectedField, obj *model.EventCountsResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EventCountsResult_items(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Items, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.EventCount) graphql.Marshaler {
+			return ec.marshalNEventCount2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCountᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EventCountsResult_items(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "EventCountsResult",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EventCount(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _EventCountsResult_total(ctx context.Context, field graphql.CollectedField, obj *model.EventCountsResult) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_EventCountsResult_total(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return obj.Total, nil
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v int) graphql.Marshaler {
+			return ec.marshalNInt2int(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_EventCountsResult_total(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	return graphql.NewScalarFieldContext("EventCountsResult", field, false, false, errors.New("field of type Int does not have child fields"))
 }
 
 func (ec *executionContext) _EventDefinition_id(ctx context.Context, field graphql.CollectedField, obj *model.EventDefinition) (ret graphql.Marshaler) {
@@ -3993,15 +4049,15 @@ func (ec *executionContext) _GeoIPStatus_state(ctx context.Context, field graphq
 			return obj.State, nil
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNString2string(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v model.GeoIPState) graphql.Marshaler {
+			return ec.marshalNGeoIPState2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPState(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
 func (ec *executionContext) fieldContext_GeoIPStatus_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("GeoIPStatus", field, false, false, errors.New("field of type String does not have child fields"))
+	return graphql.NewScalarFieldContext("GeoIPStatus", field, false, false, errors.New("field of type GeoIPState does not have child fields"))
 }
 
 func (ec *executionContext) _GeoIPStatus_dbPath(ctx context.Context, field graphql.CollectedField, obj *model.GeoIPStatus) (ret graphql.Marshaler) {
@@ -4207,6 +4263,126 @@ func (ec *executionContext) fieldContext_Mutation_logout(_ context.Context, fiel
 	return graphql.NewScalarFieldContext("Mutation", field, true, true, errors.New("field of type Boolean does not have child fields"))
 }
 
+func (ec *executionContext) _Mutation_upsertEventDefinition(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_upsertEventDefinition(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().UpsertEventDefinition(ctx, fc.Args["siteId"].(string), fc.Args["input"].(model.EventDefinitionInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.EventDefinition) graphql.Marshaler {
+			return ec.marshalNEventDefinition2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinition(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_upsertEventDefinition(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EventDefinition(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_upsertEventDefinition_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_deleteEventDefinition(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_deleteEventDefinition(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Mutation().DeleteEventDefinition(ctx, fc.Args["siteId"].(string), fc.Args["name"].(string))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
+			return ec.marshalNBoolean2bool(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_deleteEventDefinition(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_deleteEventDefinition_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_refreshGeoIPDatabase(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Mutation_refreshGeoIPDatabase(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			return ec.Resolvers.Mutation().RefreshGeoIPDatabase(ctx)
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.GeoIPStatus) graphql.Marshaler {
+			return ec.marshalNGeoIPStatus2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Mutation_refreshGeoIPDatabase(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_GeoIPStatus(ctx, field)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Mutation_createSite(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -4377,126 +4553,6 @@ func (ec *executionContext) fieldContext_Mutation_regenerateSiteKey(ctx context.
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_regenerateSiteKey_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_refreshGeoIPDatabase(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_refreshGeoIPDatabase(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return ec.Resolvers.Mutation().RefreshGeoIPDatabase(ctx)
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.GeoIPStatus) graphql.Marshaler {
-			return ec.marshalNGeoIPStatus2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_refreshGeoIPDatabase(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_GeoIPStatus(ctx, field)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_upsertEventDefinition(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_upsertEventDefinition(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().UpsertEventDefinition(ctx, fc.Args["siteId"].(string), fc.Args["input"].(model.EventDefinitionInput))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.EventDefinition) graphql.Marshaler {
-			return ec.marshalNEventDefinition2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinition(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_upsertEventDefinition(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_EventDefinition(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_upsertEventDefinition_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Mutation_deleteEventDefinition(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Mutation_deleteEventDefinition(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Mutation().DeleteEventDefinition(ctx, fc.Args["siteId"].(string), fc.Args["name"].(string))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v bool) graphql.Marshaler {
-			return ec.marshalNBoolean2bool(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Mutation_deleteEventDefinition(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Mutation",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_deleteEventDefinition_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5026,94 +5082,6 @@ func (ec *executionContext) fieldContext_Query_registrationStatus(_ context.Cont
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_sites(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Query_sites(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Sites(ctx, fc.Args["paging"].(model.PagingInput))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.Site) graphql.Marshaler {
-			return ec.marshalNSite2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSiteᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Query_sites(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Site(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_sites_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_site(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Query_site(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Site(ctx, fc.Args["id"].(string))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.Site) graphql.Marshaler {
-			return ec.marshalOSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_Query_site(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Site(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_site_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Query_dashboard(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -5202,6 +5170,138 @@ func (ec *executionContext) fieldContext_Query_realtime(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_events(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_events(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().Events(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["paging"].(model.PagingInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.EventsResult) graphql.Marshaler {
+			return ec.marshalNEventsResult2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventsResult(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_events(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EventsResult(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_events_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_eventCounts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_eventCounts(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().EventCounts(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["paging"].(model.PagingInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v *model.EventCountsResult) graphql.Marshaler {
+			return ec.marshalNEventCountsResult2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCountsResult(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_eventCounts(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EventCountsResult(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_eventCounts_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_eventDefinitions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.fieldContext_Query_eventDefinitions(ctx, field)
+		},
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.Resolvers.Query().EventDefinitions(ctx, fc.Args["siteId"].(string), fc.Args["paging"].(model.PagingInput))
+		},
+		nil,
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.EventDefinition) graphql.Marshaler {
+			return ec.marshalNEventDefinition2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinitionᚄ(ctx, selections, v)
+		},
+		true,
+		true,
+	)
+}
+func (ec *executionContext) fieldContext_Query_eventDefinitions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return ec.childFields_EventDefinition(ctx, field)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_eventDefinitions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_geoIPStatus(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -5278,34 +5378,34 @@ func (ec *executionContext) fieldContext_Query_geoIPCountries(ctx context.Contex
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_events(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Query_sites(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Query_events(ctx, field)
+			return ec.fieldContext_Query_sites(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().Events(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["limit"].(*int), fc.Args["offset"].(*int))
+			return ec.Resolvers.Query().Sites(ctx, fc.Args["paging"].(model.PagingInput))
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v *model.EventsResult) graphql.Marshaler {
-			return ec.marshalNEventsResult2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventsResult(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v []*model.Site) graphql.Marshaler {
+			return ec.marshalNSite2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSiteᚄ(ctx, selections, v)
 		},
 		true,
 		true,
 	)
 }
-func (ec *executionContext) fieldContext_Query_events(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_sites(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_EventsResult(ctx, field)
+			return ec.childFields_Site(ctx, field)
 		},
 	}
 	defer func() {
@@ -5315,41 +5415,41 @@ func (ec *executionContext) fieldContext_Query_events(ctx context.Context, field
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_events_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_sites_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_eventCounts(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Query_site(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
 		ec.OperationContext,
 		field,
 		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Query_eventCounts(ctx, field)
+			return ec.fieldContext_Query_site(ctx, field)
 		},
 		func(ctx context.Context) (any, error) {
 			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().EventCounts(ctx, fc.Args["siteId"].(string), fc.Args["dateRange"].(*model.DateRangeInput), fc.Args["filter"].(*model.FilterInput), fc.Args["paging"].(model.PagingInput))
+			return ec.Resolvers.Query().Site(ctx, fc.Args["id"].(string))
 		},
 		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.EventCount) graphql.Marshaler {
-			return ec.marshalNEventCount2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCountᚄ(ctx, selections, v)
+		func(ctx context.Context, selections ast.SelectionSet, v *model.Site) graphql.Marshaler {
+			return ec.marshalOSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite(ctx, selections, v)
 		},
 		true,
-		true,
+		false,
 	)
 }
-func (ec *executionContext) fieldContext_Query_eventCounts(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_site(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
 		IsMethod:   true,
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_EventCount(ctx, field)
+			return ec.childFields_Site(ctx, field)
 		},
 	}
 	defer func() {
@@ -5359,51 +5459,7 @@ func (ec *executionContext) fieldContext_Query_eventCounts(ctx context.Context, 
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_eventCounts_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_eventDefinitions(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Query_eventDefinitions(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.Resolvers.Query().EventDefinitions(ctx, fc.Args["siteId"].(string), fc.Args["paging"].(model.PagingInput))
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.EventDefinition) graphql.Marshaler {
-			return ec.marshalNEventDefinition2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinitionᚄ(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Query_eventDefinitions(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_EventDefinition(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_eventDefinitions_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Query_site_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5643,29 +5699,6 @@ func (ec *executionContext) _RegistrationStatus_allowRegistration(ctx context.Co
 }
 func (ec *executionContext) fieldContext_RegistrationStatus_allowRegistration(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("RegistrationStatus", field, false, false, errors.New("field of type Boolean does not have child fields"))
-}
-
-func (ec *executionContext) _Session_id(ctx context.Context, field graphql.CollectedField, obj *model.Session) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_Session_id(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.ID, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v string) graphql.Marshaler {
-			return ec.marshalNID2string(ctx, selections, v)
-		},
-		true,
-		true,
-	)
-}
-func (ec *executionContext) fieldContext_Session_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	return graphql.NewScalarFieldContext("Session", field, false, false, errors.New("field of type ID does not have child fields"))
 }
 
 func (ec *executionContext) _Site_id(ctx context.Context, field graphql.CollectedField, obj *model.Site) (ret graphql.Marshaler) {
@@ -5942,49 +5975,6 @@ func (ec *executionContext) _User_createdAt(ctx context.Context, field graphql.C
 }
 func (ec *executionContext) fieldContext_User_createdAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	return graphql.NewScalarFieldContext("User", field, false, false, errors.New("field of type Time does not have child fields"))
-}
-
-func (ec *executionContext) _User_sites(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
-	return graphql.ResolveField(
-		ctx,
-		ec.OperationContext,
-		field,
-		func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.fieldContext_User_sites(ctx, field)
-		},
-		func(ctx context.Context) (any, error) {
-			return obj.Sites, nil
-		},
-		nil,
-		func(ctx context.Context, selections ast.SelectionSet, v []*model.Site) graphql.Marshaler {
-			return ec.marshalOSite2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSiteᚄ(ctx, selections, v)
-		},
-		true,
-		false,
-	)
-}
-func (ec *executionContext) fieldContext_User_sites(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "User",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return ec.childFields_Site(ctx, field)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_User_sites_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -8247,6 +8237,49 @@ func (ec *executionContext) _EventCount(ctx context.Context, sel ast.SelectionSe
 	return out
 }
 
+var eventCountsResultImplementors = []string{"EventCountsResult"}
+
+func (ec *executionContext) _EventCountsResult(ctx context.Context, sel ast.SelectionSet, obj *model.EventCountsResult) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, eventCountsResultImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferredFieldSet := graphql.NewFieldSet(nil)
+	deferLabelToView := make(map[string]*graphql.FieldSetView)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("EventCountsResult")
+		case "items":
+			out.Values[i] = ec._EventCountsResult_items(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "total":
+			out.Values[i] = ec._EventCountsResult_total(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
+
+	ec.ProcessDeferredGroup(graphql.DeferredGroup{
+		Defers:   deferLabelToView,
+		Path:     graphql.GetPath(ctx),
+		FieldSet: deferredFieldSet,
+		Context:  ctx,
+	})
+
+	return out
+}
+
 var eventDefinitionImplementors = []string{"EventDefinition"}
 
 func (ec *executionContext) _EventDefinition(ctx context.Context, sel ast.SelectionSet, obj *model.EventDefinition) graphql.Marshaler {
@@ -8548,6 +8581,27 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "upsertEventDefinition":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_upsertEventDefinition(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "deleteEventDefinition":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_deleteEventDefinition(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "refreshGeoIPDatabase":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_refreshGeoIPDatabase(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "createSite":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createSite(ctx, field)
@@ -8572,27 +8626,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "regenerateSiteKey":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_regenerateSiteKey(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "refreshGeoIPDatabase":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_refreshGeoIPDatabase(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "upsertEventDefinition":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_upsertEventDefinition(ctx, field)
-			})
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "deleteEventDefinition":
-			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_deleteEventDefinition(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -9003,50 +9036,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "sites":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_sites(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "site":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_site(ctx, field)
-				if res == graphql.RequiredNull {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "dashboard":
 			field := field
 
@@ -9079,50 +9068,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_realtime(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "geoIPStatus":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_geoIPStatus(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "geoIPCountries":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_geoIPCountries(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -9190,6 +9135,94 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				}()
 				res = ec._Query_eventDefinitions(ctx, field)
 				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "geoIPStatus":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_geoIPStatus(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "geoIPCountries":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_geoIPCountries(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "sites":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_sites(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "site":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_site(ctx, field)
+				if res == graphql.RequiredNull {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
 				return res
@@ -9398,44 +9431,6 @@ func (ec *executionContext) _RegistrationStatus(ctx context.Context, sel ast.Sel
 	return out
 }
 
-var sessionImplementors = []string{"Session"}
-
-func (ec *executionContext) _Session(ctx context.Context, sel ast.SelectionSet, obj *model.Session) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, sessionImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferredFieldSet := graphql.NewFieldSet(nil)
-	deferLabelToView := make(map[string]*graphql.FieldSetView)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Session")
-		case "id":
-			out.Values[i] = ec._Session_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.Deferred, int32(min(len(deferLabelToView), math.MaxInt32)))
-
-	ec.ProcessDeferredGroup(graphql.DeferredGroup{
-		Defers:   deferLabelToView,
-		Path:     graphql.GetPath(ctx),
-		FieldSet: deferredFieldSet,
-		Context:  ctx,
-	})
-
-	return out
-}
-
 var siteImplementors = []string{"Site"}
 
 func (ec *executionContext) _Site(ctx context.Context, sel ast.SelectionSet, obj *model.Site) graphql.Marshaler {
@@ -9539,11 +9534,6 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "createdAt":
 			out.Values[i] = ec._User_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "sites":
-			out.Values[i] = ec._User_sites(ctx, field, obj)
-			if out.Values[i] == graphql.RequiredNull {
 				out.Invalids++
 			}
 		default:
@@ -10216,6 +10206,20 @@ func (ec *executionContext) marshalNEventCount2ᚖgithubᚗcomᚋlovelyᚑeyeᚋ
 	return ec._EventCount(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNEventCountsResult2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCountsResult(ctx context.Context, sel ast.SelectionSet, v model.EventCountsResult) graphql.Marshaler {
+	return ec._EventCountsResult(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNEventCountsResult2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventCountsResult(ctx context.Context, sel ast.SelectionSet, v *model.EventCountsResult) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			graphql.AddErrorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._EventCountsResult(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNEventDefinition2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinition(ctx context.Context, sel ast.SelectionSet, v model.EventDefinition) graphql.Marshaler {
 	return ec._EventDefinition(ctx, sel, &v)
 }
@@ -10273,8 +10277,7 @@ func (ec *executionContext) marshalNEventDefinitionField2ᚖgithubᚗcomᚋlovel
 }
 
 func (ec *executionContext) unmarshalNEventDefinitionFieldInput2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐEventDefinitionFieldInputᚄ(ctx context.Context, v any) ([]*model.EventDefinitionFieldInput, error) {
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
+	vSlice := graphql.CoerceList(v)
 	var err error
 	res := make([]*model.EventDefinitionFieldInput, len(vSlice))
 	for i := range vSlice {
@@ -10385,6 +10388,16 @@ func (ec *executionContext) marshalNFloat2float64(ctx context.Context, sel ast.S
 		}
 	}
 	return graphql.WrapContextMarshaler(ctx, res)
+}
+
+func (ec *executionContext) unmarshalNGeoIPState2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPState(ctx context.Context, v any) (model.GeoIPState, error) {
+	var res model.GeoIPState
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNGeoIPState2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPState(ctx context.Context, sel ast.SelectionSet, v model.GeoIPState) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNGeoIPStatus2githubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐGeoIPStatus(ctx context.Context, sel ast.SelectionSet, v model.GeoIPStatus) graphql.Marshaler {
@@ -10671,8 +10684,7 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 }
 
 func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
+	vSlice := graphql.CoerceList(v)
 	var err error
 	res := make([]string, len(vSlice))
 	for i := range vSlice {
@@ -10768,8 +10780,7 @@ func (ec *executionContext) marshalN__DirectiveLocation2string(ctx context.Conte
 }
 
 func (ec *executionContext) unmarshalN__DirectiveLocation2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
+	vSlice := graphql.CoerceList(v)
 	var err error
 	res := make([]string, len(vSlice))
 	for i := range vSlice {
@@ -10921,8 +10932,7 @@ func (ec *executionContext) unmarshalOEventType2ᚕgithubᚗcomᚋlovelyᚑeye�
 	if v == nil {
 		return nil, nil
 	}
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
+	vSlice := graphql.CoerceList(v)
 	var err error
 	res := make([]model.EventType, len(vSlice))
 	for i := range vSlice {
@@ -10966,8 +10976,7 @@ func (ec *executionContext) unmarshalOID2ᚕstringᚄ(ctx context.Context, v any
 	if v == nil {
 		return nil, nil
 	}
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
+	vSlice := graphql.CoerceList(v)
 	var err error
 	res := make([]string, len(vSlice))
 	for i := range vSlice {
@@ -11016,25 +11025,6 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) marshalOSite2ᚕᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSiteᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Site) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := graphql.MarshalSliceConcurrently(ctx, len(v), 0, false, func(ctx context.Context, i int) graphql.Marshaler {
-		fc := graphql.GetFieldContext(ctx)
-		fc.Result = &v[i]
-		return ec.marshalNSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite(ctx, sel, v[i])
-	})
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
 func (ec *executionContext) marshalOSite2ᚖgithubᚗcomᚋlovelyᚑeyeᚋserverᚋinternalᚋgraphᚋmodelᚐSite(ctx context.Context, sel ast.SelectionSet, v *model.Site) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -11046,8 +11036,7 @@ func (ec *executionContext) unmarshalOString2ᚕstringᚄ(ctx context.Context, v
 	if v == nil {
 		return nil, nil
 	}
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
+	vSlice := graphql.CoerceList(v)
 	var err error
 	res := make([]string, len(vSlice))
 	for i := range vSlice {

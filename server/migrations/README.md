@@ -11,27 +11,28 @@ The devcontainer automatically provides:
 ## Development Workflow
 
 ### Create New Migrations
-1. Edit models in `internal/models/models.go`
-2. Run `task migrator-diff` (prompts for migration name)
-3. Atlas CLI generates `.up.sql` and `.down.sql` for both SQLite and PostgreSQL
+1. Edit the owning feature's row types under `internal/<feature>/persistence`.
+2. Register new tables in `atlas-schema.go` when needed.
+3. Run `task server:migrator-diff` from the repository root (prompts for a migration name).
+4. Atlas CLI generates `.up.sql` and `.down.sql` for both SQLite and PostgreSQL.
 
 ### Test Before Committing
 ```bash
-task test-migrations  # Tests full up/down cycle on both databases
+task server:test-migrations  # Tests the full up/down cycle on both databases
 ```
 
 ### Apply Locally
 ```bash
-task migrate-up
+task server:migrate-up
 ```
 
 ## Production Deployment
 
 ```bash
-task migrate-init    # First time only - creates migration tracking tables
-task migrate-up      # Applies all pending migrations
-task migrate-status  # Shows what's applied
-task migrate-down    # Rollback if needed
+task server:migrate-init    # First time only - creates migration tracking tables
+task server:migrate-up      # Applies all pending migrations
+task server:migrate-status  # Shows what's applied
+task server:migrate-down    # Rollback if needed
 ```
 
 ## CI/CD Integration

@@ -2,7 +2,7 @@ version: "3"
 
 vars:
   GO: go
-  TSC: bunx tsc
+  TSC: bun ../../dashboard/node_modules/typescript/bin/tsc
 
 tasks:
   build:

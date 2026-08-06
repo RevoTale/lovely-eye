@@ -117,7 +117,7 @@ func (d *Downloader) writeStagedDatabase(source io.Reader) (string, error) {
 	}
 
 	databasePath := databaseFile.Name()
-	if _, err := io.Copy(databaseFile, source); err != nil {
+	if err := copyWithLimit(databaseFile, source, maxExtractedBytes); err != nil {
 		_ = databaseFile.Close()
 		_ = os.Remove(databasePath)
 		return "", fmt.Errorf("write extracted GeoIP database: %w", err)

@@ -63,7 +63,7 @@ Server-generated visitor ID computed from minimized request signals:
 
 ## IP Address Handling
 
-Client IP is resolved by `server/pkg/clientip`:
+Client IP is resolved by `server/internal/transport/http/clientip`:
 - `RemoteAddr` is authoritative unless it belongs to a configured trusted proxy CIDR.
 - `X-Forwarded-For` and `X-Real-IP` are ignored from untrusted remotes.
 - For trusted proxy chains, Lovely Eye scans `X-Forwarded-For` from right to left and selects the last non-trusted hop as the client.
@@ -104,6 +104,7 @@ Limits exist because analytics endpoints are public by design:
 - `ANALYTICS_RATE_LIMIT_PER_MINUTE` defaults to `120`; collect traffic is limited by client IP before site lookup and by site key plus client IP after validation.
 - `ANALYTICS_RATE_LIMIT_BURST` defaults to `240`; it uses the same keying as the refill limit.
 - `GRAPHQL_MAX_BODY_BYTES` defaults to `1048576`.
+- `GRAPHQL_MAX_COMPLEXITY` defaults to `300`; gqlgen rejects more expensive operations before resolver execution.
 - `DASHBOARD_MAX_DAILY_RANGE_DAYS` defaults to `730`.
 - `DASHBOARD_MAX_HOURLY_RANGE_DAYS` defaults to `31`.
 - `DASHBOARD_MAX_FILTER_VALUES` defaults to `100`.

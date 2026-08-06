@@ -3,7 +3,6 @@ package downloader
 import (
 	"context"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -19,7 +18,7 @@ func (d *Downloader) downloadAndInstall(ctx context.Context, plan DownloadPlan) 
 	for _, candidateURL := range plan.CandidateURLs {
 		if err := d.downloadCandidate(ctx, candidateURL); err != nil {
 			lastErr = err
-			slog.Warn("failed to download GeoIP database", "url", candidateURL, "error", err)
+			slog.Warn("failed to download GeoIP database", "url", downloadURLForLog(candidateURL), "error", err)
 			continue
 		}
 		return nil
@@ -38,21 +37,22 @@ func (d *Downloader) downloadCandidate(ctx context.Context, downloadURL string) 
 	}()
 
 	if err := d.installDownloadedFile(downloadPath, downloadURL); err != nil {
-		return fmt.Errorf("install GeoIP database from %q: %w", downloadURL, err)
+		return fmt.Errorf("install GeoIP database from %q: %w", downloadURLForLog(downloadURL), err)
 	}
 
 	return nil
 }
 
 func (d *Downloader) downloadToTempFile(ctx context.Context, downloadURL string) (string, error) {
+	logURL := downloadURLForLog(downloadURL)
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, downloadURL, nil)
 	if err != nil {
-		return "", fmt.Errorf("build GeoIP download request: %w", err)
+		return "", fmt.Errorf("build GeoIP download request for %q: invalid URL", logURL)
 	}
 
 	response, err := d.httpClient.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("download GeoIP database from %q: %w", downloadURL, err)
+		return "", fmt.Errorf("download GeoIP database from %q: %w", logURL, downloadRequestCause(err))
 	}
 	defer func() {
 		if closeErr := response.Body.Close(); closeErr != nil {
@@ -61,7 +61,7 @@ func (d *Downloader) downloadToTempFile(ctx context.Context, downloadURL string)
 	}()
 
 	if response.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("download GeoIP database from %q: unexpected status %s", downloadURL, response.Status)
+		return "", fmt.Errorf("download GeoIP database from %q: unexpected status %s", logURL, response.Status)
 	}
 
 	downloadFile, err := d.createTempFile("geoip-download-*")
@@ -70,7 +70,7 @@ func (d *Downloader) downloadToTempFile(ctx context.Context, downloadURL string)
 	}
 
 	downloadPath := downloadFile.Name()
-	if _, err := io.Copy(downloadFile, response.Body); err != nil {
+	if err := copyWithLimit(downloadFile, response.Body, maxDownloadedBytes); err != nil {
 		_ = downloadFile.Close()
 		_ = os.Remove(downloadPath)
 		return "", fmt.Errorf("write downloaded GeoIP payload: %w", err)

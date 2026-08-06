@@ -5,7 +5,7 @@
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": [],
 
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -23,7 +23,7 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
     "noImplicitOverride": true,
-    "exactOptionalPropertyTypes": false,
+    "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
     "noPropertyAccessFromIndexSignature": true,
     "allowUnusedLabels": false,
@@ -41,5 +41,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "codegen.ts", "vite.config.ts", "tailwind.config.ts", "postcss.config.js"]
+  "include": ["src"]
 }

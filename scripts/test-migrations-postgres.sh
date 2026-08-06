@@ -1,14 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
+repository_root="$(cd "$(dirname "$0")/.." && pwd)"
+compose_file="$repository_root/docker/docker-compose.migrations-test.yml"
+
+cleanup() {
+  docker compose -f "$compose_file" --profile postgres down -v
+}
+trap cleanup EXIT
 
 echo "Testing PostgreSQL migrations..."
-docker compose -f docker/docker-compose.migrations-test.yml up -d postgres --wait
-docker compose -f docker/docker-compose.migrations-test.yml --profile postgres run --rm --build test-migrations-postgres
-EXIT_CODE=$?
-
-echo "Cleaning up..."
-docker compose -f docker/docker-compose.migrations-test.yml --profile postgres down -v
-
-exit $EXIT_CODE
+docker compose -f "$compose_file" up -d postgres --wait
+docker compose -f "$compose_file" --profile postgres run --rm --build test-migrations-postgres

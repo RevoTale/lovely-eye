@@ -59,8 +59,11 @@ func Handler(cfg Config) http.Handler {
 
 	indexContent := string(indexHTML)
 	if cfg.BasePath == "" {
-
-		indexContent = strings.ReplaceAll(indexContent, `<base href="{{BASE_PATH}}/" />`, "")
+		indexContent = strings.ReplaceAll(
+			indexContent,
+			`<base href="{{BASE_PATH}}/" />`,
+			`<base href="/" />`,
+		)
 		indexContent = strings.ReplaceAll(indexContent, "{{BASE_PATH}}", "")
 	} else {
 

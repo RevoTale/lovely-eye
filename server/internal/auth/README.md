@@ -11,7 +11,7 @@ JWT-based authentication with HttpOnly cookies.
 
 1. User logs in with username/password
 2. Credentials validated (bcrypt)
-3. Two cookies set: `le_access` and `le_refresh` (HttpOnly)
+3. Two `HttpOnly` cookies are set. Their `le_access_*` and `le_refresh_*` names and `Path` are derived from the normalized runtime `BASE_PATH`, so instances mounted on the same origin remain isolated.
 4. Subsequent requests authenticated via cookies
 5. Access token auto-refreshed when expired
 
@@ -20,7 +20,7 @@ JWT-based authentication with HttpOnly cookies.
 - `HttpOnly` - No JavaScript access (XSS protection)
 - `SameSite=Strict` (production) or `Lax` (development) - CSRF protection
 - `Secure` - HTTPS only in production
-- `Path=/` - Available for all routes
+- `Path=<normalized BASE_PATH>` - Available only within this runtime mount; `/` is used only for a root-mounted instance
 
 GraphQL POST requests with a foreign `Origin` are rejected before resolvers run. SameSite cookies remain a second browser-side CSRF mitigation, and auth mutations are rate-limited per trusted client IP.
 

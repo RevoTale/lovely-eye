@@ -1,0 +1,29 @@
+type Country {
+  code: String!
+  name: String!
+}
+
+enum GeoIPState {
+  DISABLED
+  MISSING
+  DOWNLOADING
+  READY
+  ERROR
+}
+
+type GeoIPStatus {
+  state: GeoIPState!
+  dbPath: String!
+  source: String
+  lastError: String
+  updatedAt: Time
+}
+
+extend type Query {
+  geoIPStatus: GeoIPStatus!
+  geoIPCountries(search: String, codes: [String!], paging: PagingInput!): [Country!]!
+}
+
+extend type Mutation {
+  refreshGeoIPDatabase: GeoIPStatus!
+}
