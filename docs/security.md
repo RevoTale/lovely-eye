@@ -78,23 +78,24 @@ cd /workspaces/lovely-eye
 task server:vuln
 ```
 
-The 2026-08-06 review pinned patched compatible transitive versions of `brace-expansion`,
-`immutable`, `shell-quote`, `ws`, and `yaml`. Production Bun dependencies and reachable Go code
-have no reported vulnerabilities.
+The 2026-08-15 review pinned patched compatible transitive versions of `@babel/core`,
+`brace-expansion`, `immutable`, `js-yaml`, `nanoid`, `shell-quote`, `ws`, and `yaml`. Production Bun
+dependencies and reachable Go code have no reported vulnerabilities.
 
-The full development-tool audit retains two high/moderate advisory groups and one low advisory:
+The full development-tool audit retains one transitive advisory group with one high and one
+moderate finding:
 
 - `picomatch@2.3.1` through Vite, TanStack Router, shadcn, and GraphQL Codegen tool paths. Bun cannot
-  apply a top-level version-scoped override without also forcing incompatible v4 consumers. The
-  affected glob input is repository-owned, not runtime/user input.
-- `js-yaml@4.1.1` through `cosmiconfig` in GraphQL Codegen and shadcn. No patched v4 release exists;
-  the available fix is a major-version override. The parsed configuration is repository-owned.
-- `@babel/core<=7.29.0` has a low-severity arbitrary-file-read advisory through build/codegen tools.
-  Source map comments and source inputs are repository-owned; none of these tools execute in the
-  production application.
+  apply its documented parent- or version-scoped override forms in Bun 1.3.14, while a global
+  override would also force incompatible v4 consumers. A direct 2.3.2 pin does not replace the
+  nested 2.3.1 edge. The affected glob input is repository-owned, not runtime/user input.
 
-Recheck all three after any related tool release and no later than 2026-09-06. Do not force a major
-override without generation, shadcn, build, and complete browser verification.
+Verbose `govulncheck` also reports the module-only `GO-2026-5932` advisory for the unmaintained
+`x/crypto/openpgp` package. Lovely Eye does not import that package; symbol and package results are
+empty, and the module advisory has no fixed release.
+
+Recheck this edge after any Bun, micromatch, or related tool release and no later than 2026-09-15.
+Do not force a global override without generation, shadcn, build, and complete browser verification.
 
 ## Release verification
 

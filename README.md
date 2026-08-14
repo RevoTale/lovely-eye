@@ -86,7 +86,7 @@ services:
     restart: unless-stopped
 
   lovely-eye-db:
-    image: postgres:18.3-alpine
+    image: postgres:18.6-alpine
     environment:
       - POSTGRES_USER=lovely
       - POSTGRES_PASSWORD=lovely
@@ -305,7 +305,7 @@ services:
     restart: unless-stopped
 
   lovely-eye-db:
-    image: postgres:18.3-alpine
+    image: postgres:18.6-alpine
     environment:
       - POSTGRES_USER=lovely
       - POSTGRES_PASSWORD=lovely

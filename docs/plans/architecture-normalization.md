@@ -231,6 +231,20 @@ Migration evidence:
 - [TypeScript 7 announcement](https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/)
 - [Apollo Client installation](https://www.apollographql.com/docs/react/get-started)
 
+Dependency refresh snapshot: 2026-08-15. The approved stack was rechecked against the npm and Go
+registries before changing either lockfile. Retained frontend packages were updated to their latest
+stable releases, including Apollo Client `4.2.12`, TanStack Router `1.170.29` and plugin `1.168.32`,
+Lucide `1.31.0`, Biome `2.5.8`, GraphQL Codegen client preset `6.1.3`, shadcn `4.18.0`, and Vite
+`8.2.1`. `shadcn diff` reports no component-source updates. The client-preset regeneration removes
+its obsolete partial-fragment overload without requiring an application compatibility layer.
+
+The full Bun audit exposed newly patched build-tool edges. Same-major overrides pin fixed
+`@babel/core`, `js-yaml`, and `nanoid` releases; the existing security overrides were refreshed as
+well. One dev-only `micromatch -> picomatch@2.3.1` advisory remains documented in
+[`docs/security.md`](../security.md): Bun 1.3.14 does not apply its documented scoped override forms,
+a direct pin does not replace the nested edge, and a global override would incorrectly force v2 on
+v4 consumers. Production dependencies remain clean.
+
 ### Go
 
 | Capability | Keep or add | Remove or replace | Reason |
@@ -254,6 +268,14 @@ Go upgrade candidates at audit time:
 - Remove `urfave/cli/v3`; other direct modules were already latest stable in the audit snapshot.
 
 Use `go mod tidy`, `go mod verify`, full tests, migration tests, and `govulncheck ./...` after the dependency change. Go's official module guidance documents both update discovery and Go 1.24+ [`tool` directives](https://go.dev/doc/modules/managing-dependencies#tools).
+
+The 2026-08-15 refresh moved the minimum toolchain to security-fixed Go `1.26.6`, updated GeoIP2 to
+`2.3.0`, MaxMind DB to `2.5.0`, `x/crypto` to `0.55.0`, the pinned `govulncheck` tool to `1.7.0`,
+and the static esbuild module to `0.28.2`. `go get -t -u ./...`, explicit tool updates, and
+`go mod tidy` refreshed retained indirect requirements without promoting transitive modules to the
+application API. The paired GeoIP update preserves the existing reader API; cache policy remains a
+separate measured decision. The first scan on Go 1.26.5 found six reachable standard-library
+advisories fixed by 1.26.6; the refreshed scan reports zero reachable vulnerabilities.
 
 ## Accepted target shape
 
@@ -544,6 +566,7 @@ Add dated entries only after verification.
 | 2026-08-06 | Responsive admin follow-up | Centralized bounded Add New Site and Site Settings content; established shared 16/24/32 px mobile-to-desktop gutters and a wide-screen shell bound; made responsive grids explicitly shrinkable; hardened long domains, analytics labels, event metadata, tracking controls, GeoIP paths, editor actions, and code snippets | Passed; real Chromium coverage verifies critical routes at 320/768/1024/1440 px plus custom date picker, key regeneration, and event-editor states without horizontal page overflow. Dashboard static checks, 18 unit tests, and all 9 primary browser flows pass. |
 | 2026-08-06 | Site-creation recovery regression | Clear stale form errors whenever the user edits the site name or domain collection after a rejected submission | Passed; RED/GREEN Chromium coverage proves an invalid domain can be corrected and submitted successfully. Dashboard checks and all 10 primary browser flows pass. |
 | 2026-08-06 | Zen Inspired admin theme | Replaced the global shadcn semantic palette, charts, radius, tracking, and runtime-switchable shadows with the selected Tweakcn theme; used system sans/serif/mono stacks; normalized destructive foreground usage; documented the theme boundary for future AI changes | Passed; visual QA of Add New Site and Analytics in both modes found no console errors or external requests. The light/dark contract, 18 unit tests, all 11 primary browser flows, the `/`, `/lovely-eye`, and `/tools/lovely-eye` deployment matrix, zero-warning lint/type checks, generation freshness, Go tests, and production builds are green. |
+| 2026-08-15 | Full stable dependency and CI refresh | Rechecked npm, Go, Docker Hub, MCR/GHCR, and official GitHub Action releases; upgraded every outdated direct frontend dependency, every retained `go.mod` requirement and tool, Go 1.26.6, PostgreSQL 18.6, production base images, checkout/setup-go v7, generated GraphQL output, and security overrides; updated current deployment examples and the residual-risk register | Passed; `bun outdated` and the per-requirement Go proxy audit are empty, frozen Bun install and both Go module verifications are clean, `shadcn diff` and generation freshness report no pending component/artifact changes, actionlint exits zero, production Bun audit and reachable/package Go vulnerability results are empty, and the documented dev-only picomatch/module-only openpgp residuals are unchanged in runtime reachability. Full `task check`, targeted race tests, 11 admin flows, the three-path runtime matrix, same-origin isolation, SQLite/PostgreSQL init/up/down/reapply, and the exact-image production health/dashboard check pass. The fresh performance baseline also passed: initial JavaScript 189,521 B gzip, analytics increment 78,765 B, all JavaScript 394,042 B, CSS 11,659 B, server 27,000,882 B, migrate 19,152,362 B, Chromium login 1,366 ms, dashboard 903 ms, and 8 GraphQL operations. |
 
 ## Interview history
 
