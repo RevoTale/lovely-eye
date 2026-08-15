@@ -43,6 +43,9 @@ fi
 echo "SQLITE_BENCHMARKS"
 go test -run '^$' -bench '^BenchmarkAnalyticsDashboardReads$' -benchmem -count=10 ./internal/analytics/persistence
 
+echo "COLLECT_BENCHMARKS"
+go test -run '^$' -bench '^BenchmarkAnalyticsHandlerCollectPageView$' -benchmem -count=10 ./internal/transport/http/collect
+
 echo "BROWSER_BASELINE"
 cd "$repository_root/dashboard"
 TEST_PERFORMANCE=true bunx --bun playwright test tests/e2e/performance-baseline.spec.ts

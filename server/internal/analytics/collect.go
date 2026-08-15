@@ -35,7 +35,19 @@ func (s *Service) CollectPageView(ctx context.Context, input CollectInput) error
 	if !accepted {
 		return nil
 	}
+	return s.collectAcceptedPageView(ctx, site, input)
+}
 
+// CollectPageViewForSite avoids reloading a site already resolved by the HTTP boundary while still
+// applying the analytics bot, origin, and blocking rules.
+func (s *Service) CollectPageViewForSite(ctx context.Context, resolvedSite *site.Site, input CollectInput) error {
+	if !s.acceptsAnalyticsRequest(resolvedSite, input.UserAgent, input.Origin, input.Referer, input.IP) {
+		return nil
+	}
+	return s.collectAcceptedPageView(ctx, resolvedSite, input)
+}
+
+func (s *Service) collectAcceptedPageView(ctx context.Context, site *site.Site, input CollectInput) error {
 	dimensions := parseClientDimensions(input.UserAgent)
 	now := s.now()
 	nowUnix := now.Unix()
@@ -65,10 +77,20 @@ func (s *Service) acceptedAnalyticsSite(
 	if err != nil {
 		return nil, false, fmt.Errorf("get site by public key: %w", err)
 	}
-	if !IsAllowedDomain(origin, referer, site.Domains) || s.isBlockedRequest(site, ip) {
+	if !s.acceptsSiteRequest(site, origin, referer, ip) {
 		return site, false, nil
 	}
 	return site, true, nil
+}
+
+func (s *Service) acceptsAnalyticsRequest(site *site.Site, userAgent, origin, referer, ip string) bool {
+	return !s.botDetector.IsBot(userAgent) && s.acceptsSiteRequest(site, origin, referer, ip)
+}
+
+func (s *Service) acceptsSiteRequest(site *site.Site, origin, referer, ip string) bool {
+	return site != nil &&
+		IsAllowedDomain(origin, referer, site.Domains) &&
+		!s.isBlockedRequest(site, ip)
 }
 
 func parseClientDimensions(userAgent string) clientDimensions {
@@ -341,7 +363,20 @@ func (s *Service) CollectEvent(ctx context.Context, input EventInput) error {
 	if !accepted || s.eventDefinitionStore == nil {
 		return nil
 	}
+	return s.collectAcceptedEvent(ctx, site, input)
+}
 
+// CollectEventForSite avoids reloading a site already resolved by the HTTP boundary while still
+// applying the analytics bot, origin, and blocking rules.
+func (s *Service) CollectEventForSite(ctx context.Context, resolvedSite *site.Site, input EventInput) error {
+	if s.eventDefinitionStore == nil ||
+		!s.acceptsAnalyticsRequest(resolvedSite, input.UserAgent, input.Origin, input.Referer, input.IP) {
+		return nil
+	}
+	return s.collectAcceptedEvent(ctx, resolvedSite, input)
+}
+
+func (s *Service) collectAcceptedEvent(ctx context.Context, site *site.Site, input EventInput) error {
 	definition, sanitizedProps, ok, err := s.eventDefinitionForCollect(ctx, site.ID, input)
 	if err != nil {
 		return err

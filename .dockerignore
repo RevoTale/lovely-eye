@@ -13,6 +13,7 @@
 **/node_modules
 **/coverage
 **/coverage.*
+**/*.test
 **/playwright-report
 **/test-results
 

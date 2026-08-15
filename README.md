@@ -250,6 +250,7 @@ The dashboard uses Biome's recommended rules plus a local source-size check. The
 - [PRIVACY.md](./PRIVACY.md) - privacy handling
 - [UPGRADING.md](./UPGRADING.md) - container backup, upgrade, verification, and rollback
 - [dashboard/README.md](./dashboard/README.md) - dashboard development
+- [Performance runbook](./docs/performance.md) - server RAM, allocation, CPU, and profiling baselines
 - [Release runbook](./docs/releasing.md) - maintainer release contract and checklist
 - [Architecture normalization plan](./docs/plans/architecture-normalization.md) - living intent, decisions, clarifications, and phased roadmap
 - [ADR-0001](./docs/decisions/0001-runtime-base-path.md) - arbitrary runtime base-path support

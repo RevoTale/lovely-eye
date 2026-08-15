@@ -142,8 +142,7 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Name != "" {
-		err = h.analyticsService.CollectEvent(r.Context(), analytics.EventInput{
-			SiteKey:    siteKey,
+		err = h.analyticsService.CollectEventForSite(r.Context(), site, analytics.EventInput{
 			Name:       req.Name,
 			Path:       req.Path,
 			Properties: req.Properties,
@@ -153,8 +152,7 @@ func (h *AnalyticsHandler) Collect(w http.ResponseWriter, r *http.Request) {
 			Referer:    r.Header.Get("Referer"),
 		})
 	} else {
-		err = h.analyticsService.CollectPageView(r.Context(), analytics.CollectInput{
-			SiteKey:     siteKey,
+		err = h.analyticsService.CollectPageViewForSite(r.Context(), site, analytics.CollectInput{
 			Path:        req.Path,
 			Exit:        req.Exit,
 			Referrer:    req.Referrer,

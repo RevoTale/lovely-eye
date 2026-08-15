@@ -67,6 +67,32 @@ func TestRepository_DeleteRemovesOwnedData(t *testing.T) {
 	requireModelTableEmpty(t, db, (*Domain)(nil))
 }
 
+func TestRepository_GetByPublicKeyReturnsAnalyticsRelations(t *testing.T) {
+	t.Parallel()
+
+	db := setupTestDB(t)
+	repository := New(db)
+	site := createTestSite(t, db)
+	ctx := context.Background()
+
+	_, err := db.NewInsert().Model(&Domain{SiteID: site.ID, Domain: "alias.example.com", Position: 1}).Exec(ctx)
+	require.NoError(t, err)
+	_, err = db.NewInsert().Model(&BlockedIP{SiteID: site.ID, IP: "203.0.113.10"}).Exec(ctx)
+	require.NoError(t, err)
+	_, err = db.NewInsert().Model(&BlockedCountry{SiteID: site.ID, CountryCode: "US"}).Exec(ctx)
+	require.NoError(t, err)
+
+	loaded, err := repository.GetByPublicKey(ctx, site.PublicKey)
+	require.NoError(t, err)
+	require.Equal(t, site.ID, loaded.ID)
+	require.Equal(t, []string{"example.com", "alias.example.com"}, []string{
+		loaded.Domains[0].Domain,
+		loaded.Domains[1].Domain,
+	})
+	require.Equal(t, "203.0.113.10", loaded.BlockedIPs[0].IP)
+	require.Equal(t, "US", loaded.BlockedCountries[0].CountryCode)
+}
+
 func requireModelTableEmpty(t *testing.T, db *bun.DB, model any) {
 	t.Helper()
 	count, err := db.NewSelect().Model(model).Count(context.Background())

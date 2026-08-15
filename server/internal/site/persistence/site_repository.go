@@ -61,25 +61,33 @@ func (r *Repository) GetOwnerID(ctx context.Context, id int64) (int64, error) {
 }
 
 func (r *Repository) GetByPublicKey(ctx context.Context, publicKey string) (*sitefeature.Site, error) {
+	// Collection resolves this graph for every accepted request. Raw queries preserve current database
+	// state without paying Bun's per-request relation-query construction cost.
 	site := new(Site)
-	err := r.db.NewSelect().
-		Model(site).
-		Where("public_key = ?", publicKey).
-		Relation("Domains", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.Order("position ASC", "id ASC")
-		}).
-		Relation("BlockedIPs", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.Order("ip ASC")
-		}).
-		Relation("BlockedCountries", func(q *bun.SelectQuery) *bun.SelectQuery {
-			return q.Order("country_code ASC")
-		}).
-		Scan(ctx)
+	err := r.db.NewRaw("SELECT * FROM sites WHERE public_key = ?", publicKey).Scan(ctx, site)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("failed to get site by public key: %w", sitefeature.ErrSiteNotFound)
 		}
 		return nil, fmt.Errorf("failed to get site by public key: %w", err)
+	}
+	if err := r.db.NewRaw(
+		"SELECT * FROM site_domains WHERE site_id = ? ORDER BY position ASC, id ASC",
+		site.ID,
+	).Scan(ctx, &site.Domains); err != nil {
+		return nil, fmt.Errorf("failed to get site domains by public key: %w", err)
+	}
+	if err := r.db.NewRaw(
+		"SELECT * FROM site_blocked_ips WHERE site_id = ? ORDER BY ip ASC",
+		site.ID,
+	).Scan(ctx, &site.BlockedIPs); err != nil {
+		return nil, fmt.Errorf("failed to get site blocked IPs by public key: %w", err)
+	}
+	if err := r.db.NewRaw(
+		"SELECT * FROM site_blocked_countries WHERE site_id = ? ORDER BY country_code ASC",
+		site.ID,
+	).Scan(ctx, &site.BlockedCountries); err != nil {
+		return nil, fmt.Errorf("failed to get site blocked countries by public key: %w", err)
 	}
 	return siteFromModel(site), nil
 }

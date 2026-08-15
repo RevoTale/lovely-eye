@@ -189,13 +189,58 @@ func TestAnalyticsHandlerCollectIgnoresForwardedIPFromUntrustedRemote(t *testing
 	require.Equal(t, 1, countAnalyticsHandlerPageViews(t, fixture.db, fixture.site.ID))
 }
 
+func TestAnalyticsHandlerCollectLoadsSiteOnce(t *testing.T) {
+	fixture := newAnalyticsHandlerTestFixtureWithResolver(t, AnalyticsHandlerConfig{
+		MaxBodyBytes:       4096,
+		MaxPropertiesBytes: 1024,
+	}, nil, clientip.MustNewResolver(nil))
+	counter := new(publicKeyQueryCounter)
+	fixture.db.AddQueryHook(counter)
+
+	recorder := httptest.NewRecorder()
+	fixture.handler.Collect(recorder, newAnalyticsCollectRequest(fixture.site.PublicKey, `{"path":"/pricing"}`))
+
+	require.Equal(t, http.StatusNoContent, recorder.Code)
+	require.Equal(t, 1, counter.queries)
+}
+
+func TestAnalyticsHandlerCollectAllocationBudget(t *testing.T) {
+	handler, site := newAnalyticsHandlerTestFixture(t, AnalyticsHandlerConfig{
+		MaxBodyBytes:       4096,
+		MaxPropertiesBytes: 1024,
+	}, nil)
+
+	allocations := testing.AllocsPerRun(20, func() {
+		recorder := httptest.NewRecorder()
+		handler.Collect(recorder, newAnalyticsCollectRequest(site.PublicKey, `{"path":"/pricing"}`))
+		if recorder.Code != http.StatusNoContent {
+			t.Fatalf("collect status = %d, want %d", recorder.Code, http.StatusNoContent)
+		}
+	})
+
+	require.LessOrEqual(t, allocations, 625.0)
+}
+
+type publicKeyQueryCounter struct {
+	queries int
+}
+
+func (c *publicKeyQueryCounter) BeforeQuery(ctx context.Context, event *bun.QueryEvent) context.Context {
+	if strings.Contains(event.Query, "public_key") {
+		c.queries++
+	}
+	return ctx
+}
+
+func (*publicKeyQueryCounter) AfterQuery(context.Context, *bun.QueryEvent) {}
+
 type analyticsHandlerTestFixture struct {
 	handler *AnalyticsHandler
 	site    *sitepersistence.Site
 	db      *bun.DB
 }
 
-func newAnalyticsHandlerTestFixture(t *testing.T, handlerConfig AnalyticsHandlerConfig, limiter *RateLimiter) (*AnalyticsHandler, *sitepersistence.Site) {
+func newAnalyticsHandlerTestFixture(t testing.TB, handlerConfig AnalyticsHandlerConfig, limiter *RateLimiter) (*AnalyticsHandler, *sitepersistence.Site) {
 	t.Helper()
 
 	fixture := newAnalyticsHandlerTestFixtureWithResolver(t, handlerConfig, limiter, clientip.MustNewResolver(nil))
@@ -203,7 +248,7 @@ func newAnalyticsHandlerTestFixture(t *testing.T, handlerConfig AnalyticsHandler
 }
 
 func newAnalyticsHandlerTestFixtureWithResolver(
-	t *testing.T,
+	t testing.TB,
 	handlerConfig AnalyticsHandlerConfig,
 	limiter *RateLimiter,
 	resolver *clientip.Resolver,
@@ -253,7 +298,7 @@ func newAnalyticsHandlerTestFixtureWithResolver(
 	}
 }
 
-func setupAnalyticsHandlerTestDB(t *testing.T) *bun.DB {
+func setupAnalyticsHandlerTestDB(t testing.TB) *bun.DB {
 	t.Helper()
 
 	sqldb, err := sql.Open("sqlite", ":memory:")
