@@ -31,14 +31,21 @@ and [architecture decisions](docs/decisions/0003-feature-oriented-go-modular-mon
 
 ## Quick Start
 
-The Docker Compose examples below are meant to be copied directly. They use `SECURE_COOKIES=false` so dashboard auth works on `http://localhost`. Change it to `true` when you serve Lovely Eye behind HTTPS.
+The Docker Compose examples below are meant to be copied directly. They follow the moving `v2`
+major channel, which receives backward-compatible v2 releases but never a future v3 release. Pin an
+exact version such as `v2.0.0`, or the digest published in the GitHub Release, for controlled
+production upgrades. Do not automate production deployments from `latest`; it moves across major
+versions. Read [UPGRADING.md](./UPGRADING.md) before replacing an existing container.
+
+The examples use `SECURE_COOKIES=false` so dashboard auth works on `http://localhost`. Change it to
+`true` when you serve Lovely Eye behind HTTPS.
 
 ### Docker Compose (SQLite)
 
 ```yaml
 services:
   lovely-eye:
-    image: ghcr.io/revotale/lovely-eye:latest
+    image: ghcr.io/revotale/lovely-eye:v2
     ports:
       - "8080:8080"
     environment:
@@ -69,7 +76,7 @@ Open `http://localhost:8080/dashboard`.
 ```yaml
 services:
   lovely-eye:
-    image: ghcr.io/revotale/lovely-eye:latest
+    image: ghcr.io/revotale/lovely-eye:v2
     ports:
       - "8080:8080"
     environment:
@@ -241,7 +248,9 @@ The dashboard uses Biome's recommended rules plus a local source-size check. The
 
 - [ANALYTICS.md](./ANALYTICS.md) - tracking mechanics
 - [PRIVACY.md](./PRIVACY.md) - privacy handling
+- [UPGRADING.md](./UPGRADING.md) - container backup, upgrade, verification, and rollback
 - [dashboard/README.md](./dashboard/README.md) - dashboard development
+- [Release runbook](./docs/releasing.md) - maintainer release contract and checklist
 - [Architecture normalization plan](./docs/plans/architecture-normalization.md) - living intent, decisions, clarifications, and phased roadmap
 - [ADR-0001](./docs/decisions/0001-runtime-base-path.md) - arbitrary runtime base-path support
 - [server/CONTRIBUTING.md](./server/CONTRIBUTING.md) - server development notes
@@ -253,7 +262,7 @@ This example includes all server environment variables. Start with the quick-sta
 ```yaml
 services:
   lovely-eye:
-    image: ghcr.io/revotale/lovely-eye:latest
+    image: ghcr.io/revotale/lovely-eye:v2
     ports:
       - "8080:8080"
     environment:

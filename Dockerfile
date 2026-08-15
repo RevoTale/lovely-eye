@@ -44,6 +44,12 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 # Stage 3: Final minimal image
 FROM alpine:3.24
 
+LABEL org.opencontainers.image.title="Lovely Eye" \
+      org.opencontainers.image.description="Lightweight self-hosted web analytics" \
+      org.opencontainers.image.source="https://github.com/RevoTale/lovely-eye" \
+      org.opencontainers.image.documentation="https://github.com/RevoTale/lovely-eye/blob/main/UPGRADING.md" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later"
+
 WORKDIR /app
 COPY --from=builder /app/server .
 COPY --from=builder /app/static ./static
