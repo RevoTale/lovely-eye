@@ -58,6 +58,7 @@
     "vite": "^8.2.1"
   },
   "overrides": {
+    "@graphql-codegen/client-preset": "6.1.3",
     "@babel/core": "7.29.7",
     "brace-expansion": "5.0.9",
     "immutable": "5.1.9",
