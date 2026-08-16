@@ -11,7 +11,7 @@ JWT-based authentication with HttpOnly cookies.
 
 1. User logs in with username/password
 2. Credentials validated (bcrypt)
-3. Two cookies set: `le_access` and `le_refresh` (HttpOnly)
+3. Two `HttpOnly` cookies are set. Their `le_access_*` and `le_refresh_*` names and `Path` are derived from the normalized runtime `BASE_PATH`, so instances mounted on the same origin remain isolated.
 4. Subsequent requests authenticated via cookies
 5. Access token auto-refreshed when expired
 
@@ -20,9 +20,9 @@ JWT-based authentication with HttpOnly cookies.
 - `HttpOnly` - No JavaScript access (XSS protection)
 - `SameSite=Strict` (production) or `Lax` (development) - CSRF protection
 - `Secure` - HTTPS only in production
-- `Path=/` - Available for all routes
+- `Path=<normalized BASE_PATH>` - Available only within this runtime mount; `/` is used only for a root-mounted instance
 
-No CSRF tokens needed. See [discussion](https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/).
+GraphQL POST requests with a foreign `Origin` are rejected before resolvers run. SameSite cookies remain a second browser-side CSRF mitigation, and auth mutations are rate-limited per trusted client IP.
 
 ## Configuration
 
@@ -37,6 +37,9 @@ No CSRF tokens needed. See [discussion](https://www.reddit.com/r/node/comments/1
 | `ALLOW_REGISTRATION` | `auto` | Post-bootstrap registration policy. Defaults to `false` when both `INITIAL_ADMIN_USERNAME` and `INITIAL_ADMIN_PASSWORD` are set, otherwise defaults to `true`. The first registration is still available whenever no users exist. |
 | `INITIAL_ADMIN_USERNAME` | (empty) | Optional initial admin username. Takes effect only when `INITIAL_ADMIN_PASSWORD` is also set. |
 | `INITIAL_ADMIN_PASSWORD` | (empty) | Optional initial admin password. Takes effect only when `INITIAL_ADMIN_USERNAME` is also set. |
+| `AUTH_RATE_LIMIT_ENABLED` | `true` | Enables per-process rate limiting for `login` and `register` GraphQL mutations. |
+| `AUTH_RATE_LIMIT_ATTEMPTS` | `10` | Maximum auth mutation attempts per trusted client IP during the window. |
+| `AUTH_RATE_LIMIT_WINDOW` | `15m` | Fixed auth rate-limit window. |
 
 `ANALYTICS_IDENTITY_SECRET` is used by analytics tracking, not dashboard auth. It is documented here because it falls back to `JWT_SECRET` when unset.
 

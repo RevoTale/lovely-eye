@@ -1,0 +1,43 @@
+# Auth owns the session bootstrap and credential mutations as one generated contract.
+query Me {
+  me {
+    ...AuthUserDetailsFields
+  }
+  registrationStatus {
+    hasUsers
+    allowRegistration
+  }
+}
+
+mutation Login($input: LoginInput!) {
+  login(input: $input) {
+    user {
+      ...AuthUserFields
+    }
+  }
+}
+
+mutation Register($input: RegisterInput!) {
+  register(input: $input) {
+    user {
+      ...AuthUserFields
+    }
+  }
+}
+
+mutation Logout {
+  logout
+}
+
+fragment AuthUserFields on User {
+  id
+  username
+  role
+}
+
+fragment AuthUserDetailsFields on User {
+  id
+  username
+  role
+  createdAt
+}

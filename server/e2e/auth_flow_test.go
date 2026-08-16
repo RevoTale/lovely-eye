@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -57,9 +58,6 @@ func TestAuthFlowWithCookies(t *testing.T) {
 	}
 
 	require.GreaterOrEqual(t, len(cookies), 2, "Expected at least 2 cookies (access and refresh)")
-
-	// NOTE: No CSRF tokens needed! Modern auth uses HttpOnly + Secure cookies with SameSite
-	// See https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
 
 	t.Log("\nSTEP 3: Page reloads, ME query runs (cookies auto-included)")
 	meQuery := `{"query": "query { me { id username role } }"}`
@@ -122,6 +120,83 @@ func TestAuthFlowWithCookies(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp2.StatusCode, "Authenticated mutation should succeed")
 
 	t.Log("\n✅ All authentication flow tests passed!")
+}
+
+func TestGraphQLRejectsCrossOriginAuthenticatedPost(t *testing.T) {
+	cfg := testConfigWithInitialAdmin("admin", "password123")
+	ts := newTestServerWithConfig(t, cfg)
+
+	jar, err := cookiejar.New(nil)
+	require.NoError(t, err)
+	client := &http.Client{Jar: jar}
+
+	loginMutation := `{
+		"query": "mutation Login($input: LoginInput!) { login(input: $input) { user { id username role } } }",
+		"variables": {"input": {"username": "admin", "password": "password123"}}
+	}`
+	_ = mustGraphQL(t, client, ts.httpServer.URL+"/graphql", loginMutation)
+
+	createSiteMutation := `{
+		"query": "mutation CreateSite($input: CreateSiteInput!) { createSite(input: $input) { id domains } }",
+		"variables": {"input": {"domains": ["evil.example"], "name": "Blocked"}}
+	}`
+	req, err := http.NewRequest(http.MethodPost, ts.httpServer.URL+"/graphql", bytes.NewBufferString(createSiteMutation))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Origin", "https://evil.example")
+
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusForbidden, resp.StatusCode, string(body))
+}
+
+func TestAuthMutationsAreRateLimited(t *testing.T) {
+	cfg := testConfigWithInitialAdmin("admin", "password123")
+	cfg.Auth.RateLimitEnabled = true
+	cfg.Auth.RateLimitAttempts = 1
+	cfg.Auth.RateLimitWindow = time.Minute
+	ts := newTestServerWithConfig(t, cfg)
+
+	loginMutation := `{
+		"query": "mutation Login($input: LoginInput!) { login(input: $input) { user { id username role } } }",
+		"variables": {"input": {"username": "admin", "password": "wrong-password"}}
+	}`
+
+	resp1 := postGraphQLRaw(t, ts.httpServer.Client(), ts.httpServer.URL+"/graphql", loginMutation)
+	require.Equal(t, http.StatusOK, resp1.status, resp1.body)
+	require.Contains(t, resp1.body, `"errors"`)
+
+	resp2 := postGraphQLRaw(t, ts.httpServer.Client(), ts.httpServer.URL+"/graphql", loginMutation)
+	require.Equal(t, http.StatusTooManyRequests, resp2.status, resp2.body)
+}
+
+type rawGraphQLResponse struct {
+	status int
+	body   string
+}
+
+func postGraphQLRaw(t *testing.T, client *http.Client, url, query string) rawGraphQLResponse {
+	t.Helper()
+
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBufferString(query))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer func() {
+		require.NoError(t, resp.Body.Close())
+	}()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	return rawGraphQLResponse{status: resp.StatusCode, body: string(body)}
 }
 
 func mustGraphQL(t *testing.T, client *http.Client, url, query string) string {

@@ -41,11 +41,31 @@
 - The dedicated identity secret helps reduce the impact of database-only leaks by making visitor IDs harder to reproduce
 
 ## Code structure
+
 - [Migrations](./migrations/README.md)
 - [E2E testing](./e2e/README.md)
-- [Packages](./pkg/README.md)
-- [App-related logic](./internal/README.md)
+- Feature behavior lives under `internal/<feature>`; database rows and Bun queries stay in that
+  feature's `persistence` package.
+- HTTP adapters live under `internal/transport/http`; configuration and database lifecycle live
+  under `internal/platform`; `internal/app` is the explicit composition root.
+
+## GraphQL errors
+
+Resolver failures use GraphQL-native errors with a stable machine-readable `extensions.code`:
+
+- `BAD_USER_INPUT` — invalid credentials, IDs, ranges, filters, or feature input.
+- `UNAUTHENTICATED` — the operation requires a valid dashboard session.
+- `FORBIDDEN` — the user is authenticated but policy or ownership denies the operation.
+- `NOT_FOUND` — the requested resource does not exist.
+- `CONFLICT` — a uniqueness or current-state conflict prevents the operation.
+- `INTERNAL_SERVER_ERROR` — an unexpected failure; internal details are logged and never returned.
+
+Add feature sentinel errors to `internal/graph/errors.go` when they cross the GraphQL boundary. UI
+logic must branch on `extensions.code`, not on human-readable message text.
 
 ## Code Generation
 
-- Run `task generate` after modifying `schema.graphqls` or e2e operations to regenerate GraphQL code
+- Keep feature SDL in `schema/<feature>.graphqls` and its handwritten transport adapter in
+  `internal/graph/<feature>.resolvers.go`; generated gqlgen executor/model output stays isolated.
+- Run `task generate` after modifying `schema/*.graphqls` or e2e operations to regenerate GraphQL code.
+  A new resolver stub must be adopted as handwritten code before the freshness gate passes.

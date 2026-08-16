@@ -1,19 +1,18 @@
 query Dashboard(
-  $siteId: ID!,
+  $siteId: ID!
   # @genqlient(pointer: true)
-  $dateRange: DateRangeInput,
+  $dateRange: DateRangeInput
   # @genqlient(pointer: true, omitempty: true)
-  $filter: FilterInput,
-  $topPagesPaging: PagingInput!,
-  $referrersPaging: PagingInput!,
-  $browsersPaging: PagingInput!,
-  $devicesPaging: PagingInput!,
-  $osPaging: PagingInput!,
-  $countriesPaging: PagingInput!,
+  $filter: FilterInput
+  $topPagesPaging: PagingInput!
+  $referrersPaging: PagingInput!
+  $browsersPaging: PagingInput!
+  $devicesPaging: PagingInput!
+  $osPaging: PagingInput!
+  $countriesPaging: PagingInput!
   # @genqlient(pointer: true)
-  $dailyStatsBucket: TimeBucket,
-  # @genqlient(pointer: true)
-  $dailyStatsLimit: Int,
+  $dailyStatsBucket: TimeBucket
+  $dailyStatsPaging: PagingInput!
 ) {
   dashboard(siteId: $siteId, dateRange: $dateRange, filter: $filter) {
     visitors
@@ -67,7 +66,7 @@ query Dashboard(
         visitors
       }
     }
-    dailyStats(bucket: $dailyStatsBucket, limit: $dailyStatsLimit) {
+    dailyStats(bucket: $dailyStatsBucket, paging: $dailyStatsPaging) {
       date
       visitors
       pageViews
@@ -85,15 +84,12 @@ query Realtime($siteId: ID!) {
 
 # @genqlient
 query Events(
-  $siteId: ID!,
+  $siteId: ID!
   # @genqlient(pointer: true)
-  $dateRange: DateRangeInput,
-  # @genqlient(pointer: true)
-  $limit: Int,
-  # @genqlient(pointer: true)
-  $offset: Int,
+  $dateRange: DateRangeInput
+  $paging: PagingInput!
 ) {
-  events(siteId: $siteId, dateRange: $dateRange, limit: $limit, offset: $offset) {
+  events(siteId: $siteId, dateRange: $dateRange, paging: $paging) {
     events {
       id
       name
@@ -105,5 +101,18 @@ query Events(
       createdAt
     }
     total
+  }
+}
+
+query EventCounts($siteId: ID!, $paging: PagingInput!) {
+  eventCounts(siteId: $siteId, paging: $paging) {
+    total
+    items {
+      count
+      event {
+        id
+        name
+      }
+    }
   }
 }

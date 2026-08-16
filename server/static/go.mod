@@ -1,7 +1,7 @@
 module github.com/lovely-eye/static
 
-go 1.26
+go 1.26.6
 
-require github.com/evanw/esbuild v0.28.0
+require github.com/evanw/esbuild v0.28.2
 
-require golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
+require golang.org/x/sys v0.47.0 // indirect

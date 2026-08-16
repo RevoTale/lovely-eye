@@ -16,7 +16,8 @@
 
 ## Code Generation
 
-- Run `bun run codegen` after modifying GraphQL operations in `src/gql/`
+- Run `bun run codegen` after modifying GraphQL operations. Generated artifacts live in
+  `src/shared/api/generated/` and must not be edited by hand.
 
 ## Commands
 

@@ -1,0 +1,65 @@
+type Site {
+  id: ID!
+  """
+  All tracked domains (includes primary)
+  """
+  domains: [String!]!
+  name: String!
+  """
+  Used in tracking script
+  """
+  publicKey: String!
+  """
+  Enable country tracking (requires GeoIP database)
+  """
+  trackCountry: Boolean!
+  """
+  IP addresses blocked from tracking
+  """
+  blockedIPs: [String!]!
+  """
+  ISO country codes blocked from tracking
+  """
+  blockedCountries: [String!]!
+  createdAt: Time!
+}
+
+input CreateSiteInput {
+  domains: [String!]!
+  name: String!
+}
+
+input UpdateSiteInput {
+  name: String!
+  trackCountry: Boolean
+  """
+  Full list of tracked domains (includes primary)
+  """
+  domains: [String!]
+  """
+  Full list of blocked IPs
+  """
+  blockedIPs: [String!]
+  """
+  Full list of blocked country codes
+  """
+  blockedCountries: [String!]
+}
+
+extend type Query {
+  sites(paging: PagingInput!): [Site!]!
+  site(id: ID!): Site
+}
+
+extend type Mutation {
+  createSite(input: CreateSiteInput!): Site!
+  updateSite(id: ID!, input: UpdateSiteInput!): Site!
+  """
+  Deletes site and all analytics data
+  """
+  deleteSite(id: ID!): Boolean!
+  """
+  Invalidates old tracking scripts
+  """
+  regenerateSiteKey(id: ID!): Site!
+}

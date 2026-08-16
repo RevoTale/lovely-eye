@@ -23,13 +23,7 @@ type Site struct {
 
 type AuthPayload struct {
 	User *User `json:"user"`
-	// Tokens are set as HttpOnly cookies, not returned in response
-	// See: https://www.reddit.com/r/node/comments/1im7yj0/comment/mc0ylfd/
-}
-
-type TokenPayload struct {
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
+	// Tokens are set as HttpOnly cookies, not returned in response.
 }
 
 type PageStats struct {

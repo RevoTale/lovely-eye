@@ -11,14 +11,15 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
 	operations "github.com/lovely-eye/server/e2e/generated"
-	"github.com/lovely-eye/server/internal/config"
-	"github.com/lovely-eye/server/internal/server"
+	"github.com/lovely-eye/server/internal/app"
+	"github.com/lovely-eye/server/internal/platform/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,7 +45,8 @@ func testConfig() config.Config {
 			CookieDomain:      "",
 		},
 		Analytics: config.AnalyticsConfig{
-			IdentitySecret: strings.Repeat("a", 32),
+			IdentitySecret:    strings.Repeat("a", 32),
+			TrustedProxyCIDRs: []string{"127.0.0.1/32"},
 		},
 		// Mock tracker.js for testing (avoid file I/O)
 		TrackerJS: []byte(`console.log("mock tracker")`),
@@ -52,28 +54,28 @@ func testConfig() config.Config {
 }
 
 type testServer struct {
-	*server.Server
+	*app.App
 	httpServer *httptest.Server
 }
 
 func newTestServer(t *testing.T) *testServer {
 	t.Helper()
 
-	srv, err := server.New(testConfig())
+	application, err := app.New(context.Background(), testConfig())
 	require.NoError(t, err, "failed to create server")
 
-	httpServer := newTestHTTPServer(srv.Handler)
+	httpServer := newTestHTTPServer(application.Handler)
 
 	t.Cleanup(func() {
 		httpServer.Close()
-		err := srv.Close()
+		err := application.Close()
 		if nil != err {
 			slog.Error("Server close failed", "error", err)
 		}
 	})
 
 	return &testServer{
-		Server:     srv,
+		App:        application,
 		httpServer: httpServer,
 	}
 }
@@ -107,14 +109,16 @@ func postJSONWithOrigin(client *http.Client, url string, body []byte, origin str
 	return resp, nil
 }
 
+func collectURL(baseURL, siteKey string) string {
+	return baseURL + "/api/collect?site_key=" + url.QueryEscape(siteKey)
+}
+
 func (ts *testServer) graphqlClient() graphql.Client {
 	return graphql.NewClient(ts.httpServer.URL+"/graphql", ts.httpServer.Client())
 }
 
 // authenticatedClient creates a client with a cookie jar and performs login
 // Returns the authenticated client that will use cookies for subsequent requests
-//
-//nolint:unparam
 func (ts *testServer) authenticatedClient(ctx context.Context, t *testing.T, username, password string) graphql.Client {
 	t.Helper()
 	jar, err := cookiejar.New(nil)
@@ -222,16 +226,14 @@ func TestStatsCollection(t *testing.T) {
 
 	t.Run("collect page view", func(t *testing.T) {
 		payload := map[string]any{
-			"site_key":     siteKey,
-			"path":         "/home",
-			"referrer":     "https://google.com",
-			"screen_width": 1920,
+			"path":     "/home",
+			"referrer": "https://google.com",
 		}
 		body, _ := json.Marshal(payload)
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://example.com",
 		)
@@ -247,7 +249,6 @@ func TestStatsCollection(t *testing.T) {
 
 	t.Run("collect custom event", func(t *testing.T) {
 		payload := map[string]any{
-			"site_key":   siteKey,
 			"name":       "button_click",
 			"path":       "/home",
 			"properties": `{"button": "signup"}`,
@@ -256,7 +257,7 @@ func TestStatsCollection(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://example.com",
 		)
@@ -313,13 +314,13 @@ func TestDashboardAuthorization(t *testing.T) {
 	siteID := siteResp.CreateSite.Id
 
 	t.Run("authenticated user can view dashboard", func(t *testing.T) {
-		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		resp, err := operations.Dashboard(ctx, authedClient, siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, defaultPaging)
 		require.NoError(t, err)
 		require.Equal(t, 0, resp.Dashboard.Visitors)
 	})
 
 	t.Run("unauthenticated user cannot view dashboard", func(t *testing.T) {
-		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, nil)
+		_, err := operations.Dashboard(ctx, ts.graphqlClient(), siteID, nil, nil, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, defaultPaging)
 		require.Error(t, err)
 	})
 
@@ -431,7 +432,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("valid string:string properties accepted", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "purchase",
 			"path":       "/checkout",
 			"properties": `{"product_id": "123", "price": "29.99", "currency": "USD"}`,
@@ -440,7 +440,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -456,7 +456,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("empty properties accepted", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "page_scroll",
 			"path":       "/home",
 			"properties": "",
@@ -465,7 +464,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -481,7 +480,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("invalid JSON properties rejected", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `{invalid json}`,
@@ -490,7 +488,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -506,7 +504,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("malformed JSON properties rejected", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `{"key": "value"`,
@@ -515,7 +512,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -531,7 +528,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("JSON array rejected (must be object)", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `["item1", "item2"]`,
@@ -540,7 +536,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -556,7 +552,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("JSON string rejected (must be object)", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `"just a string"`,
@@ -565,7 +560,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -581,7 +576,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("JSON number rejected (must be object)", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `123`,
@@ -590,7 +584,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -606,7 +600,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("non-string values rejected (must be string:string)", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `{"key": 123}`,
@@ -615,7 +608,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -631,7 +624,6 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 	t.Run("nested objects rejected (must be string:string)", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "click",
 			"path":       "/page",
 			"properties": `{"key": {"nested": "value"}}`,
@@ -640,7 +632,7 @@ func TestEventPropertiesValidation(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-test.com",
 		)
@@ -718,7 +710,6 @@ func TestEventPropertiesStored(t *testing.T) {
 
 		properties := `{"button": "signup", "variant": "blue", "position": "1"}`
 		payload := map[string]interface{}{
-			"site_key":   siteKey,
 			"name":       "button_click",
 			"path":       "/landing",
 			"properties": properties,
@@ -727,7 +718,7 @@ func TestEventPropertiesStored(t *testing.T) {
 
 		resp, err := postJSONWithOrigin(
 			ts.httpServer.Client(),
-			ts.httpServer.URL+"/api/collect",
+			collectURL(ts.httpServer.URL, siteKey),
 			body,
 			"https://events-storage-test.com",
 		)
@@ -740,7 +731,7 @@ func TestEventPropertiesStored(t *testing.T) {
 		}()
 		require.Equal(t, http.StatusNoContent, resp.StatusCode)
 
-		eventsResp, err := operations.Events(ctx, client, siteID, nil, nil, nil)
+		eventsResp, err := operations.Events(ctx, client, siteID, nil, defaultPaging)
 		require.NoError(t, err)
 		require.NotEmpty(t, eventsResp.Events.Events, "should have at least one event")
 
@@ -778,7 +769,6 @@ func TestEventPropertiesStored(t *testing.T) {
 
 		for _, ev := range events {
 			payload := map[string]interface{}{
-				"site_key":   siteKey,
 				"name":       ev.name,
 				"path":       ev.path,
 				"properties": ev.properties,
@@ -787,7 +777,7 @@ func TestEventPropertiesStored(t *testing.T) {
 
 			resp, err := postJSONWithOrigin(
 				ts.httpServer.Client(),
-				ts.httpServer.URL+"/api/collect",
+				collectURL(ts.httpServer.URL, siteKey),
 				body,
 				"https://events-storage-test.com",
 			)
@@ -798,7 +788,7 @@ func TestEventPropertiesStored(t *testing.T) {
 			require.Equal(t, http.StatusNoContent, resp.StatusCode)
 		}
 
-		eventsResp, err := operations.Events(ctx, client, siteID, nil, nil, nil)
+		eventsResp, err := operations.Events(ctx, client, siteID, nil, defaultPaging)
 		require.NoError(t, err)
 
 		for _, expected := range events {
@@ -814,15 +804,20 @@ func TestEventPropertiesStored(t *testing.T) {
 	})
 
 	t.Run("events pagination works", func(t *testing.T) {
-		limit := 2
-		eventsResp, err := operations.Events(ctx, client, siteID, nil, &limit, nil)
+		paging := operations.PagingInput{Limit: 2, Offset: 0}
+		eventsResp, err := operations.Events(ctx, client, siteID, nil, paging)
 		require.NoError(t, err)
 		require.LessOrEqual(t, len(eventsResp.Events.Events), 2, "should return at most 2 events")
 		require.GreaterOrEqual(t, eventsResp.Events.Total, 4, "total should include all events")
+
+		countsResp, err := operations.EventCounts(ctx, client, siteID, paging)
+		require.NoError(t, err)
+		require.LessOrEqual(t, len(countsResp.EventCounts.Items), 2)
+		require.GreaterOrEqual(t, countsResp.EventCounts.Total, len(countsResp.EventCounts.Items))
 	})
 
 	t.Run("unauthenticated user cannot access events", func(t *testing.T) {
-		_, err := operations.Events(ctx, ts.graphqlClient(), siteID, nil, nil, nil)
+		_, err := operations.Events(ctx, ts.graphqlClient(), siteID, nil, defaultPaging)
 		require.Error(t, err)
 	})
 }

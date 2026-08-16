@@ -46,15 +46,16 @@ func newJWTProvider(secret string, accessExpiry, refreshExpiry time.Duration) *j
 }
 
 func (p *jwtProvider) generateAccessToken(user *User) (string, error) {
+	now := time.Now()
 	claims := &jwtClaims{
 		UserID:    user.ID,
 		Username:  user.Username,
 		Role:      user.Role,
 		TokenType: accessTokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(p.accessExpiry)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(now.Add(p.accessExpiry)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    p.issuer,
 			Subject:   user.Username,
 		},
@@ -69,15 +70,16 @@ func (p *jwtProvider) generateAccessToken(user *User) (string, error) {
 }
 
 func (p *jwtProvider) generateRefreshToken(user *User) (string, error) {
+	now := time.Now()
 	claims := &jwtClaims{
 		UserID:    user.ID,
 		Username:  user.Username,
 		Role:      user.Role,
 		TokenType: refreshTokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(p.refreshExpiry)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			NotBefore: jwt.NewNumericDate(time.Now()),
+			ExpiresAt: jwt.NewNumericDate(now.Add(p.refreshExpiry)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    p.issuer,
 			Subject:   user.Username,
 		},
@@ -92,12 +94,17 @@ func (p *jwtProvider) generateRefreshToken(user *User) (string, error) {
 }
 
 func (p *jwtProvider) validateToken(tokenString string) (*jwtClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &jwtClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, ErrInvalidToken
-		}
-		return p.secret, nil
-	})
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		&jwtClaims{},
+		func(_ *jwt.Token) (interface{}, error) {
+			return p.secret, nil
+		},
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithIssuer(p.issuer),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+	)
 
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {

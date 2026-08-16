@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.6/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -13,12 +13,18 @@
       "dashboard/components.json",
       "dashboard/index.html",
       "dashboard/package.json",
-      "dashboard/src",
-      "dashboard/tailwind.config.ts",
+      "dashboard/playwright.config.ts",
+      "dashboard/scripts/check-boundaries.ts",
+      "dashboard/scripts/report-bundle-size.ts",
+      "dashboard/src/**",
       "dashboard/tsconfig.json",
+      "dashboard/tsconfig.node.json",
+      "dashboard/tsconfig.tests.json",
+      "dashboard/tsconfig.unit.json",
+      "dashboard/tests/**",
       "dashboard/vite.config.ts",
-      "server/e2e/operations",
-      "server/schema.graphqls",
+      "server/e2e/operations/**",
+      "server/schema/**",
       "server/static/tracker.ts",
       "server/static/tsconfig.json"
     ]
@@ -49,6 +55,11 @@
       "allowComments": true
     }
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "assist": {
     "enabled": true,
     "actions": {
@@ -59,8 +70,11 @@
   },
   "linter": {
     "enabled": true,
+    "domains": {
+      "react": "recommended"
+    },
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "complexity": {
         "noArguments": "error",
         "noExcessiveCognitiveComplexity": {
@@ -98,7 +112,30 @@
   },
   "overrides": [
     {
-      "includes": ["dashboard/src/gql", "dashboard/src/routeTree.gen.ts"],
+      "includes": ["dashboard/src/**/*.ts", "dashboard/src/**/*.tsx", "server/static/**/*.ts"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveLinesPerFunction": {
+              "level": "error",
+              "options": {
+                "maxLines": 160
+              }
+            }
+          },
+          "style": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": {
+                "maxLines": 220
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["dashboard/src/shared/api/generated/**", "dashboard/src/app/route-tree.gen.ts"],
       "assist": {
         "enabled": false
       },
@@ -110,11 +147,21 @@
       }
     },
     {
-      "includes": ["dashboard/src/router.tsx", "dashboard/src/routes"],
+      "includes": ["dashboard/src/app/router.tsx", "dashboard/src/app/routes/**"],
       "linter": {
         "rules": {
           "style": {
             "useThrowOnlyError": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["dashboard/src/shared/ui/**"],
+      "linter": {
+        "rules": {
+          "performance": {
+            "noNamespaceImport": "off"
           }
         }
       }

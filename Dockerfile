@@ -1,5 +1,5 @@
 # Stage 1: Build the React dashboard
-FROM oven/bun:1-alpine AS dashboard-builder
+FROM oven/bun:1.3.14-alpine AS dashboard-builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY ./dashboard .
 RUN bun run build
 
 # Stage 2: Build the Go server
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26.6-alpine AS builder
 
 WORKDIR /app
 COPY ./server/go.mod ./server/go.sum ./
@@ -42,7 +42,13 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o load-example-data ./cmd/load-example-data
 
 # Stage 3: Final minimal image
-FROM alpine
+FROM alpine:3.24
+
+LABEL org.opencontainers.image.title="Lovely Eye" \
+      org.opencontainers.image.description="Lightweight self-hosted web analytics" \
+      org.opencontainers.image.source="https://github.com/RevoTale/lovely-eye" \
+      org.opencontainers.image.documentation="https://github.com/RevoTale/lovely-eye/blob/main/UPGRADING.md" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later"
 
 WORKDIR /app
 COPY --from=builder /app/server .

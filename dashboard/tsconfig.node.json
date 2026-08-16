@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2024"],
+    "types": ["node"]
+  },
+  "include": [
+    "codegen.ts",
+    "vite.config.ts",
+    "scripts/check-boundaries.ts",
+    "scripts/report-bundle-size.ts"
+  ]
+}

@@ -1,10 +1,10 @@
 import type { CodegenConfig } from '@graphql-codegen/cli';
 
 const config: CodegenConfig = {
-  schema: '../server/schema.graphqls',
+  schema: '../server/schema/*.graphqls',
   documents: 'src/**/*.graphql',
   generates: {
-    './src/gql/': {
+    './src/shared/api/generated/': {
       preset: 'client',
       presetConfig: {
         fragmentMasking: true,

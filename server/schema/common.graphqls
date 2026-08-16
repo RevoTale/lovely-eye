@@ -1,0 +1,11 @@
+scalar Time
+
+input PagingInput {
+  limit: Int!
+  offset: Int!
+}
+
+input DateRangeInput {
+  from: Time
+  to: Time
+}

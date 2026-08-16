@@ -1,5 +1,5 @@
 schema:
-  - schema.graphqls
+  - schema/*.graphqls
 
 exec:
   filename: internal/graph/generated.go
@@ -14,6 +14,9 @@ resolver:
   dir: internal/graph
   package: graph
   filename_template: "{name}.resolvers.go"
+  # Feature resolver adapters are handwritten and must remain visible to lint.
+  # Schema changes still fail generated interface compilation when an adapter is stale.
+  preserve_resolver: true
 
 autobind:
   - github.com/lovely-eye/server/internal/graph/model

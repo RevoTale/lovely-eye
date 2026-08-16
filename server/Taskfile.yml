@@ -16,20 +16,40 @@ tasks:
       - "{{.GO}} build -o bin/server ./cmd/server"
       - "{{.GO}} build -o bin/migrate ./cmd/migrate"
 
+  build-check:
+    desc: Compile every Go package without writing binaries to the workspace
+    cmds:
+      - "{{.GO}} build ./..."
+
   run:
     desc: Run the server
     cmds:
       - "{{.GO}} run ./cmd/server"
+
+  lint:
+    desc: Run Go lint checks
+    env:
+      GOCACHE: /tmp/go-build-cache
+      GOLANGCI_LINT_CACHE: /tmp/golangci-lint-cache
+    cmds:
+      - golangci-lint run ./...
+
+  boundaries:
+    desc: Check Go package ownership boundaries
+    cmds:
+      - bash ../scripts/check-go-boundaries.sh
 
   test:
     desc: Run server tests, static typecheck, and lint
     env:
       DASHBOARD_PATH: "{{.DASHBOARD_PATH}}"
       GOCACHE: /tmp/go-build-cache
+      GOLANGCI_LINT_CACHE: /tmp/golangci-lint-cache
     cmds:
       - "{{.GO}} test ./... --count=2"
       - task: static:typecheck
-      - golangci-lint run
+      - task: boundaries
+      - task: lint
 
   clean:
     desc: Clean build output and local data
@@ -40,9 +60,14 @@ tasks:
   generate:
     desc: Generate Go code and static tracker asset
     cmds:
-      - "{{.GO}} run github.com/99designs/gqlgen generate"
+      - "{{.GO}} tool gqlgen generate"
       - "{{.GO}} generate ./e2e"
       - task: static:build
+
+  vuln:
+    desc: Scan reachable Go code with the module-pinned vulnerability scanner
+    cmds:
+      - "{{.GO}} tool govulncheck ./..."
 
   migrate-init:
     desc: Initialize migration tracking tables

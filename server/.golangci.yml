@@ -10,7 +10,7 @@ linters:
     - nilnil
     - bodyclose
     - rowserrcheck
-    - sqlclosecheck 
+    - sqlclosecheck
     - gosec
     - unparam
     - unused
@@ -19,3 +19,61 @@ linters:
     - forcetypeassert
     - contextcheck
     - loggercheck
+    - funlen
+    - gocognit
+    - misspell
+    - noctx
+    - revive
+    - unconvert
+  settings:
+    funlen:
+      lines: 120
+      statements: 80
+      ignore-comments: true
+    gocognit:
+      min-complexity: 35
+    revive:
+      severity: error
+      enable-default-rules: true
+      rules:
+        - name: file-length-limit
+          arguments:
+            - max: 700
+              skip-comments: true
+              skip-blank-lines: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - forcetypeassert
+          - funlen
+          - gocognit
+          - noctx
+          - revive
+          - unparam
+      - path: ^(e2e/generated|internal/graph/generated\.go|internal/graph/model/models_gen\.go)
+        linters:
+          - funlen
+          - gocognit
+          - revive
+
+run:
+  timeout: 5m
+  relative-path-mode: gomod
+  modules-download-mode: readonly
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax

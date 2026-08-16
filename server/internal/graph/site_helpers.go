@@ -4,10 +4,10 @@ import (
 	"strconv"
 
 	"github.com/lovely-eye/server/internal/graph/model"
-	"github.com/lovely-eye/server/internal/models"
+	"github.com/lovely-eye/server/internal/site"
 )
 
-func buildGraphQLSite(site *models.Site) *model.Site {
+func buildGraphQLSite(site *site.Site) *model.Site {
 	return &model.Site{
 		ID:               strconv.FormatInt(site.ID, 10),
 		Domains:          siteDomains(site),
@@ -20,7 +20,7 @@ func buildGraphQLSite(site *models.Site) *model.Site {
 	}
 }
 
-func siteDomains(site *models.Site) []string {
+func siteDomains(site *site.Site) []string {
 	domains := make([]string, 0, len(site.Domains))
 	for _, domain := range site.Domains {
 		if domain != nil && domain.Domain != "" {
@@ -30,7 +30,7 @@ func siteDomains(site *models.Site) []string {
 	return domains
 }
 
-func siteBlockedIPs(site *models.Site) []string {
+func siteBlockedIPs(site *site.Site) []string {
 	ips := make([]string, 0, len(site.BlockedIPs))
 	for _, entry := range site.BlockedIPs {
 		if entry != nil && entry.IP != "" {
@@ -40,7 +40,7 @@ func siteBlockedIPs(site *models.Site) []string {
 	return ips
 }
 
-func siteBlockedCountries(site *models.Site) []string {
+func siteBlockedCountries(site *site.Site) []string {
 	countries := make([]string, 0, len(site.BlockedCountries))
 	for _, entry := range site.BlockedCountries {
 		if entry != nil && entry.CountryCode != "" {

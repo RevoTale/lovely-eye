@@ -1,0 +1,13 @@
+export const COUNTRY_PAGE_OFFSET = 0;
+export const COUNTRY_PAGE_SIZE = 100;
+export const EMPTY_COUNT = 0;
+export const EMPTY_STRING = '';
+export const FIRST_INDEX = 0;
+export const ID_OFFSET = 1;
+export const IPV4_MAX_VALUE = 255;
+export const IPV4_PARTS_COUNT = 4;
+export const MAX_COUNTRIES = 250;
+export const MAX_COUNTRY_MATCHES = 8;
+export const MAX_IPS = 500;
+export const SEARCH_MIN_LENGTH = 2;
+export const SEARCH_SINGLE_MATCH_COUNT = 1;

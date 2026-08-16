@@ -9,8 +9,12 @@ permissions:
   pull-requests: write
   packages: write
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   release-please:
     runs-on: ubuntu-latest
+    needs: test
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
@@ -20,19 +24,20 @@ jobs:
       # - uses: google-github-actions/release-please-action@v4
         id: release
         with:
-          release-type: simple
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-
-  test:
-    uses: ./.github/workflows/test.yml
 
   build-and-push-docker:
     runs-on: ubuntu-latest
-    needs: [release-please, test]
+    needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
+    concurrency:
+      group: lovely-eye-container-release
+      cancel-in-progress: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Build and push Docker image
         id: push
         uses: revotale/docker-multi-arch-release-action@v1.4.0
@@ -42,6 +47,38 @@ jobs:
           image-name: ${{ github.repository }}
           password: ${{ secrets.GITHUB_TOKEN }}
           tags: |
-            ${{ needs.release-please.outputs.tag_name }}
-            latest
+            type=semver,pattern={{raw}},value=${{ needs.release-please.outputs.tag_name }}
+            type=semver,pattern=v{{major}}.{{minor}},value=${{ needs.release-please.outputs.tag_name }}
+            type=semver,pattern=v{{major}},value=${{ needs.release-please.outputs.tag_name }}
+            type=raw,value=latest
           platforms: linux/amd64,linux/arm64
+      - name: Publish release notes and immutable image digest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE: ghcr.io/revotale/lovely-eye
+          RELEASE_TAG: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          image_ref="${IMAGE}:${RELEASE_TAG}"
+          digest="$(docker buildx imagetools inspect "${image_ref}" | awk '/^Digest:/ { print $2; exit }')"
+          if [[ -z "${digest}" ]]; then
+            echo "Could not resolve the published digest for ${image_ref}" >&2
+            exit 1
+          fi
+
+          notes_path="docs/releases/${RELEASE_TAG}.md"
+          notes_file="${RUNNER_TEMP}/release-notes.md"
+          if [[ -f "${notes_path}" ]]; then
+            cp "${notes_path}" "${notes_file}"
+          else
+            gh release view "${RELEASE_TAG}" --json body --jq '.body' > "${notes_file}"
+          fi
+
+          {
+            printf '\n## Container image\n\n'
+            printf -- '- Tag: `%s`\n' "${image_ref}"
+            printf -- '- Immutable digest: `%s@%s`\n' "${IMAGE}" "${digest}"
+          } >> "${notes_file}"
+
+          gh release edit "${RELEASE_TAG}" --draft=false --latest --notes-file "${notes_file}"

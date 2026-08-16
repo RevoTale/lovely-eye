@@ -1,0 +1,100 @@
+type Event {
+  id: ID!
+  name: String!
+  path: String!
+  definition: EventDefinition
+  """
+  Key-value properties associated with the event
+  """
+  properties: [EventProperty!]!
+  createdAt: Time!
+}
+
+type EventProperty {
+  key: String!
+  value: String!
+}
+
+type EventsResult {
+  events: [Event!]!
+  total: Int!
+}
+
+type EventCount {
+  event: Event!
+  count: Int!
+}
+
+type EventCountsResult {
+  items: [EventCount!]!
+  total: Int!
+}
+
+enum EventFieldType {
+  STRING
+  INT
+  BOOLEAN
+}
+
+enum EventType {
+  PAGE_VIEW
+  PREDEFINED
+}
+
+type EventDefinitionField {
+  id: ID!
+  key: String!
+  type: EventFieldType!
+  required: Boolean!
+  maxLength: Int!
+}
+
+type EventDefinition {
+  id: ID!
+  name: String!
+  fields: [EventDefinitionField!]!
+  createdAt: Time!
+  updatedAt: Time!
+}
+
+input EventDefinitionFieldInput {
+  key: String!
+  type: EventFieldType!
+  required: Boolean!
+  maxLength: Int
+}
+
+input EventDefinitionInput {
+  name: String!
+  fields: [EventDefinitionFieldInput!]!
+}
+
+extend type Query {
+  """
+  Get events for a site with pagination
+  """
+  events(
+    siteId: ID!
+    dateRange: DateRangeInput
+    filter: FilterInput
+    paging: PagingInput!
+  ): EventsResult!
+  """
+  Get event counts aggregated by event with the most recent occurrence
+  """
+  eventCounts(
+    siteId: ID!
+    dateRange: DateRangeInput
+    filter: FilterInput
+    paging: PagingInput!
+  ): EventCountsResult!
+  """
+  Get event definitions for a site
+  """
+  eventDefinitions(siteId: ID!, paging: PagingInput!): [EventDefinition!]!
+}
+
+extend type Mutation {
+  upsertEventDefinition(siteId: ID!, input: EventDefinitionInput!): EventDefinition!
+  deleteEventDefinition(siteId: ID!, name: String!): Boolean!
+}

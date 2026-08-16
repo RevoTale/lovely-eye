@@ -20,10 +20,9 @@
       Runtime configuration - loaded before app initialization.
       This file is NOT bundled by Vite (intentionally non-module) and is
       replaced/modified at container startup to inject environment-specific values.
-      The Vite warning about type="module" is expected and can be safely ignored.
       {{BASE_PATH}} placeholder is replaced by Go server at runtime.
     -->
-    <script src="{{BASE_PATH}}/config.js"></script>
+    <!-- runtime-config -->
   </head>
   <body>
     <div id="root"></div>
