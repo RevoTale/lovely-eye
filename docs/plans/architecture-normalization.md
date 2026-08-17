@@ -236,13 +236,13 @@ registries before changing either lockfile. Retained frontend packages were upda
 stable releases, including Apollo Client `4.2.12`, TanStack Router `1.170.29` and plugin `1.168.32`,
 Lucide `1.31.0`, Biome `2.5.8`, GraphQL Codegen client preset `6.1.3`, shadcn `4.18.0`, and Vite
 `8.2.1`. `shadcn diff` reports no component-source updates. The client-preset regeneration removes
-its obsolete partial-fragment overload without requiring an application compatibility layer. Keep
-that preset globally overridden to `6.1.3`: the upgraded Bun lockfile otherwise retained the CLI's
-older nested `6.1.1`, making generated output depend on the installed package layout.
+its obsolete partial-fragment overload without requiring an application compatibility layer. A
+fresh lockfile regeneration resolves both the direct `^6.1.3` requirement and the CLI's `^6.1.0`
+requirement to one `6.1.3` package without an override.
 
-The full Bun audit exposed newly patched build-tool edges. Same-major overrides pin fixed
-`@babel/core`, `js-yaml`, and `nanoid` releases; the existing security overrides were refreshed as
-well. One dev-only `micromatch -> picomatch@2.3.1` advisory remains documented in
+The full Bun audit exposed newly patched build-tool edges. The frozen lockfile now resolves their
+patched versions through the upstream-compatible ranges without project-level overrides. One
+dev-only `micromatch -> picomatch@2.3.1` advisory remains documented in
 [`docs/security.md`](../security.md): Bun 1.3.14 does not apply its documented scoped override forms,
 a direct pin does not replace the nested edge, and a global override would incorrectly force v2 on
 v4 consumers. Production dependencies remain clean.
@@ -572,6 +572,7 @@ Add dated entries only after verification.
 | 2026-08-15 | Major-release and container-upgrade handoff | Audited the Release Please and GHCR flow against SemVer, GitHub Release, Docker tag/digest, Docker Metadata Action, and OCI annotation guidance; added v2 consumer release notes, a permanent backup/upgrade/rollback guide, a maintainer release runbook, controlled SemVer container channels, OCI image metadata, automatic publication of the multi-architecture image digest, and a bounded non-secret Docker build context | Passed; Release Please configuration validates against the official schema, actionlint exits zero, Biome checks all 199 files, `task check` passes, and the production image builds for the supported target with a 1.91 MB context and the expected OCI labels. An isolated v1.7.0 → v2 schema → v1.7.0 SQLite exercise proves the documented code-only rollback contract. The GitHub Release stays draft until CI passes and the exact multi-architecture image plus digest are available. No runtime, database, tracker, API, or base-path implementation changed. |
 | 2026-08-15 | Go collection RAM and allocation optimization | Profiled the production SQLite container, Go GC, collect handler, site persistence, and rate limiter under idle and repeatable load; removed the duplicate site graph lookup across the HTTP/analytics boundary; retained live configuration reads while replacing per-request Bun relation builders with narrow raw queries; added a collect benchmark, allocation/query guards, relation coverage, a profiling runbook, and Go test-binary Docker exclusion | Passed; ten-sample warm collect results moved from 198–206 us/op, 95.8–96.0 KiB/op, and 900 allocs/op to 120–124 us/op, 45.2–45.3 KiB/op, and 565 allocs/op. On identical cloned SQLite data and 2,000 requests, GC cycles fell from 91 to 39 and VmHWM from 23.5 to 21.5 MiB while elapsed time remained 3,044 ms and cgroup memory remained about 28 MiB. A real PostgreSQL 18.6 image accepted the optimized collect path. The value-map limiter experiment was reverted after worsening rotating-key memory from 138 to 220 B/op; hard limiter capacity remains a separately documented traffic-policy clarification rather than an assumed behavior change. |
 | 2026-08-15 | Deterministic frontend GraphQL generation | Traced the CI-only stale `fragment-masking.ts` result to coexisting client preset `6.1.3` and CLI-nested `6.1.1` entries introduced by the dependency refresh; globally overrode the accepted preset version and regenerated the frozen Bun lockfile | Passed; a clean frozen install contains only preset `6.1.3`, the native `codegen --check` gate passes without a workflow workaround, `task check` exits zero, and `git diff --check` is clean. |
+| 2026-08-17 | Transitive dependency override cleanup | Audited every direct dashboard package and each top-level override; removed all nine overrides after regenerating a coherent lockfile | Passed; parent ranges retain patched Babel and other transitive versions, `js-yaml` returns from the forced incompatible v5 override to supported `4.3.1`, a fresh install resolves one client preset `6.1.3`, development audit findings are unchanged, production audit is clean, shadcn reports no updates, generation is current, and full `task check` exits zero. |
 
 ## Interview history
 

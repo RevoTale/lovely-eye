@@ -78,9 +78,13 @@ cd /workspaces/lovely-eye
 task server:vuln
 ```
 
-The 2026-08-15 review pinned patched compatible transitive versions of `@babel/core`,
-`brace-expansion`, `immutable`, `js-yaml`, `nanoid`, `shell-quote`, `ws`, and `yaml`. Production Bun
-dependencies and reachable Go code have no reported vulnerabilities.
+The 2026-08-17 review removed the temporary top-level security overrides for `@babel/core`,
+`brace-expansion`, `immutable`, `js-yaml`, `nanoid`, `shell-quote`, `ws`, and `yaml`. Every parent
+range and the frozen lockfile already resolve patched compatible versions. Keeping the overrides
+made transitive tools appear to be project-owned dependencies and allowed Renovate to force
+`js-yaml@5` across consumers that require `^4.1.0`. Production Bun dependencies and reachable Go
+code have no reported vulnerabilities. No top-level override remains; a fresh lockfile also resolves
+the direct and CLI GraphQL client preset requirements to the same `6.1.3` release.
 
 The full development-tool audit retains one transitive advisory group with one high and one
 moderate finding:
