@@ -4,7 +4,7 @@
 
 - Status: Implementation complete — awaiting maintainer review
 - Implementation approval: Granted on 2026-08-06 for the accepted phase plan and dependency set
-- Last updated: 2026-08-15
+- Last updated: 2026-08-17
 - Owner: Project maintainer
 - Purpose: Living source of truth for the full frontend and backend normalization update
 
@@ -573,6 +573,7 @@ Add dated entries only after verification.
 | 2026-08-15 | Go collection RAM and allocation optimization | Profiled the production SQLite container, Go GC, collect handler, site persistence, and rate limiter under idle and repeatable load; removed the duplicate site graph lookup across the HTTP/analytics boundary; retained live configuration reads while replacing per-request Bun relation builders with narrow raw queries; added a collect benchmark, allocation/query guards, relation coverage, a profiling runbook, and Go test-binary Docker exclusion | Passed; ten-sample warm collect results moved from 198–206 us/op, 95.8–96.0 KiB/op, and 900 allocs/op to 120–124 us/op, 45.2–45.3 KiB/op, and 565 allocs/op. On identical cloned SQLite data and 2,000 requests, GC cycles fell from 91 to 39 and VmHWM from 23.5 to 21.5 MiB while elapsed time remained 3,044 ms and cgroup memory remained about 28 MiB. A real PostgreSQL 18.6 image accepted the optimized collect path. The value-map limiter experiment was reverted after worsening rotating-key memory from 138 to 220 B/op; hard limiter capacity remains a separately documented traffic-policy clarification rather than an assumed behavior change. |
 | 2026-08-15 | Deterministic frontend GraphQL generation | Traced the CI-only stale `fragment-masking.ts` result to coexisting client preset `6.1.3` and CLI-nested `6.1.1` entries introduced by the dependency refresh; globally overrode the accepted preset version and regenerated the frozen Bun lockfile | Passed; a clean frozen install contains only preset `6.1.3`, the native `codegen --check` gate passes without a workflow workaround, `task check` exits zero, and `git diff --check` is clean. |
 | 2026-08-17 | Transitive dependency override cleanup | Audited every direct dashboard package and each top-level override; removed all nine overrides after regenerating a coherent lockfile | Passed; parent ranges retain patched Babel and other transitive versions, `js-yaml` returns from the forced incompatible v5 override to supported `4.3.1`, a fresh install resolves one client preset `6.1.3`, development audit findings are unchanged, production audit is clean, shadcn reports no updates, generation is current, and full `task check` exits zero. |
+| 2026-08-17 | Release Please action normalization | Replaced the stale `gvillo` fork with the official `googleapis/release-please-action@v5.0.0`, granted the documented issue-label permission, and serialized release-branch updates per target ref | Passed; official v5 metadata accepts the existing manifest inputs, actionlint `1.7.12` exits zero, and `git diff --check` is clean. Repository rules must still allow the release token to force-update the generated `release-please--branches--*` branch. |
 
 ## Interview history
 
