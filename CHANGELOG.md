@@ -1,5 +1,69 @@
 # Changelog
 
+## [2.0.0](https://github.com/RevoTale/lovely-eye/compare/v1.7.0...v2.0.0) (2026-08-18)
+
+
+### ⚠ BREAKING CHANGES
+
+* **analytics:** collect requests now require site_key in the query string and legacy duration/screen_width payload behavior is removed.
+
+### Features
+
+* **analytics:** harden server-owned collection ([cf3f32d](https://github.com/RevoTale/lovely-eye/commit/cf3f32db778f910954f540563dfa2414b2d1d279))
+* **auth:** harden authentication and quality gates ([f090071](https://github.com/RevoTale/lovely-eye/commit/f090071b4664d4d21fb283ed9bb1a4394865b2f1))
+
+
+### Fixes
+
+* **ci:** make GraphQL codegen deterministic ([4917f04](https://github.com/RevoTale/lovely-eye/commit/4917f04dfed4a76a91cf210a0754a1fd5147cc9e))
+* **deps:** update all non-major dependencies ([eeb603f](https://github.com/RevoTale/lovely-eye/commit/eeb603f2bc1bec79c7a44d5dfaca748003ab7c39))
+* **deps:** update all non-major dependencies ([46b54d0](https://github.com/RevoTale/lovely-eye/commit/46b54d0127e331dbf8f2e33ea050244a5d0daf36))
+* **deps:** update all non-major dependencies ([4ae0299](https://github.com/RevoTale/lovely-eye/commit/4ae0299f3e58524fa8022049e96ad7868f2eedd9))
+* **deps:** update all non-major dependencies ([11f0ec8](https://github.com/RevoTale/lovely-eye/commit/11f0ec88af3fd38ef4523a80a9e918bf06a0eb59))
+* **deps:** update dependency lucide-react to v1 ([e44eace](https://github.com/RevoTale/lovely-eye/commit/e44eacecd1b8070195a6f61962a98c9b34dcb8ec))
+* **deps:** update dependency lucide-react to v1 ([fc226aa](https://github.com/RevoTale/lovely-eye/commit/fc226aa0692a35876d1db2e652b394c47ac526dc))
+* **deps:** update module github.com/evanw/esbuild to v0.27.4 ([c98fae7](https://github.com/RevoTale/lovely-eye/commit/c98fae747b46d54b242989272f12a438ade445ae))
+* **deps:** update module github.com/stretchr/testify to v1.12.0 ([ca8f8cc](https://github.com/RevoTale/lovely-eye/commit/ca8f8cce2b02d7c0a1777824ca3a4bcb5bd27b1d))
+* **deps:** update module github.com/stretchr/testify to v1.12.0 ([b1901cf](https://github.com/RevoTale/lovely-eye/commit/b1901cf454102fde800496845b7d9dc10b8d464b))
+* **deps:** update module modernc.org/sqlite to v1.47.0 ([b4f1e9b](https://github.com/RevoTale/lovely-eye/commit/b4f1e9b6e60c546469c786f15472ff815a5b7f42))
+* **deps:** update module modernc.org/sqlite to v1.47.0 ([178abfd](https://github.com/RevoTale/lovely-eye/commit/178abfd86d346c3843fcaf85f80b91256381fba1))
+* **deps:** update module modernc.org/sqlite to v1.49.1 ([d26e7ed](https://github.com/RevoTale/lovely-eye/commit/d26e7edb460d0e61155684e342cabf5923741dfb))
+* **deps:** update module modernc.org/sqlite to v1.49.1 ([7e0d1e0](https://github.com/RevoTale/lovely-eye/commit/7e0d1e0a2561fc4f738f17a9df093a4e2d93d9d2))
+
+
+### Performance
+
+* **analytics:** reduce collection allocation pressure ([f9a626a](https://github.com/RevoTale/lovely-eye/commit/f9a626a546ba466e104247f38e2564fbf8b27b60))
+
+
+### Architecture
+
+* **architecture:** normalize application boundaries ([c739a33](https://github.com/RevoTale/lovely-eye/commit/c739a33a0f949bbeb362c052c8468e31b3e0a6c1))
+
+
+### Build and dependencies
+
+* **deps:** align stack with latest stable releases ([8bc5ed8](https://github.com/RevoTale/lovely-eye/commit/8bc5ed8fe131e0744e79e2a4fc270b22f67581fc))
+* **deps:** remove redundant transitive overrides ([6b044e7](https://github.com/RevoTale/lovely-eye/commit/6b044e70f31df15c2b70b9b15c253dfe93291278))
+* **deps:** remove redundant transitive overrides ([e075898](https://github.com/RevoTale/lovely-eye/commit/e07589840a94d6e08a177f15f27444e83eae5fb5))
+
+
+### CI
+
+* **release:** harden major upgrade delivery ([bc6e34a](https://github.com/RevoTale/lovely-eye/commit/bc6e34ab00800bc900db183701dcd200c695a62f))
+* **release:** use official release-please action ([c8deda4](https://github.com/RevoTale/lovely-eye/commit/c8deda4fc33f28a4a4bf64c7c4d323100cf90407))
+* **release:** use official release-please action ([be64491](https://github.com/RevoTale/lovely-eye/commit/be64491e62a20eceb8973911ce418d92f18934d3))
+
+
+### Maintenance
+
+* **deps:** update dependency @vitejs/plugin-react to v6 ([20944fa](https://github.com/RevoTale/lovely-eye/commit/20944fa54602fc783fb9304d8120e7b508b8ada4))
+* **deps:** update dependency js-yaml to v5 ([994823f](https://github.com/RevoTale/lovely-eye/commit/994823f8ab25532ea15debc10f4846dba8070cf9))
+* **deps:** update dependency js-yaml to v5 ([1591271](https://github.com/RevoTale/lovely-eye/commit/159127100c55be00f42bcf6af09758a4c6a9b800))
+* pin to `mcr.microsoft.com/devcontainers/go:2.1-1.26-trixie` ([a872ad6](https://github.com/RevoTale/lovely-eye/commit/a872ad6b5c571334b3b536e94dd69174127de2d7))
+* pin to `mcr.microsoft.com/devcontainers/go:2.1-1.26-trixie` ([8c56acd](https://github.com/RevoTale/lovely-eye/commit/8c56acd93a4f61de2a70322b7faec676b6c0b2ba))
+* upgrade all packages to the latest version. ([7f908fa](https://github.com/RevoTale/lovely-eye/commit/7f908fa58866d6381e96bf838824c436e46664f5))
+
 ## [1.7.0](https://github.com/RevoTale/lovely-eye/compare/v1.6.0...v1.7.0) (2026-03-12)
 
 
