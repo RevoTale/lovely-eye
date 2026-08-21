@@ -13,7 +13,7 @@ Normative decisions: [`docs/plans/architecture-normalization.md`](../docs/plans/
 
 - [x] 1.1 Create one non-mutating zero-warning quality command.
 - [x] 1.2 Enable the accepted TypeScript strictness baseline.
-- [x] 1.3 Add Bun unit and Playwright browser harnesses.
+- [x] 1.3 Add Node unit and Playwright browser harnesses.
 - [x] Checkpoint 1A: quality and test harnesses green.
 - [x] 1.4 Characterize runtime base paths and auth isolation.
 - [x] 1.5 Characterize critical admin state transitions.

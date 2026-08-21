@@ -11,24 +11,13 @@ import (
 
 type Config struct {
 	BasePath      string
-	APIUrl        string
 	GraphQLUrl    string
 	DashboardPath string
-}
-
-func DefaultConfig() Config {
-	return Config{
-		BasePath:      "/",
-		APIUrl:        "/api",
-		GraphQLUrl:    "/graphql",
-		DashboardPath: "dashboard",
-	}
 }
 
 const configJSTemplate = `// Runtime configuration - injected by server
 window.__ENV__ = {
   BASE_PATH: '{{.BasePath}}',
-  API_URL: '{{.APIUrl}}',
   GRAPHQL_URL: '{{.GraphQLUrl}}',
 };
 `

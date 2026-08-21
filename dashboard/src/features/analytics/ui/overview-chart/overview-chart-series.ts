@@ -1,4 +1,4 @@
-export const OVERVIEW_SERIES_KEYS = ['visitors', 'pageViews', 'sessions'] as const;
+const OVERVIEW_SERIES_KEYS = ['visitors', 'pageViews', 'sessions'] as const;
 
 export type OverviewSeriesKey = (typeof OVERVIEW_SERIES_KEYS)[number];
 

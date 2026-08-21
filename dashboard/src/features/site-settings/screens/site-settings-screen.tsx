@@ -18,7 +18,7 @@ import {
   type UpdateSiteMutationVariables,
 } from '@/shared/api/generated/graphql';
 import { readFragment } from '@/shared/api/read-fragment';
-import { Button } from '@/shared/ui/button';
+import { buttonVariants } from '@/shared/ui/button';
 import { Card, CardContent, CardHeader } from '@/shared/ui/card';
 import { Skeleton } from '@/shared/ui/skeleton';
 
@@ -98,12 +98,10 @@ export const SiteSettingsScreen = (): React.ReactNode => {
   return (
     <div className='mx-auto w-full max-w-3xl space-y-6'>
       <div className='flex items-center gap-4'>
-        <Button variant='outline' size='sm' asChild>
-          <Link to='/sites'>
-            <ArrowLeft className='h-4 w-4 mr-2' />
-            Back to Sites
-          </Link>
-        </Button>
+        <Link to='/sites' className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+          <ArrowLeft className='h-4 w-4 mr-2' />
+          Back to Sites
+        </Link>
       </div>
 
       <div>

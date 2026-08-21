@@ -29,7 +29,7 @@ func loadTrackerJS(cfg config.Config) ([]byte, error) {
 	if len(cfg.TrackerJS) != 0 {
 		return cfg.TrackerJS, nil
 	}
-	trackerPath := filepath.Join("static", "tracker.js")
+	trackerPath := filepath.Join("static", "dist", "tracker.js")
 	trackerJS, err := os.ReadFile(trackerPath) // #nosec G304 -- path is composed only from static constants
 	if err != nil {
 		return nil, fmt.Errorf("load tracker.js: %w", err)

@@ -12,7 +12,7 @@ dashboard transport, tracker collection, analytics identity, or dependencies.
 | Dashboard rendering | stored paths, event data, and referrers | admin browser session | React escaping, HTTP(S)-only external referrer links, CSP, frame denial, no raw HTML sinks |
 | GeoIP download | operator-controlled URL and license key | server filesystem and outbound network | explicit configuration ownership, bounded HTTP client behavior, archive validation, errors without client IP logging |
 | SQLite/PostgreSQL | application-generated parameterized queries | users, sites, pseudonymous analytics | feature-owned persistence adapters, migrations, both-dialect tests, no transport exposure of row models |
-| Dependency graph | registry packages and lifecycle scripts | build and release integrity | committed Bun/Go lock data, frozen install, Bun default-deny dependency scripts with one reviewed SWC exception, Bun audit and `govulncheck` |
+| Dependency graph | registry packages and lifecycle scripts | build and release integrity | committed pnpm/Go lock data, frozen install, pnpm default-deny dependency scripts with reviewed SWC/esbuild exceptions, pnpm audit and `govulncheck` |
 
 Assets intentionally do not include a stable raw visitor identifier. Stored client hashes rotate
 after a skipped UTC day and derive from a site-scoped keyed hash plus truncated IP prefix. Raw IP
@@ -70,9 +70,9 @@ Run from the existing Dev Container:
 
 ```sh
 cd /workspaces/lovely-eye/dashboard
-bun install --frozen-lockfile
-bun audit
-bun audit --prod
+pnpm install --frozen-lockfile
+pnpm audit
+pnpm audit --prod
 
 cd /workspaces/lovely-eye
 task server:vuln
@@ -82,32 +82,24 @@ The 2026-08-17 review removed the temporary top-level security overrides for `@b
 `brace-expansion`, `immutable`, `js-yaml`, `nanoid`, `shell-quote`, `ws`, and `yaml`. Every parent
 range and the frozen lockfile already resolve patched compatible versions. Keeping the overrides
 made transitive tools appear to be project-owned dependencies and allowed Renovate to force
-`js-yaml@5` across consumers that require `^4.1.0`. Production Bun dependencies and reachable Go
+`js-yaml@5` across consumers that require `^4.1.0`. Production dashboard dependencies and reachable Go
 code have no reported vulnerabilities. No top-level override remains; a fresh lockfile also resolves
 the direct and CLI GraphQL client preset requirements to the same `6.1.3` release.
 
-The full development-tool audit retains one transitive advisory group with one high and one
-moderate finding:
-
-- `picomatch@2.3.1` through Vite, TanStack Router, shadcn, and GraphQL Codegen tool paths. Bun cannot
-  apply its documented parent- or version-scoped override forms in Bun 1.3.14, while a global
-  override would also force incompatible v4 consumers. A direct 2.3.2 pin does not replace the
-  nested 2.3.1 edge. The affected glob input is repository-owned, not runtime/user input.
+The 2026-08-21 pnpm lockfile regeneration resolves the previously reported development-tool
+advisories through compatible upstream ranges. Both `pnpm audit --prod` and the full `pnpm audit`
+report no known vulnerabilities. No package-version override is present.
 
 Verbose `govulncheck` also reports the module-only `GO-2026-5932` advisory for the unmaintained
 `x/crypto/openpgp` package. Lovely Eye does not import that package; symbol and package results are
 empty, and the module advisory has no fixed release.
-
-Recheck this edge after any Bun, micromatch, or related tool release and no later than 2026-09-15.
-Do not force a global override without generation, shadcn, build, and complete browser verification.
 
 ## Release verification
 
 Before release, require all of the following:
 
 1. `task check` and `task server:vuln` pass.
-2. `bun audit --prod` reports no vulnerability; full `bun audit` matches only documented,
-   unreachable dev-tool findings.
+2. `pnpm audit --prod` and the full `pnpm audit` report no known vulnerabilities.
 3. The 7-flow admin suite, `/`, `/lovely-eye`, `/tools/lovely-eye`, and same-origin multi-instance
    auth-isolation suites pass.
 4. SQLite and PostgreSQL migration up/down/reapply tests pass in isolated databases.

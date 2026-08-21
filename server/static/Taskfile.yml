@@ -2,7 +2,7 @@ version: "3"
 
 vars:
   GO: go
-  TSC: bun ../../dashboard/node_modules/typescript/bin/tsc
+  TSC: pnpm --dir ../../dashboard exec tsc
 
 tasks:
   build:
@@ -13,4 +13,4 @@ tasks:
   typecheck:
     desc: Typecheck tracker TypeScript sources
     cmds:
-      - "{{.TSC}} -p tsconfig.json"
+      - "{{.TSC}} -p ../server/static/tsconfig.json"

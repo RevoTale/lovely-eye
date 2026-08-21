@@ -1,13 +1,14 @@
 'use client';
 
-import { Label as LabelPrimitive } from 'radix-ui';
 import type * as React from 'react';
 
 import { cn } from '@/shared/lib/utils';
 
-function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
+function Label({ className, ...props }: React.ComponentProps<'label'>) {
   return (
-    <LabelPrimitive.Root
+    // Consumers associate this shared primitive through htmlFor or by nesting the control.
+    // biome-ignore lint/a11y/noLabelWithoutControl: the association is supplied by each consumer
+    <label
       data-slot='label'
       className={cn(
         'flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50',

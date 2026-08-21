@@ -22,7 +22,8 @@ ln -s "$repository_root/dashboard/node_modules" "$temporary_repository/dashboard
 
 (
   cd "$temporary_repository/dashboard"
-  bun run codegen
+  # The temporary tree intentionally reuses the frozen install without allowing pnpm to mutate it.
+  ./node_modules/.bin/graphql-codegen --config codegen.ts
 )
 
 (

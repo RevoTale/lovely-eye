@@ -20,7 +20,7 @@ One dashboard build artifact must work unchanged at any normalized runtime `BASE
 
 - Vite emits relative asset URLs by using a relative `base` (`./` or the equivalent empty value).
 - The HTML base URL and `config.js` are resolved at runtime by the Go server.
-- Runtime configuration is the source of truth for `BASE_PATH`, `API_URL`, and `GRAPHQL_URL`.
+- Runtime configuration is the source of truth for `BASE_PATH` and `GRAPHQL_URL`.
 - The Go server mounts dashboard and API handlers below the configured base path and strips that prefix before static-file lookup.
 - TanStack Router receives the normalized runtime base path through its `basepath` option. Route definitions, links, and navigation targets remain unprefixed.
 - The static handler returns `index.html` for extensionless unknown paths so direct loads and refreshes of client routes work.

@@ -80,7 +80,6 @@ func newTestDashboardHandler(t *testing.T, basePath string) http.Handler {
 	)
 	return Handler(Config{
 		BasePath:      basePath,
-		APIUrl:        basePath + "/api",
 		GraphQLUrl:    basePath + "/graphql",
 		DashboardPath: dashboardPath,
 	})

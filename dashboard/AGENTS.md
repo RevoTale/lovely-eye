@@ -40,6 +40,7 @@
 
 ## Tooling
 
-- Use Bun; do not introduce npm, pnpm, Yarn, Vitest, or parallel build/CSS paths.
+- Use the pinned Node.js and pnpm versions from `package.json`; do not introduce Bun, npm, Yarn,
+  Vitest, or parallel build/CSS paths.
 - Generated `src/app/route-tree.gen.ts` and `src/shared/api/generated` files are never hand-edited.
 - Run GraphQL generation after operation changes and the complete dashboard checks before handoff.

@@ -2,7 +2,7 @@
 
 ## Stack
 
-- Bun for package management
+- Node.js and pnpm for package management and scripts
 - Vite for static export (no SSR)
 - TanStack Router for type-safe routing
 - Apollo Client for GraphQL
@@ -16,12 +16,13 @@
 
 ## Code Generation
 
-- Run `bun run codegen` after modifying GraphQL operations. Generated artifacts live in
+- Run `pnpm run codegen` after modifying GraphQL operations. Generated artifacts live in
   `src/shared/api/generated/` and must not be edited by hand.
 
 ## Commands
 
 ```bash
-bun run build    # Type check + production build
-bun run codegen  # Generate GraphQL types
+pnpm run build    # Production build
+pnpm run typecheck
+pnpm run codegen  # Generate GraphQL types
 ```

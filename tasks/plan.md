@@ -90,7 +90,7 @@ accepted decisions and ADRs
 
 ### Task 1.3 — Add frontend unit and browser harnesses
 
-**Acceptance criteria:** Bun runs pure unit tests; Playwright runs the real dashboard against the application; test configuration works locally and in CI without a second JavaScript test runner.
+**Acceptance criteria:** Node's built-in runner runs pure unit tests; Playwright runs the real dashboard against the application; test configuration works locally and in CI without a second JavaScript test runner.
 
 **Verification:** One unit smoke test and one browser smoke test pass in the Dev Container and CI configuration validates.
 
@@ -280,7 +280,7 @@ accepted decisions and ADRs
 
 ### Task 4.2 — Rebuild the canonical shadcn foundation
 
-**Acceptance criteria:** Current new-york/Radix components are generated into `shared/ui`; unified `radix-ui`, `react-day-picker`, and `tw-animate-css` replace legacy packages; Tailwind v4 tokens/config follow current docs; adopted components use `data-slot` and retain product theming/accessibility.
+**Acceptance criteria:** Current Base Vega/Base UI components are generated into `shared/ui`; `@base-ui/react`, `react-day-picker`, and `tw-animate-css` provide the adopted component foundation; Tailwind v4 tokens/config follow current docs; adopted components use `data-slot` and retain product theming/accessibility.
 
 **Verification:** shadcn diff/source review, component browser smoke, visual/layout checks, build, and dependency audit pass.
 

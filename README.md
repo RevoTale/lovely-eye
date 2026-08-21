@@ -17,12 +17,12 @@ Self-hosted web analytics with a Go backend and a React dashboard. Lovely Eye tr
 
 ## Architecture And Stack
 
-- Dashboard: React + strict TypeScript, Vite/SWC, Tailwind CSS v4, shadcn/ui with unified Radix,
+- Dashboard: React + strict TypeScript, Vite/SWC, Tailwind CSS v4, shadcn/ui with Base UI,
   TanStack Router, Apollo GraphQL, Zod, and Recharts.
 - Server: Go `net/http`, gqlgen, Bun ORM, SQLite or PostgreSQL, JWT/bcrypt authentication, and
   country-only MaxMind-compatible GeoIP.
-- Tooling: Bun, Biome, Playwright, deterministic GraphQL code generation, Atlas migrations, Go
-  tool directives, and `govulncheck`.
+- Tooling: Node.js, pnpm, Biome, Playwright, deterministic GraphQL code generation, Atlas
+  migrations, Go tool directives, and `govulncheck`.
 
 Frontend product ownership is `app` → `features` → `shared`; backend ownership is feature packages
 with private persistence adapters plus edge-owned `graph`, `transport`, and `platform` packages.

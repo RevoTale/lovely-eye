@@ -4,7 +4,7 @@
 
 - Status: Implementation complete — awaiting maintainer review
 - Implementation approval: Granted on 2026-08-06 for the accepted phase plan and dependency set
-- Last updated: 2026-08-17
+- Last updated: 2026-08-21
 - Owner: Project maintainer
 - Purpose: Living source of truth for the full frontend and backend normalization update
 
@@ -69,16 +69,18 @@ Confidence: 100% — explicitly confirmed by the user on 2026-08-06. Target arch
 - One dashboard artifact must work at `/`, one-level subpaths, and nested runtime subpaths without rebuilding.
 - Database migrations must preserve all existing analytics, configuration, and user data; deleting data or requiring reimport is not allowed.
 - Application routes must not manually prepend `BASE_PATH`.
-- Project tooling uses Bun; do not introduce Node/npm workflows.
+- Project tooling uses pinned Node.js and pnpm; do not introduce Bun, npm, Yarn, or parallel
+  package-manager/test-runner workflows.
 - Go remains the backend language and React with TypeScript remains the dashboard foundation unless a later explicit decision supersedes this.
 - No Git commit is created without an explicit user request.
 - Generated files are not hand-edited.
 
-See [ADR-0001](../decisions/0001-runtime-base-path.md) for the accepted runtime base-path decision.
+See [ADR-0001](../decisions/0001-runtime-base-path.md) for the accepted runtime base-path decision
+and [ADR-0006](../decisions/0006-node-pnpm-toolchain.md) for the accepted frontend toolchain.
 
 ## Remaining architecture and delivery decisions
 
-No blocking architecture clarification remains. Phase 6 resolved the chunk-budget mismatch by enforcing stable transfer boundaries: initial JavaScript, analytics increment, total JavaScript, total CSS, and Go binaries. Login/register/sites route attribution remains observational because Vite assigns shared shadcn chunks to whichever lazy route first owns them; eagerly moving those chunks would make the number smaller without reducing transferred code. The CSS ceiling is 12,500 gzip bytes, leaving measured headroom above the stable 11,412-byte shadcn/Tailwind v4 output while still blocking material growth.
+No blocking architecture clarification remains. Phase 6 resolved the chunk-budget mismatch by enforcing stable transfer boundaries: initial JavaScript, analytics increment, total JavaScript, total CSS, and Go binaries. Login/register/sites route attribution remains observational because Vite assigns shared shadcn chunks to whichever lazy route first owns them; eagerly moving those chunks would make the number smaller without reducing transferred code. The CSS ceiling remains 12,500 gzip bytes. The total-JavaScript ceiling is 425,000 gzip bytes after the approved Base UI runtime replacement measured 416,354 bytes; initial and analytics-route limits remain unchanged.
 
 ## Change classification
 
@@ -198,33 +200,34 @@ Recorded during the 2026-08-05 audit:
 
 ## Dependency disposition plan
 
-Audit snapshot: 2026-08-06. Versions are candidates observed from the official npm registry and `go list -u -m`; implementation must re-check the latest stable release and its official migration notes immediately before changing a lockfile. This section approves the planned dependency set, not an unreviewed bulk upgrade.
+Dependency decision baseline: 2026-08-06; current approved disposition last updated 2026-08-21. Versions must be rechecked against the official registry and migration notes immediately before changing a lockfile. This section records the approved dependency capabilities and replacements, not authorization for unrelated packages.
 
 ### Frontend
 
 | Capability | Keep or add | Remove or replace | Reason |
 | --- | --- | --- | --- |
 | React runtime | `react`, `react-dom` | Direct `react-is` unless a fresh build proves a direct API requirement | React remains the UI foundation; undeclared transitive needs stay transitive. |
-| GraphQL client | `@apollo/client`, `graphql`, generated client preset; add direct `rxjs` | — | Apollo remains useful for shared query lifecycle and stable refresh behavior. Its official installation requires `rxjs` as a top-level peer. |
+| GraphQL client | `@apollo/client`, `graphql`, generated client preset, generated `@graphql-typed-document-node/core` type contract; add direct `rxjs` | — | Apollo remains useful for shared query lifecycle and stable refresh behavior. Its official installation requires `rxjs` as a top-level peer, while generated source directly imports the typed-document contract. |
 | Routing | `@tanstack/react-router`, `@tanstack/router-plugin` | Direct `@tanstack/router-generator` | The Vite plugin owns file-route generation; the generator need not also be a direct dependency. |
 | Build and CSS | `vite`, `@vitejs/plugin-react-swc`, `tailwindcss`, `@tailwindcss/vite`, `lightningcss` | `@vitejs/plugin-react`, `@tailwindcss/postcss`, `postcss`, `autoprefixer` | Keep the active SWC/Vite and Tailwind Vite paths; remove unused parallel Babel/PostCSS paths. |
-| shadcn foundation | Add pinned `shadcn`, unified `radix-ui`, `react-day-picker`, and `tw-animate-css`; keep `class-variance-authority`, `clsx`, `tailwind-merge`, and `lucide-react` | Individual `@radix-ui/react-*`, `@daypicker/react`, `tailwindcss-animate` | Rebuild from the current shadcn Vite/new-york/Radix source, using its unified Radix package and current animation/calendar dependencies. |
+| shadcn foundation | Keep pinned `shadcn`, `@base-ui/react`, `react-day-picker`, and `tw-animate-css`; keep `class-variance-authority`, `clsx`, `tailwind-merge`, and `lucide-react` | Unified `radix-ui`, individual `@radix-ui/react-*`, `@daypicker/react`, `tailwindcss-animate` | Use the current shadcn Vite/Base Vega source. Base UI primitives remain private to `shared/ui`, and only product-adopted component surfaces are retained. |
 | Product UI/data | `date-fns`, `recharts`, `zod` | — | Each owns a used product capability: dates, charts, and runtime boundary validation. |
 | Code quality and generation | `@biomejs/biome`, `@graphql-codegen/cli`, `@graphql-codegen/client-preset`, TypeScript and React/Node type packages | — | These enforce the accepted strictness and deterministic generation policies. |
-| Frontend tests | Bun's built-in test runner for pure units; add `@playwright/test` for browser contracts | Do not add Vitest initially | One unit runner plus real-browser coverage satisfies the risk-based policy with less tooling overlap. |
+| Frontend tests | Node's built-in `node:test` runner with `tsx` for TypeScript path aliases; `@playwright/test` for browser contracts | Bun and Vitest | One standard runtime, one unit runner, and real-browser coverage satisfy the policy without overlapping frameworks. |
 
-Registry candidates at audit time:
+Registry versions at the 2026-08-21 refresh:
 
-- Core/API: React and React DOM `19.2.8`, Apollo `4.2.10`, GraphQL `17.0.2`, RxJS `7.8.2`, GraphQL Codegen CLI `7.2.0`, client preset `6.1.1`.
-- Routing/build: TanStack Router `1.170.20`, router plugin `1.168.25`, Vite `8.2.0`, React SWC plugin `4.3.3`, TypeScript `7.0.2`, Biome `2.5.7`, Tailwind CSS and its Vite plugin `4.3.3`, Lightning CSS `1.33.0`.
-- UI: shadcn `4.16.1`, unified Radix UI `1.6.7`, React DayPicker `10.0.1`, `tw-animate-css` `1.4.0`, Lucide React `1.28.0`, Recharts `3.10.1`.
+- Core/API: React and React DOM `19.2.8`, Apollo `4.2.12`, GraphQL `17.0.2`, RxJS `7.8.2`, GraphQL Codegen CLI `7.2.0`, client preset `6.1.3`.
+- Routing/build: TanStack Router `1.170.31`, router plugin `1.168.34`, Vite `8.2.2`, React SWC plugin `4.3.3`, TypeScript `7.0.2`, Biome `2.5.9`, Tailwind CSS and its Vite plugin `4.3.3`, Lightning CSS `1.33.0`.
+- UI: shadcn `4.18.0`, Base UI `1.7.0`, React DayPicker `10.0.1`, `tw-animate-css` `1.4.0`, Lucide React `1.33.0`, Recharts `3.10.1`.
 - Browser tests: Playwright `1.62.1`.
 
 Migration evidence:
 
 - [shadcn Vite installation](https://ui.shadcn.com/docs/installation/vite)
 - [shadcn Tailwind v4 migration](https://ui.shadcn.com/docs/tailwind-v4)
-- [shadcn unified Radix migration](https://ui.shadcn.com/docs/changelog/2026-02-radix-ui)
+- [shadcn Base UI default and migration guidance](https://ui.shadcn.com/docs/changelog/2026-07-base-ui-default)
+- [Base UI composition and `render` migration](https://base-ui.com/react/handbook/composition)
 - [shadcn `components.json`](https://ui.shadcn.com/docs/components-json)
 - [TanStack Router manual setup](https://tanstack.com/router/latest/docs/installation/manual)
 - [Vite official plugins](https://vite.dev/plugins/)
@@ -240,12 +243,11 @@ its obsolete partial-fragment overload without requiring an application compatib
 fresh lockfile regeneration resolves both the direct `^6.1.3` requirement and the CLI's `^6.1.0`
 requirement to one `6.1.3` package without an override.
 
-The full Bun audit exposed newly patched build-tool edges. The frozen lockfile now resolves their
-patched versions through the upstream-compatible ranges without project-level overrides. One
-dev-only `micromatch -> picomatch@2.3.1` advisory remains documented in
-[`docs/security.md`](../security.md): Bun 1.3.14 does not apply its documented scoped override forms,
-a direct pin does not replace the nested edge, and a global override would incorrectly force v2 on
-v4 consumers. Production dependencies remain clean.
+The 2026-08-21 Node/pnpm migration regenerated the complete frontend graph without package-version
+overrides. Both the production and development pnpm audits are clean. GraphQL Codegen's nested
+`graphql-config` has not yet widened its peer declaration for GraphQL 17; pnpm records a narrow
+allowed-version rule rather than changing the resolved package graph, and deterministic generation
+plus generated-artifact freshness remain its compatibility proof.
 
 ### Go
 
@@ -359,7 +361,7 @@ The reproducible command is `./scripts/measure-baseline.sh`. Run it from the rep
 | Register route increment, gzip | 1,221 B | 1,221 B | Observe; Vite shared-chunk attribution is not a transfer boundary |
 | Sites route increment, gzip | 1,620 B | 1,620 B | Observe; Vite shared-chunk attribution is not a transfer boundary |
 | Site analytics route increment, gzip | 123,334 B | 123,334 B | <= 136,000 B |
-| All dashboard JavaScript, gzip | 362,261 B | 362,261 B | <= 400,000 B |
+| All dashboard JavaScript, gzip | 362,261 B | 362,261 B | <= 425,000 B after the approved Base UI migration |
 | All dashboard CSS, gzip | 8,966 B | 8,966 B | <= 12,500 B after the current shadcn/Tailwind v4 foundation |
 | Server binary | 26,444,141 B | 26,444,141 B | <= 29,100,000 B |
 | Migration binary | 19,456,283 B | 19,456,283 B | <= 21,400,000 B |
@@ -488,7 +490,7 @@ All blocking discovery clarifications are answered. Reopen an item only when new
 | D-011 | Database migrations must preserve all existing data. Destructive migration or mandatory data reimport is not allowed. | Accepted invariant | 2026-08-06 | Confirmed during the C-003 interview. |
 | D-012 | Environment variables may be renamed or removed without permanent aliases when migration documentation and a precise startup diagnostic identify the required operator action. | Accepted principle | 2026-08-06 | Confirmed during the C-003 interview. |
 | D-013 | Internal dashboard URLs may change without legacy redirects. Runtime base-path behavior, nested-route refresh, and external tracker URLs remain protected contracts. | Accepted principle | 2026-08-06 | Confirmed during the C-003 interview. |
-| D-014 | Current shadcn/ui components and styling patterns are the default UI foundation. Canonical components live in `shared/ui`; features compose them directly; underlying primitives stay inside that boundary; wrappers require repeated product-specific behavior. | Accepted principle | 2026-08-06 | Confirmed during the C-004 interview. |
+| D-014 | Current shadcn/ui components and styling patterns are the default UI foundation. Canonical components use the Base UI registry and live in `shared/ui`; features compose them directly; `@base-ui/react` stays inside that boundary; wrappers require repeated product-specific behavior. | Accepted principle | 2026-08-21 | Base UI replacement explicitly approved after the C-004 foundation decision. |
 | D-015 | Frontend source uses only `app`, `features`, and `shared` at the architectural top level. Global `pages`, `components`, and `hooks` buckets are removed; feature-internal folders exist only when justified. | Accepted architecture | 2026-08-06 | Confirmed during the C-004 interview. |
 | D-016 | Use explicit idiomatic Go constructor composition with consumer-owned interfaces, concrete constructor results, and explicit lifecycle cleanup. Wiring may be handwritten or generated according to graph complexity. Do not use globals, service locators, or hidden runtime reflection. | Accepted architecture | 2026-08-06 | Confirmed during the C-005 interview after clarifying that “manual DI” was the wrong term. |
 | D-017 | Code generation is allowed when it is deterministic, has a clear handwritten source of truth, is reproducible by project commands, keeps generated output isolated, and is checked for staleness. Generated files are never hand-edited. | Accepted principle | 2026-08-06 | User explicitly clarified that codegen should not be avoided. |
@@ -574,6 +576,9 @@ Add dated entries only after verification.
 | 2026-08-15 | Deterministic frontend GraphQL generation | Traced the CI-only stale `fragment-masking.ts` result to coexisting client preset `6.1.3` and CLI-nested `6.1.1` entries introduced by the dependency refresh; globally overrode the accepted preset version and regenerated the frozen Bun lockfile | Passed; a clean frozen install contains only preset `6.1.3`, the native `codegen --check` gate passes without a workflow workaround, `task check` exits zero, and `git diff --check` is clean. |
 | 2026-08-17 | Transitive dependency override cleanup | Audited every direct dashboard package and each top-level override; removed all nine overrides after regenerating a coherent lockfile | Passed; parent ranges retain patched Babel and other transitive versions, `js-yaml` returns from the forced incompatible v5 override to supported `4.3.1`, a fresh install resolves one client preset `6.1.3`, development audit findings are unchanged, production audit is clean, shadcn reports no updates, generation is current, and full `task check` exits zero. |
 | 2026-08-17 | Release Please action normalization | Replaced the stale `gvillo` fork with the official `googleapis/release-please-action@v5.0.0`, granted the documented issue-label permission, and serialized release-branch updates per target ref | Passed; official v5 metadata accepts the existing manifest inputs, actionlint `1.7.12` exits zero, and `git diff --check` is clean. Repository rules must still allow the release token to force-update the generated `release-please--branches--*` branch. |
+| 2026-08-21 | Latest dependency and Base UI migration | Rechecked every direct frontend and Go module against current registries and official migration guidance; upgraded all outdated runtime, test, build, and tool dependencies; regenerated every adopted shadcn component from the Base Vega registry; replaced `radix-ui` with `@base-ui/react`; migrated `asChild` composition to `render` or semantic links; removed unused dropdown component surface; and replaced Radix-specific E2E assertions with ARIA state | Passed; `bun outdated` is empty, Radix is absent from source/manifest/lockfile, Go runtime/test/tool upgrades pass module verification, strict checks and generated freshness are green, all 11 primary browser flows pass, and `/`, `/lovely-eye`, `/tools/lovely-eye`, plus same-origin isolation remain green. Fresh guarded measurements: initial JavaScript 185,086 B gzip, analytics increment 101,483 B, all JavaScript 416,354 B, CSS 12,425 B, server 27,009,933 B, migrate 19,161,382 B, Chromium login 1,365 ms, dashboard 912 ms, and 8 GraphQL operations. Base UI increased total JavaScript 5.7% while reducing the initial boundary; the documented total-JavaScript ceiling is therefore 425,000 B, while all other transfer limits remain unchanged. |
+| 2026-08-21 | Node.js and pnpm toolchain migration | Replaced Bun package management, script/test execution, Docker build stage, Dev Container feature, CI bootstrap, lockfile, Taskfiles, and maintainer commands with pinned Node.js `26.7.0` and pnpm `11.22.0`; kept `node:test` with the documented `tsx` alias loader; added default-deny pnpm build permissions; recorded ADR-0006 | Passed; direct dependencies are current, frozen install and peer checks are warning-free, full `task check`, actionlint, generation freshness, production and development audits, 11 primary browser flows, the `/`, `/lovely-eye`, `/tools/lovely-eye` matrix, same-origin isolation, and the production Docker build are green. The final image contains no Bun, Node.js, npm, or pnpm binary. Guarded measurements remain within limits: initial JavaScript 182,206 B gzip, analytics increment 100,915 B, all JavaScript 409,563 B, CSS 12,044 B, server 27,010,261 B, migrate 19,161,382 B, Chromium login 1,356 ms, dashboard 835 ms, and 8 GraphQL operations. |
+| 2026-08-21 | Post-migration dead-code cleanup | Audited frontend entrypoints, dependency usage, generated boundaries, shared UI exports, Go reachability, tracker artifacts, and runtime configuration; removed unused shadcn component surfaces, helpers, exports, two unreachable Go functions, a duplicate screen export, the unused `API_URL` runtime field, and the duplicate tracker artifact; declared the generated code's previously hoisted typed-document contract; the production image now copies only the generated tracker instead of its build sources | Frozen install, full static/unit/Go/generation/build gates, 11 browser flows, the three-path runtime matrix, auth isolation, and a clean production Docker build pass. Go's official dead-code analyzer and `go mod tidy -diff` report no remaining application candidates. Build-only `lightningcss`, maintenance-only `shadcn`, the bundle-report entrypoint, and generated route exports remain intentionally retained. |
 
 ## Interview history
 

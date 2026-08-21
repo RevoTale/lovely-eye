@@ -3,34 +3,42 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "packageManager": "pnpm@11.22.0",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "26.7.0",
+      "onFail": "error"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "check": "biome check .. && bun --bun run check:boundaries && bun --bun run typecheck && bun --bun run test:unit",
-    "check:boundaries": "bun run scripts/check-boundaries.ts",
+    "check": "biome check .. && pnpm run check:boundaries && pnpm run typecheck && pnpm run test:unit",
+    "check:boundaries": "tsx scripts/check-boundaries.ts",
     "lint": "biome check ..",
     "format": "biome check --write ..",
     "preview": "vite preview",
-    "test": "bun --bun run test:unit && bun --bun run test:e2e && bun --bun run test:e2e:base-path && bun --bun run test:e2e:isolation",
+    "test": "pnpm run test:unit && pnpm run test:e2e && pnpm run test:e2e:base-path && pnpm run test:e2e:isolation",
     "test:e2e": "playwright test",
     "test:e2e:base-path": "for base_path in / /lovely-eye /tools/lovely-eye; do TEST_BASE_PATH=\"$base_path\" playwright test tests/e2e/runtime-base-path.spec.ts || exit; done",
     "test:e2e:install": "playwright install --with-deps chromium",
     "test:e2e:isolation": "TEST_MULTI_INSTANCE=true TEST_BASE_PATH=/instance-a playwright test tests/e2e/auth-isolation.spec.ts",
-    "test:unit": "bun test tests/unit",
-    "typecheck": "bun --bun run tsc && bun --bun run tsc:tracker",
+    "test:unit": "node --import tsx --test tests/unit/*.test.ts",
+    "typecheck": "pnpm run tsc && pnpm run tsc:tracker",
     "tsc": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.unit.json && tsc --noEmit -p tsconfig.tests.json",
     "tsc:tracker": "tsc --noEmit -p ../server/static/tsconfig.json",
     "codegen": "graphql-codegen --config codegen.ts"
   },
   "dependencies": {
     "@apollo/client": "^4.2.12",
-    "@tanstack/react-router": "^1.170.29",
+    "@base-ui/react": "^1.7.0",
+    "@tanstack/react-router": "^1.170.31",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
     "graphql": "^17.0.2",
-    "lucide-react": "^1.31.0",
-    "radix-ui": "^1.6.7",
+    "lucide-react": "^1.33.0",
     "react": "^19.2.8",
     "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.8",
@@ -40,12 +48,13 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.8",
+    "@biomejs/biome": "^2.5.9",
     "@graphql-codegen/cli": "^7.2.0",
     "@graphql-codegen/client-preset": "^6.1.3",
+    "@graphql-typed-document-node/core": "^3.2.0",
     "@playwright/test": "1.62.1",
     "@tailwindcss/vite": "^4.3.3",
-    "@tanstack/router-plugin": "^1.168.32",
+    "@tanstack/router-plugin": "^1.168.34",
     "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
@@ -53,11 +62,9 @@
     "lightningcss": "^1.33.0",
     "shadcn": "^4.18.0",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.12",
     "tw-animate-css": "^1.4.0",
     "typescript": "~7.0.2",
-    "vite": "^8.2.1"
-  },
-  "trustedDependencies": [
-    "@swc/core"
-  ]
+    "vite": "^8.2.2"
+  }
 }

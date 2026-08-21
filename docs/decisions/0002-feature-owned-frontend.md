@@ -8,6 +8,8 @@ Accepted
 
 2026-08-06
 
+Last updated: 2026-08-21
+
 ## Context
 
 The dashboard currently divides ownership between global routes, pages, components, hooks, and layout files. A single change can cross several generic folders, while route files delegate to pages that depend back on router state. This obscures feature boundaries, encourages broad barrels and prop chains, and makes loading or navigation behavior difficult to reason about.
@@ -34,7 +36,7 @@ dashboard/src/
 - Features do not import another feature's internals or concrete route definitions.
 - Generated route and GraphQL files remain isolated and are never edited by hand.
 - Canonical current shadcn components live in `shared/ui`; features compose them directly.
-- Underlying primitive imports stay inside `shared/ui`. The accepted current Radix setup uses the unified `radix-ui` package.
+- Underlying primitive imports stay inside `shared/ui`. The accepted current setup uses shadcn's Base UI registry and `@base-ui/react`; application and feature modules never import Base UI directly.
 - Product wrappers require repeated behavior or policy; renaming or hiding a shadcn API is not sufficient.
 - Analytics filters, date ranges, and pagination remain final typed URL state.
 - The application uses the stable loading contract from D-025: first-load-only skeletons, retained data during refresh, no protected-content flash, stable geometry, and coherent mutation state.
@@ -59,5 +61,5 @@ Rejected because it creates an unnecessary abstraction and prevents direct use o
 - Frontend normalization proceeds as vertical feature slices, not a bulk folder move.
 - Import-direction checks must prevent feature-to-feature internals and shared-to-feature dependencies.
 - Existing global folders and transitional barrels must be removed before completion.
-- UI migration follows current official shadcn sources and preserves only adopted product components.
+- UI migration follows current official shadcn Base UI sources and preserves only adopted product components.
 - Browser tests protect routing, base paths, loading transitions, layout stability, and critical admin workflows.

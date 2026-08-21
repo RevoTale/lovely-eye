@@ -10,13 +10,6 @@ export const getNormalizedBlockedIPs = (values: string[]): string[] => {
   return Array.from(new Set(normalized));
 };
 
-export const normalizeCountryCodes = (values: string[]): string[] =>
-  Array.from(
-    new Set(
-      values.map((code) => code.trim().toUpperCase()).filter((code) => code.length > EMPTY_COUNT)
-    )
-  ).sort((a, b) => a.localeCompare(b));
-
 export const normalizeCountryCodesPreserveOrder = (values: string[]): string[] => {
   const result: string[] = [];
   const seen = new Set<string>();

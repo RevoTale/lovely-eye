@@ -58,25 +58,28 @@ const DateTimePicker = forwardRef<DateTimePickerRef, DateTimePickerProps>(
 
     return (
       <Popover>
-        <PopoverTrigger asChild disabled={disabled}>
-          <Button
-            variant='outline'
-            className={cn(
-              'w-full justify-start text-left font-normal',
-              !value && 'text-muted-foreground',
-              className
-            )}
-            ref={ref}
-          >
-            <CalendarIcon className='mr-2 h-4 w-4' />
-            {value ? (
-              format(value, hourCycle === 24 ? hourFormats.hour24 : hourFormats.hour12, {
-                locale: mergedLocale,
-              })
-            ) : (
-              <span>{placeholder}</span>
-            )}
-          </Button>
+        <PopoverTrigger
+          disabled={disabled}
+          render={
+            <Button
+              variant='outline'
+              className={cn(
+                'w-full justify-start text-left font-normal',
+                !value && 'text-muted-foreground',
+                className
+              )}
+              ref={ref}
+            />
+          }
+        >
+          <CalendarIcon className='mr-2 h-4 w-4' />
+          {value ? (
+            format(value, hourCycle === 24 ? hourFormats.hour24 : hourFormats.hour12, {
+              locale: mergedLocale,
+            })
+          ) : (
+            <span>{placeholder}</span>
+          )}
         </PopoverTrigger>
         <PopoverContent className='w-auto p-0'>
           <CalendarComponent
