@@ -167,6 +167,11 @@
   }
 }
 
+::view-transition-group(root) {
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -179,6 +184,10 @@
 
   [class*="transition"] {
     transition-duration: 0.01ms;
+  }
+
+  ::view-transition-group(root) {
+    animation-duration: 0.01ms;
   }
 }
 

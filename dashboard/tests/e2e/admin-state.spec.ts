@@ -6,6 +6,21 @@ test('auth, first load, mutation feedback, and retained refresh state stay coher
   context,
   page,
 }) => {
+  await page.addInitScript(() => {
+    const startViewTransition = document.startViewTransition?.bind(document);
+    if (startViewTransition === undefined) return;
+
+    Reflect.set(globalThis, '__lovelyEyeViewTransitionCount', 0);
+    document.startViewTransition = (update) => {
+      const count = Reflect.get(globalThis, '__lovelyEyeViewTransitionCount');
+      Reflect.set(
+        globalThis,
+        '__lovelyEyeViewTransitionCount',
+        typeof count === 'number' ? count + 1 : 1
+      );
+      return startViewTransition(update);
+    };
+  });
   const operations = await installGraphQLOperationController(page);
   const authResolution = operations.blockNext('Me');
   await page.goto('login');
@@ -25,6 +40,10 @@ test('auth, first load, mutation feedback, and retained refresh state stay coher
   await expect(page.locator('.animate-pulse')).toHaveCount(0);
   sitesLoad.release();
   await expect(page.getByRole('heading', { name: 'Add New Site' })).toBeVisible();
+  const viewTransitionCount = await page.evaluate(() =>
+    Reflect.get(globalThis, '__lovelyEyeViewTransitionCount')
+  );
+  expect(viewTransitionCount).toBe(1);
 
   await page.goto('sites/new');
   await page.getByLabel('Domains').fill('primary.example');
