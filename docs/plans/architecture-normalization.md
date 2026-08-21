@@ -94,6 +94,11 @@ Historical behavior is evidence, not automatically a requirement. Before calling
 
 API contracts may change when the product needs new display data or when a demonstrably better design replaces the old contract. “Best practice” alone is not sufficient evidence: the proposal must identify the concrete correctness, type-safety, data-accuracy, usability, or maintainability gain. Schema, generated types, application consumers, documentation, and tests change together. Compatibility and rollout still follow the separately accepted compatibility policy.
 
+Dashboard page filtering keeps two explicit contracts: clicking a page applies an exact `page`
+filter, while the Top Pages search applies one case-insensitive, literal `pagePathContains` substring.
+The substring is URL-owned, trimmed at the input boundary, length-limited by the dashboard filter
+policy, and treats SQL wildcard characters as ordinary path characters.
+
 The current GraphQL API is an internal dashboard/backend contract with no known external consumers. Backend schema and bundled dashboard consumers may therefore evolve atomically without preserving obsolete GraphQL shapes. A possible future private-token API is not a current compatibility requirement; if introduced, its externally consumable contract and versioning policy must be designed and accepted explicitly.
 
 The tracker payload or script API may receive a breaking change, but implementation is blocked until the user explicitly approves a migration plan. That plan must define affected integrations, new contract, rollout and coexistence period, snippet update path, data-loss risk, verification, and rollback. Until then, existing tracker behavior remains the compatibility baseline.
@@ -254,7 +259,7 @@ plus generated-artifact freshness remain its compatibility proof.
 | Capability | Keep or add | Remove or replace | Reason |
 | --- | --- | --- | --- |
 | Schema and migrations | Atlas, Atlas Bun provider, Bun and the PostgreSQL/SQLite dialects and drivers | — | Both supported databases and data-preserving migrations remain invariants. Atlas/provider ownership must stay tooling-only. |
-| GraphQL | `gqlgen`, `gqlparser`, and test-only `genqlient` | Legacy blank-import `tools.go` pattern | GraphQL/gqlgen is accepted; Go 1.26 tool dependencies belong in `go.mod` `tool` directives. |
+| GraphQL | `gqlgen`, `gqlparser`, and test-only `genqlient` | Legacy blank-import `tools.go` pattern | GraphQL/gqlgen is accepted; Go 1.27 tool dependencies belong in `go.mod` `tool` directives. |
 | Auth and validation | `jwt/v5`, `x/crypto` | — | Used for signed tokens, password hashing, and analytics identity cryptography. |
 | Analytics dimensions and GeoIP | `useragent`, `geoip2-golang/v2`, `maxminddb-golang/v2` | — | These provide active tracker/analytics behavior not covered by the standard library. |
 | Database runtime | Bun runtime modules and `modernc.org/sqlite` | `bundebug` from the production path | The current debug hook is always installed despite having no runtime debug policy. Add structured query diagnostics only if the observability design demonstrates a need. |
@@ -280,6 +285,12 @@ and the static esbuild module to `0.28.2`. `go get -t -u ./...`, explicit tool u
 application API. The paired GeoIP update preserves the existing reader API; cache policy remains a
 separate measured decision. The first scan on Go 1.26.5 found six reachable standard-library
 advisories fixed by 1.26.6; the refreshed scan reports zero reachable vulnerabilities.
+
+The 2026-08-21 runtime refresh moves both Go modules and every build boundary to Go `1.27.0`.
+The Dev Container uses the language-neutral official base plus the pinned Go feature so the
+toolchain version has one owner; CI and the production builder use the same exact release. Go 1.27
+verification must include generation freshness, both module verifications, full tests, lint, build,
+and `govulncheck` before the migration is considered complete.
 
 ## Accepted target shape
 
@@ -594,6 +605,7 @@ Add dated entries only after verification.
 | 2026-08-21 | Node.js and pnpm toolchain migration | Replaced Bun package management, script/test execution, Docker build stage, Dev Container feature, CI bootstrap, lockfile, Taskfiles, and maintainer commands with pinned Node.js `26.7.0` and pnpm `11.22.0`; kept `node:test` with the documented `tsx` alias loader; added default-deny pnpm build permissions; recorded ADR-0006 | Passed; direct dependencies are current, frozen install and peer checks are warning-free, full `task check`, actionlint, generation freshness, production and development audits, 11 primary browser flows, the `/`, `/lovely-eye`, `/tools/lovely-eye` matrix, same-origin isolation, and the production Docker build are green. The final image contains no Bun, Node.js, npm, or pnpm binary. Guarded measurements remain within limits: initial JavaScript 182,206 B gzip, analytics increment 100,915 B, all JavaScript 409,563 B, CSS 12,044 B, server 27,010,261 B, migrate 19,161,382 B, Chromium login 1,356 ms, dashboard 835 ms, and 8 GraphQL operations. |
 | 2026-08-21 | Post-migration dead-code cleanup | Audited frontend entrypoints, dependency usage, generated boundaries, shared UI exports, Go reachability, tracker artifacts, and runtime configuration; removed unused shadcn component surfaces, helpers, exports, two unreachable Go functions, a duplicate screen export, the unused `API_URL` runtime field, and the duplicate tracker artifact; declared the generated code's previously hoisted typed-document contract; the production image now copies only the generated tracker instead of its build sources | Frozen install, full static/unit/Go/generation/build gates, 11 browser flows, the three-path runtime matrix, auth isolation, and a clean production Docker build pass. Go's official dead-code analyzer and `go mod tidy -diff` report no remaining application candidates. Build-only `lightningcss`, maintenance-only `shadcn`, the bundle-report entrypoint, and generated route exports remain intentionally retained. |
 | 2026-08-21 | Post-normalization smooth dashboard lifecycle | A controlled Playwright RED run reproduced the post-login skeleton cascade. Auth mutations now establish the returned typed user without a blocking `Me` refetch; Apollo is cleared across identity changes; one root boot boundary owns cold startup; route loaders prepare site, dashboard, sites-list, and settings data; the old effect-driven site-entry screen was removed; displayed analytics data survives variable refresh; reduced-motion and CLS assertions protect visual stability. | `task check` passes with zero warnings, generated artifacts current, Go tests/lint/build green, and the production dashboard build green. All 19 unit tests, 11 primary browser flows, `/`, `/lovely-eye`, `/tools/lovely-eye`, and same-origin auth isolation pass. The isolated performance run measured 868 ms login readiness, 888 ms dashboard readiness, and 7 GraphQL operations (guardrail ≤8), with one `Dashboard` request instead of the observed duplicate. Deleted-site analytics and settings retain their actionable not-found state. No dependency or public contract changed. |
+| 2026-08-21 | Go 1.27, page-subpath search, and chart differentiation | Moved both modules, CI, production builds, and the Dev Container feature to Go 1.27.0; made the Dev Container base language-neutral so the feature owns the toolchain version; added a separate literal, case-insensitive `pagePathContains` dashboard contract with URL-owned Top Pages search; gave chart series distinct semantic colors and solid/dashed/dotted lines. | Both module graphs verify under Go 1.27.0; dashboard checks, Go tests twice, lint, boundaries, generated freshness, builds, and `govulncheck` pass. The production Dockerfile builds fully with `golang:1.27.0-alpine`. All 20 unit tests, 12 primary browser flows, `/`, `/lovely-eye`, `/tools/lovely-eye`, and same-origin isolation pass. Persistence and GraphQL integration tests cover substring results while literal `%`, `_`, and backslash handling prevent wildcard expansion. |
 
 ## Interview history
 

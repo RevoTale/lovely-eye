@@ -11,16 +11,18 @@ interface OverviewSeriesDefinition {
   fillStart: string;
   fillEnd: string;
   strokeWidth: number;
+  strokeDasharray: string;
 }
 
 export const OVERVIEW_SERIES = [
   {
     key: 'visitors',
     label: 'Visitors',
-    stroke: 'var(--primary)',
-    fillStart: 'color-mix(in oklch, var(--primary) 34%, transparent)',
-    fillEnd: 'color-mix(in oklch, var(--primary) 4%, transparent)',
+    stroke: 'var(--chart-1)',
+    fillStart: 'color-mix(in oklch, var(--chart-1) 34%, transparent)',
+    fillEnd: 'color-mix(in oklch, var(--chart-1) 4%, transparent)',
     strokeWidth: 2.75,
+    strokeDasharray: 'none',
   },
   {
     key: 'pageViews',
@@ -29,6 +31,7 @@ export const OVERVIEW_SERIES = [
     fillStart: 'color-mix(in oklch, var(--chart-2) 18%, transparent)',
     fillEnd: 'color-mix(in oklch, var(--chart-2) 3%, transparent)',
     strokeWidth: 2,
+    strokeDasharray: '8 4',
   },
   {
     key: 'sessions',
@@ -37,6 +40,7 @@ export const OVERVIEW_SERIES = [
     fillStart: 'color-mix(in oklch, var(--chart-3) 16%, transparent)',
     fillEnd: 'color-mix(in oklch, var(--chart-3) 3%, transparent)',
     strokeWidth: 2,
+    strokeDasharray: '3 3',
   },
 ] as const satisfies readonly OverviewSeriesDefinition[];
 

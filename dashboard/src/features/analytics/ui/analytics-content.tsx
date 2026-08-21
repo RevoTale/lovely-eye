@@ -59,6 +59,8 @@ const AnalyticsContent: FunctionComponent<AnalyticsContentProps> = ({ dashboard,
         topPagesPage={state.topPagesPage}
         topPagesPageSize={PAGE_SIZES.TOP_PAGES}
         onTopPagesPageChange={(page) => state.setPage('topPagesPage', page)}
+        pagePathContains={state.pagePathContains}
+        onPagePathSearch={state.setPagePathContains}
         referrers={statsCollections.referrersItems}
         referrersTotal={statsCollections.referrersTotal}
         referrersPage={state.referrersPage}

@@ -13,7 +13,7 @@ COPY ./dashboard .
 RUN pnpm run build
 
 # Stage 2: Build the Go server
-FROM golang:1.26.6-alpine AS builder
+FROM golang:1.27.0-alpine AS builder
 
 WORKDIR /app
 COPY ./server/go.mod ./server/go.sum ./

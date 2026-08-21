@@ -23,6 +23,7 @@ func repositoryAnalyticsQuery(query Query) analyticspersistence.AnalyticsQuery {
 			Device:             query.Filter.Device,
 			OS:                 query.Filter.OS,
 			Page:               query.Filter.Page,
+			PagePathContains:   query.Filter.PagePathContains,
 			Country:            query.Filter.Country,
 			EventTypes:         eventTypes,
 			EventName:          query.Filter.EventName,

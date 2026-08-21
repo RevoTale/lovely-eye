@@ -9,6 +9,9 @@ const readThemeTokens = async (page: Page): Promise<Record<string, string>> =>
         '--background',
         '--card',
         '--primary',
+        '--chart-1',
+        '--chart-2',
+        '--chart-3',
         '--destructive-foreground',
         '--radius',
         '--theme-font-sans',
@@ -29,6 +32,9 @@ test('Zen Inspired semantic tokens switch between light and dark without externa
       '--background': '#e9e4d8',
       '--card': '#f4efe4',
       '--primary': '#2e2e2e',
+      '--chart-1': '#c2410c',
+      '--chart-2': '#1d4ed8',
+      '--chart-3': '#047857',
       '--destructive-foreground': '#fff',
       '--radius': '.5rem',
       '--theme-font-sans':
@@ -45,6 +51,9 @@ test('Zen Inspired semantic tokens switch between light and dark without externa
       '--background': '#141414',
       '--card': '#1c1c1c',
       '--primary': '#d1cfc0',
+      '--chart-1': '#fb923c',
+      '--chart-2': '#60a5fa',
+      '--chart-3': '#34d399',
       '--destructive-foreground': '#fff',
     });
 });

@@ -54,6 +54,8 @@ export type FilterInput = {
   os: Array<string> | null | undefined;
   /** Filter by page path */
   page: Array<string> | null | undefined;
+  /** Filter by a case-insensitive literal substring of the page path */
+  pagePathContains: string | null | undefined;
   /** Filter by specific referrer */
   referrer: Array<string> | null | undefined;
 };

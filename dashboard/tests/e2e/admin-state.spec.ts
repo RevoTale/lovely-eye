@@ -128,3 +128,21 @@ test('site switching and URL-owned analytics state survive history and refresh',
   await expect(page).toHaveURL(`${betaURL.replace(/\?.*$/u, '')}?preset=30d`);
   await expect(page.getByRole('tab', { name: '30d' })).toHaveAttribute('aria-selected', 'true');
 });
+
+test('top pages path search is explicit, URL-owned, and removable', async ({ page }) => {
+  await signInAsAdmin(page);
+  await createSite(page, 'Path Search Site', ['path-search.example']);
+
+  const pathInput = page.getByRole('searchbox', { name: 'Page path contains' });
+  await pathInput.fill('  /blog  ');
+  await page.getByRole('button', { name: 'Search' }).click();
+
+  await expect(page).toHaveURL(/pagePathContains=%2Fblog/u);
+  await expect(pathInput).toHaveValue('/blog');
+  const activeFilter = page.getByRole('link', { name: /Page contains: \/blog/u });
+  await expect(activeFilter).toBeVisible();
+
+  await activeFilter.click();
+  await expect(page).not.toHaveURL(/pagePathContains/u);
+  await expect(pathInput).toHaveValue('');
+});

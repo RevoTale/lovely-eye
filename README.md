@@ -117,7 +117,7 @@ docker compose up -d
 
 ### From Source
 
-Requires Go 1.26+.
+Requires Go 1.27+.
 
 ```bash
 cd server

@@ -4,6 +4,8 @@ import {
   type AnalyticsFilterKey,
   type AnalyticsSearch,
   clearAnalyticsFilters,
+  removeAnalyticsFilter,
+  setPagePathSearch,
 } from '@/features/analytics/model/analytics-search';
 import ActiveFilterChip from '@/features/analytics/ui/active-filter-chip';
 import { useFragment as getFragmentData } from '@/shared/api/generated/fragment-masking';
@@ -23,6 +25,7 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
   const devices = search.device ?? [];
   const operatingSystems = search.os ?? [];
   const pages = search.page ?? [];
+  const pagePathContains = search.pagePathContains;
   const countries = search.country ?? [];
   const normalizedCountryCodes = Array.from(
     new Set(
@@ -56,6 +59,7 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
     devices.length > EMPTY_COUNT ||
     operatingSystems.length > EMPTY_COUNT ||
     pages.length > EMPTY_COUNT ||
+    pagePathContains !== undefined ||
     countries.length > EMPTY_COUNT ||
     eventNames.length > EMPTY_COUNT ||
     eventPaths.length > EMPTY_COUNT;
@@ -95,14 +99,22 @@ export const ActiveFilters = ({ siteId, search }: ActiveFiltersProps): React.Rea
         values.map((value) => (
           <ActiveFilterChip
             key={`${field}-${value}`}
-            field={field}
             label={label}
             siteId={siteId}
-            value={value}
+            remove={(current) => removeAnalyticsFilter(current, field, value)}
           >
             {displayValue?.(value) ?? value}
           </ActiveFilterChip>
         ))
+      )}
+      {pagePathContains === undefined ? null : (
+        <ActiveFilterChip
+          label='Page contains'
+          siteId={siteId}
+          remove={(current) => setPagePathSearch(current, '')}
+        >
+          {pagePathContains}
+        </ActiveFilterChip>
       )}
       <Link
         to='/sites/$siteId/analytics'
