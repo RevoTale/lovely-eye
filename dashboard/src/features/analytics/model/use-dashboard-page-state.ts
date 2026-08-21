@@ -7,13 +7,12 @@ import {
   clearPagination,
   setAnalyticsPage,
 } from '@/features/analytics/model/analytics-search';
-import { buildFilters } from '@/features/analytics/model/dashboard-utils';
+import { buildFilterInput, buildFilters } from '@/features/analytics/model/dashboard-utils';
 import type { DatePreset } from '@/features/analytics/model/date-range';
 import { useDateRange } from '@/features/analytics/model/use-date-range';
 import type { FilterInput } from '@/shared/api/generated/graphql';
 
 const DEFAULT_STATS_BUCKET = 'daily';
-const EMPTY_COUNT = 0;
 
 export interface AnalyticsPageState {
   siteId: string;
@@ -71,22 +70,7 @@ export function useDashboardPageState(): AnalyticsPageState {
     decodedSearch,
     filter,
   } = useMemo(() => buildFilters(search), [search]);
-  const filterInput = useMemo<FilterInput | null>(() => {
-    if (Object.keys(filter).length === EMPTY_COUNT) return null;
-    const getFilter = (key: string): string[] | null => filter[key] ?? null;
-    return {
-      referrer: getFilter('referrer'),
-      browser: getFilter('browser'),
-      device: getFilter('device'),
-      os: getFilter('os'),
-      page: getFilter('page'),
-      country: getFilter('country'),
-      eventType: null,
-      eventDefinitionId: getFilter('eventDefinitionId'),
-      eventName: getFilter('eventName'),
-      eventPath: getFilter('eventPath'),
-    };
-  }, [filter]);
+  const filterInput = useMemo(() => buildFilterInput(filter), [filter]);
   const filterKey = useMemo(
     () =>
       [referrers, browsers, devices, operatingSystems, pages, countries, eventNames, eventPaths]

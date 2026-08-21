@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { type FormEvent, type ReactElement, useState } from 'react';
+import { type FormEvent, type ReactElement, useEffect, useState } from 'react';
 import { useAuth } from '@/features/auth/model/auth-context';
 import { AuthShell } from '@/features/auth/ui/auth-shell';
 import { Button } from '@/shared/ui/button';
@@ -13,8 +13,16 @@ export const RegisterScreen = (): ReactElement => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, authMode, bootstrapError } = useAuth();
+  const { register, authMode, bootstrapError, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isSubmitting || !isAuthenticated) return;
+    void navigate({ to: '/' }).catch((err: unknown) => {
+      setError(err instanceof Error ? err.message : 'Unable to open the dashboard');
+      setIsSubmitting(false);
+    });
+  }, [isAuthenticated, isSubmitting, navigate]);
 
   const handleSubmit = (e: FormEvent): void => {
     e.preventDefault();
@@ -32,16 +40,10 @@ export const RegisterScreen = (): ReactElement => {
 
     setIsSubmitting(true);
 
-    void register({ username, password })
-      .then(() => {
-        void navigate({ to: '/' });
-      })
-      .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : 'Registration failed');
-      })
-      .finally(() => {
-        setIsSubmitting(false);
-      });
+    void register({ username, password }).catch((err: unknown) => {
+      setError(err instanceof Error ? err.message : 'Registration failed');
+      setIsSubmitting(false);
+    });
   };
 
   const hasError = error !== null && error !== '';

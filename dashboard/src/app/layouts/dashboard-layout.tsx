@@ -4,7 +4,6 @@ import type { ReactElement } from 'react';
 import { Link, useNavigate } from '@/app/router';
 import { ThemeToggle } from '@/app/ui/theme-toggle';
 import { useAuth } from '@/features/auth/model/auth-context';
-import { AuthShell } from '@/features/auth/ui/auth-shell';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import {
@@ -24,7 +23,7 @@ const USERNAME_INITIALS_START = 0;
 const USERNAME_INITIALS_END = 2;
 
 export const DashboardLayout = (): ReactElement => {
-  const { user, logout, isLoading, bootstrapError, unauthenticatedRoute } = useAuth();
+  const { user, logout, unauthenticatedRoute } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = (): void => {
@@ -32,22 +31,6 @@ export const DashboardLayout = (): ReactElement => {
       void navigate({ to: unauthenticatedRoute });
     });
   };
-
-  if (isLoading) {
-    return (
-      <AuthShell title='Loading dashboard' description='Checking authentication status.'>
-        <p className='text-center text-sm text-muted-foreground'>Please wait...</p>
-      </AuthShell>
-    );
-  }
-
-  if (bootstrapError !== null) {
-    return (
-      <AuthShell title='Authentication unavailable' description={bootstrapError}>
-        <p className='text-center text-sm text-muted-foreground'>Refresh the page to retry.</p>
-      </AuthShell>
-    );
-  }
 
   const initials =
     user?.username.slice(USERNAME_INITIALS_START, USERNAME_INITIALS_END).toUpperCase() ?? 'U';

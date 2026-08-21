@@ -85,7 +85,7 @@ export const SiteSettingsScreen = (): React.ReactNode => {
     });
   };
 
-  if (siteLoading) {
+  if (siteLoading && site === undefined) {
     return <SiteFormLoading />;
   }
   if (siteError !== undefined) {

@@ -548,6 +548,32 @@ accepted decisions and ADRs
 - The final implementation matches all accepted decisions D-001 through D-029.
 - The maintainer receives a concise before/after stack and migration summary.
 
+## Post-normalization UX follow-up — Smooth dashboard lifecycle
+
+### Task F.1 — Replace the transient-state contract
+
+**Acceptance criteria:** Controlled browser tests require one neutral cold auth surface and reject full-page skeletons between successful login and the prepared authenticated destination. Warm navigation and refresh retain the current stable surface.
+
+**Verification:** The focused Playwright scenario fails against the pre-change implementation for the expected skeleton cascade, then passes after implementation without arbitrary sleeps.
+
+### Task F.2 — Coordinate auth, routing, and critical data
+
+**Acceptance criteria:** Login establishes the confirmed user without a redundant session refetch; identity changes clear Apollo data; initial site selection redirects before render; route loaders coordinate critical Apollo data; private requests remain server-authorized; `BASE_PATH` is applied only at the existing integration boundary.
+
+**Verification:** Focused auth unit tests, GraphQL operation gates, login/direct-refresh/site-switch browser flows, base-path matrix, and same-origin auth isolation pass.
+
+### Task F.3 — Normalize warm refresh and pending feedback
+
+**Acceptance criteria:** Displayable data survives polling, filters, pagination, and background refresh; brief work does not flash a placeholder; slow work exposes accessible non-blocking feedback; layout geometry stays stable and reduced-motion is respected.
+
+**Verification:** Browser state assertions, CLS trace, responsive matrix, GraphQL fan-out, full `task check`, generation freshness, and production build pass without new dependencies.
+
+### Follow-up checkpoint
+
+- D-033 is enforced by real-browser regression coverage.
+- No temporary loading bridge, duplicate request, or avoidable full-page skeleton remains.
+- Completion evidence records before/after behavior and measurements.
+
 ## Primary risks and mitigations
 
 | Risk | Impact | Mitigation |

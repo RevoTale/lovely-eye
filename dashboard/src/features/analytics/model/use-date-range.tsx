@@ -1,9 +1,10 @@
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useMemo } from 'react';
 import {
-  ANALYTICS_ROUTE_ID,
-  type AnalyticsSearch,
-} from '@/features/analytics/model/analytics-search';
+  DEFAULT_DATE_PRESET,
+  resolveAnalyticsDateState,
+} from '@/features/analytics/model/analytics-date-range';
+import { ANALYTICS_ROUTE_ID } from '@/features/analytics/model/analytics-search';
 import {
   buildDateRange,
   type DatePreset,
@@ -26,71 +27,23 @@ interface DateRangeState extends DateRangeInput {
   applyCustomRange: (range: DateRangeInput) => boolean;
 }
 
-const DEFAULT_PRESET: DatePreset = '30d';
-
-const resolveCustomRange = (raw: AnalyticsSearch): DateRangeInput | undefined => {
-  const fromDate = raw.from ?? '';
-  const toDate = raw.to ?? '';
-  const fromTime = raw.fromTime ?? '';
-  const toTime = raw.toTime ?? '';
-  const hasValidInputs =
-    isValidDateInput(fromDate) &&
-    isValidDateInput(toDate) &&
-    isValidTimeInput(fromTime) &&
-    isValidTimeInput(toTime);
-  if (!hasValidInputs) return undefined;
-
-  const candidate = buildDateRange(fromDate, toDate, fromTime, toTime);
-  if (candidate === undefined || new Date(candidate.from) > new Date(candidate.to))
-    return undefined;
-
-  return { fromDate, toDate, fromTime, toTime };
-};
-
-const resolveSearchState = (raw: AnalyticsSearch): { preset: DatePreset } & DateRangeInput => {
-  const preset = raw.preset ?? DEFAULT_PRESET;
-  if (preset === 'all') {
-    return { preset, fromDate: '', toDate: '', fromTime: '', toTime: '' };
-  }
-
-  if (preset === 'custom') {
-    const customRange = resolveCustomRange(raw);
-    if (customRange !== undefined) return { preset, ...customRange };
-  }
-
-  const presetDates = presetToDates(preset, new Date());
-  return {
-    preset,
-    fromDate: presetDates.fromDate,
-    toDate: presetDates.toDate,
-    fromTime: '00:00',
-    toTime: '23:59',
-  };
-};
-
 export function useDateRange(): DateRangeState {
   const search = useSearch({ from: ANALYTICS_ROUTE_ID });
   const { siteId } = useParams({ from: ANALYTICS_ROUTE_ID });
   const navigate = useNavigate();
 
-  const resolvedState = useMemo(() => resolveSearchState(search), [search]);
+  const resolvedState = useMemo(() => resolveAnalyticsDateState(search, new Date()), [search]);
 
   const { preset, fromDate, toDate, fromTime, toTime } = resolvedState;
 
-  const dateRange = useMemo(() => {
-    if (preset === 'all') {
-      return undefined;
-    }
-    if (preset === 'custom') {
-      return buildDateRange(fromDate, toDate, fromTime, toTime);
-    }
-    const presetDates = presetToDates(preset, new Date());
-    return buildDateRange(presetDates.fromDate, presetDates.toDate, '00:00', '23:59');
-  }, [preset, fromDate, toDate, fromTime, toTime]);
+  const dateRange = useMemo(
+    () => (preset === 'all' ? undefined : buildDateRange(fromDate, toDate, fromTime, toTime)),
+    [preset, fromDate, toDate, fromTime, toTime]
+  );
 
   const setPreset = (value: DatePreset): void => {
     if (value === 'custom') {
-      const fallbackDates = presetToDates(DEFAULT_PRESET, new Date());
+      const fallbackDates = presetToDates(DEFAULT_DATE_PRESET, new Date());
       const nextFromDate = isValidDateInput(fromDate) ? fromDate : fallbackDates.fromDate;
       const nextToDate = isValidDateInput(toDate) ? toDate : fallbackDates.toDate;
       const nextFromTime = isValidTimeInput(fromTime) ? fromTime : '00:00';

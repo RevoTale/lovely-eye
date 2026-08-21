@@ -79,3 +79,10 @@ Normative decisions: [`docs/plans/architecture-normalization.md`](../docs/plans/
 - [x] 7.3 Finalize maintained documentation and examples.
 - [x] 7.4 Close every definition-of-done item with evidence.
 - [ ] Final checkpoint: maintainer review and no temporary or unintended changes.
+
+## Post-normalization UX follow-up
+
+- [x] F.1 Replace the transient-state browser contract with D-033.
+- [x] F.2 Coordinate auth, routing, and critical Apollo data before route commit.
+- [x] F.3 Normalize warm refresh and pending feedback without skeleton cascades.
+- [x] Follow-up checkpoint: browser/performance/base-path evidence complete and maintainer review ready.

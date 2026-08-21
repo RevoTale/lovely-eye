@@ -69,7 +69,7 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
   const siteQuery = useQuery(SiteDocument, {
     variables: { id: siteId },
     skip: !hasSiteId,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-first',
     notifyOnNetworkStatusChange: true,
   });
   const dashboardQuery = useQuery(DashboardDocument, {
@@ -84,7 +84,9 @@ export function useDashboardData(params: UseDashboardDataParams): DashboardData 
       countriesPage
     ),
     skip: !hasSiteId,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'cache-only',
+    nextFetchPolicy: (_currentFetchPolicy, { reason }) =>
+      reason === 'variables-changed' ? 'cache-and-network' : 'cache-only',
     notifyOnNetworkStatusChange: true,
     pollInterval: DASHBOARD_POLL_INTERVAL_MS,
     skipPollAttempt: skipPollWhenHidden,

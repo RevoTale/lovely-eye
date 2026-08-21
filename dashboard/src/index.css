@@ -167,6 +167,21 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  [class*="animate-"] {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+
+  [class*="transition"] {
+    transition-duration: 0.01ms;
+  }
+}
+
 @layer utilities {
   .scroll-fade-right {
     -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 16px), transparent 100%);

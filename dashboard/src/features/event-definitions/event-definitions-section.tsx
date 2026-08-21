@@ -58,7 +58,7 @@ export const EventDefinitionsSection = ({ siteId }: EventDefinitionsSectionProps
     });
   };
 
-  if (loading) {
+  if (loading && eventDefinitionsData === undefined) {
     return (
       <Card>
         <CardHeader>

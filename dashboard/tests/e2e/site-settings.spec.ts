@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { createSite, signInAsAdmin } from './helpers/admin';
 import { installGraphQLOperationController } from './helpers/graphql-gate';
 
-test('site settings preserve loading, multi-domain mutation, and destructive-action state', async ({
+test('site settings preserve neutral loading, multi-domain mutation, and destructive-action state', async ({
   context,
   page,
 }) => {
@@ -18,7 +18,8 @@ test('site settings preserve loading, multi-domain mutation, and destructive-act
   const firstLoad = operations.blockNext('Site');
   await settingsPage.goto(settingsURL);
   await firstLoad.seen;
-  await expect(settingsPage.locator('.animate-pulse').first()).toBeVisible();
+  await expect(settingsPage.getByRole('heading', { name: 'Loading dashboard' })).toBeVisible();
+  await expect(settingsPage.locator('.animate-pulse')).toHaveCount(0);
   await expect(settingsPage.getByRole('heading', { name: 'Settings Contract Site' })).toHaveCount(
     0
   );
@@ -49,5 +50,7 @@ test('site settings preserve loading, multi-domain mutation, and destructive-act
   deleteMutation.release();
   await expect(settingsPage).not.toHaveURL(settingsURL);
   await settingsPage.goto(settingsURL);
+  await expect(settingsPage.getByText(/site not found/iu)).toBeVisible();
+  await settingsPage.goto(analyticsURL);
   await expect(settingsPage.getByText(/site not found/iu)).toBeVisible();
 });

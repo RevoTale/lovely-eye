@@ -1,21 +1,25 @@
+import type { ApolloClient } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
-import { RouterProvider } from '@tanstack/react-router';
-import { useMemo, useRef } from 'react';
+import { RouterProvider, useRouterState } from '@tanstack/react-router';
+import { Suspense, useMemo, useRef } from 'react';
 import { router } from '@/app/router';
+import { DashboardBoot } from '@/app/ui/dashboard-boot';
 import { AuthProvider, useAuth } from '@/features/auth/model/auth-context';
-import { AuthShell } from '@/features/auth/ui/auth-shell';
 import { createApolloClient } from '@/shared/api/apollo';
 
-const InnerApp = (): React.ReactNode => {
+const InnerApp = ({ apolloClient }: { apolloClient: ApolloClient }): React.ReactNode => {
   const auth = useAuth();
-  if (auth.isLoading) {
-    return (
-      <AuthShell title='Loading dashboard' description='Checking authentication status.'>
-        <p className='text-center text-sm text-muted-foreground'>Please wait...</p>
-      </AuthShell>
-    );
-  }
-  return <RouterProvider router={router} context={{ auth }} />;
+  const hasResolvedRoute = useRouterState({
+    router,
+    select: (state) => state.resolvedLocation !== undefined,
+  });
+  if (auth.isLoading) return <DashboardBoot />;
+  return (
+    <Suspense fallback={<DashboardBoot />}>
+      <RouterProvider router={router} context={{ apolloClient, auth }} />
+      {hasResolvedRoute ? null : <DashboardBoot />}
+    </Suspense>
+  );
 };
 
 export const App = (): React.ReactNode => {
@@ -31,7 +35,7 @@ export const App = (): React.ReactNode => {
   return (
     <ApolloProvider client={apolloClient}>
       <AuthProvider authErrorHandlerRef={authErrorHandlerRef}>
-        <InnerApp />
+        <InnerApp apolloClient={apolloClient} />
       </AuthProvider>
     </ApolloProvider>
   );

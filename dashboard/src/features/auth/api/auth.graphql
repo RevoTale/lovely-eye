@@ -12,7 +12,7 @@ query Me {
 mutation Login($input: LoginInput!) {
   login(input: $input) {
     user {
-      ...AuthUserFields
+      ...AuthUserDetailsFields
     }
   }
 }
@@ -20,19 +20,13 @@ mutation Login($input: LoginInput!) {
 mutation Register($input: RegisterInput!) {
   register(input: $input) {
     user {
-      ...AuthUserFields
+      ...AuthUserDetailsFields
     }
   }
 }
 
 mutation Logout {
   logout
-}
-
-fragment AuthUserFields on User {
-  id
-  username
-  role
 }
 
 fragment AuthUserDetailsFields on User {
