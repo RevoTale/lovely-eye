@@ -1358,6 +1358,10 @@ input FilterInput {
   """
   page: [String!]
   """
+  Filter by a case-insensitive literal substring of the page path
+  """
+  pagePathContains: String
+  """
   Filter by ISO country code
   """
   country: [String!]
@@ -7209,7 +7213,7 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"referrer", "browser", "device", "os", "page", "country", "eventType", "eventName", "eventPath", "eventDefinitionId"}
+	fieldsInOrder := [...]string{"referrer", "browser", "device", "os", "page", "pagePathContains", "country", "eventType", "eventName", "eventPath", "eventDefinitionId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -7251,6 +7255,13 @@ func (ec *executionContext) unmarshalInputFilterInput(ctx context.Context, obj a
 				return it, err
 			}
 			it.Page = data
+		case "pagePathContains":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("pagePathContains"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.PagePathContains = data
 		case "country":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("country"))
 			data, err := ec.unmarshalOString2ᚕstringᚄ(ctx, v)

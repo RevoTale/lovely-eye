@@ -81,11 +81,11 @@
   --border: #d2cbbb;
   --input: #d2cbbb;
   --ring: #2e2e2e;
-  --chart-1: #f26a4b;
-  --chart-2: #1e1e1e;
-  --chart-3: #5e5a52;
-  --chart-4: #a89f8f;
-  --chart-5: #cfc8b8;
+  --chart-1: #c2410c;
+  --chart-2: #1d4ed8;
+  --chart-3: #047857;
+  --chart-4: #a16207;
+  --chart-5: #7e22ce;
   --sidebar: #e3ddcf;
   --sidebar-foreground: #1e1e1e;
   --sidebar-primary: #2e2e2e;
@@ -131,11 +131,11 @@
   --border: #2c2c2c;
   --input: #2c2c2c;
   --ring: #d1cfc0;
-  --chart-1: #f26a4b;
-  --chart-2: #d9cfc2;
-  --chart-3: #8e8a83;
-  --chart-4: #5c5a56;
-  --chart-5: #3b3b3b;
+  --chart-1: #fb923c;
+  --chart-2: #60a5fa;
+  --chart-3: #34d399;
+  --chart-4: #facc15;
+  --chart-5: #c084fc;
   --sidebar: #101010;
   --sidebar-foreground: #e8e3da;
   --sidebar-primary: #d1cfc0;
@@ -167,6 +167,11 @@
   }
 }
 
+::view-transition-group(root) {
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -179,6 +184,10 @@
 
   [class*="transition"] {
     transition-duration: 0.01ms;
+  }
+
+  ::view-transition-group(root) {
+    animation-duration: 0.01ms;
   }
 }
 

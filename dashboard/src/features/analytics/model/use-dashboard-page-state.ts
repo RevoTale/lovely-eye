@@ -6,6 +6,7 @@ import {
   type AnalyticsSearch,
   clearPagination,
   setAnalyticsPage,
+  setPagePathSearch,
 } from '@/features/analytics/model/analytics-search';
 import { buildFilterInput, buildFilters } from '@/features/analytics/model/dashboard-utils';
 import type { DatePreset } from '@/features/analytics/model/date-range';
@@ -42,6 +43,8 @@ export interface AnalyticsPageState {
   statsBucket: 'daily' | 'hourly';
   setStatsBucket: (bucket: 'daily' | 'hourly') => void;
   setPage: (key: AnalyticsPageKey, page: number) => void;
+  pagePathContains: string;
+  setPagePathContains: (value: string) => void;
 }
 
 export function useDashboardPageState(): AnalyticsPageState {
@@ -67,16 +70,38 @@ export function useDashboardPageState(): AnalyticsPageState {
     countries,
     eventNames,
     eventPaths,
+    pagePathContains,
     decodedSearch,
     filter,
   } = useMemo(() => buildFilters(search), [search]);
-  const filterInput = useMemo(() => buildFilterInput(filter), [filter]);
+  const filterInput = useMemo(
+    () => buildFilterInput(filter, pagePathContains),
+    [filter, pagePathContains]
+  );
   const filterKey = useMemo(
     () =>
-      [referrers, browsers, devices, operatingSystems, pages, countries, eventNames, eventPaths]
-        .map((value) => value.join(','))
-        .join('|'),
-    [browsers, countries, devices, eventNames, eventPaths, operatingSystems, pages, referrers]
+      JSON.stringify({
+        referrers,
+        browsers,
+        devices,
+        operatingSystems,
+        pages,
+        countries,
+        eventNames,
+        eventPaths,
+        pagePathContains,
+      }),
+    [
+      browsers,
+      countries,
+      devices,
+      eventNames,
+      eventPaths,
+      operatingSystems,
+      pagePathContains,
+      pages,
+      referrers,
+    ]
   );
   const dateRangeForChart = useMemo(
     () =>
@@ -119,6 +144,7 @@ export function useDashboardPageState(): AnalyticsPageState {
     osPage,
     countriesPage,
     statsBucket,
+    pagePathContains: pagePathContains ?? '',
     setStatsBucket: (bucket) =>
       void navigate({
         resetScroll: false,
@@ -134,6 +160,12 @@ export function useDashboardPageState(): AnalyticsPageState {
         to: '/sites/$siteId/analytics',
         params: { siteId },
         search: (prev) => setAnalyticsPage(prev, key, page),
+      }),
+    setPagePathContains: (value) =>
+      void navigate({
+        to: '/sites/$siteId/analytics',
+        params: { siteId },
+        search: (prev) => setPagePathSearch(prev, value),
       }),
   };
 }

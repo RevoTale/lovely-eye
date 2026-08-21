@@ -26,7 +26,17 @@ const OverviewChartLegend: FunctionComponent<DefaultLegendContentProps> = ({ pay
           className='inline-flex max-w-full items-center gap-2 rounded-full border border-border/70 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground'
           title={series.label}
         >
-          <span className='h-2.5 w-2.5 rounded-full' style={{ backgroundColor: series.stroke }} />
+          <svg aria-hidden='true' className='h-2.5 w-5' viewBox='0 0 20 10'>
+            <line
+              x1='0'
+              y1='5'
+              x2='20'
+              y2='5'
+              stroke={series.stroke}
+              strokeWidth={series.strokeWidth}
+              strokeDasharray={series.strokeDasharray}
+            />
+          </svg>
           <span className='max-w-[10rem] truncate font-medium text-foreground'>{series.label}</span>
         </div>
       ))}

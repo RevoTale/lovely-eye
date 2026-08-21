@@ -60,7 +60,7 @@ lower cold value as a production memory requirement.
 - No `GOMEMLIMIT` is set by the application. The measured live heap was about 1 MiB with a 4 MiB GC
   goal; lowering the soft limit would add GC CPU without reducing the dominant mapped/file-backed
   memory. Operators may set `GOMEMLIMIT` below a container limit after workload-specific testing.
-- Go 1.26 already applies the container-aware `GOMAXPROCS` default. Do not add an automatic CPU-limit
+- Go 1.27 applies the container-aware `GOMAXPROCS` default. Do not add an automatic CPU-limit
   package or hardcode `GOMAXPROCS` without a same-quota latency and throughput comparison.
 
 ## Reproduce the benchmarks

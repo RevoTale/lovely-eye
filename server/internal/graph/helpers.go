@@ -61,7 +61,11 @@ func parseFilterInput(input *model.FilterInput, limits DashboardLimits) (analyti
 		return analytics.Filter{}, nil
 	}
 
-	if err := validateStringFilters(limits, input.Referrer, input.Browser, input.Device, input.Os, input.Page, input.Country, input.EventName, input.EventPath, input.EventDefinitionID); err != nil {
+	pagePathContains := ""
+	if input.PagePathContains != nil {
+		pagePathContains = strings.TrimSpace(*input.PagePathContains)
+	}
+	if err := validateStringFilters(limits, input.Referrer, input.Browser, input.Device, input.Os, input.Page, []string{pagePathContains}, input.Country, input.EventName, input.EventPath, input.EventDefinitionID); err != nil {
 		return analytics.Filter{}, err
 	}
 	if limits.MaxFilterValues > 0 && len(input.EventType) > limits.MaxFilterValues {
@@ -86,6 +90,7 @@ func parseFilterInput(input *model.FilterInput, limits DashboardLimits) (analyti
 		Device:             input.Device,
 		OS:                 input.Os,
 		Page:               input.Page,
+		PagePathContains:   pagePathContains,
 		Country:            input.Country,
 		EventTypes:         parseEventTypes(input.EventType),
 		EventName:          input.EventName,
@@ -117,6 +122,7 @@ func isFilterEmpty(filter analytics.Filter) bool {
 		len(filter.Device) == 0 &&
 		len(filter.OS) == 0 &&
 		len(filter.Page) == 0 &&
+		filter.PagePathContains == "" &&
 		len(filter.Country) == 0 &&
 		len(filter.EventTypes) == 0 &&
 		len(filter.EventName) == 0 &&

@@ -35,12 +35,16 @@ interface FilterResult {
   countries: string[];
   eventNames: string[];
   eventPaths: string[];
+  pagePathContains: string | undefined;
   decodedSearch: AnalyticsSearch;
   filter: Record<string, string[]>;
 }
 
-export function buildFilterInput(filter: Record<string, string[]>): FilterInput | null {
-  if (Object.keys(filter).length === EMPTY_COUNT) return null;
+export function buildFilterInput(
+  filter: Record<string, string[]>,
+  pagePathContains?: string
+): FilterInput | null {
+  if (Object.keys(filter).length === EMPTY_COUNT && pagePathContains === undefined) return null;
   const getFilter = (key: string): string[] | null => filter[key] ?? null;
   return {
     referrer: getFilter('referrer'),
@@ -48,6 +52,7 @@ export function buildFilterInput(filter: Record<string, string[]>): FilterInput 
     device: getFilter('device'),
     os: getFilter('os'),
     page: getFilter('page'),
+    pagePathContains: pagePathContains ?? null,
     country: getFilter('country'),
     eventType: null,
     eventDefinitionId: getFilter('eventDefinitionId'),
@@ -66,6 +71,7 @@ export function buildFilters(search: AnalyticsSearch): FilterResult {
   const countries = getFilter('country');
   const eventNames = getFilter('eventName');
   const eventPaths = getFilter('eventPath');
+  const pagePathContains = search.pagePathContains;
 
   const decodedSearch = {
     ...search,
@@ -99,6 +105,7 @@ export function buildFilters(search: AnalyticsSearch): FilterResult {
     countries,
     eventNames,
     eventPaths,
+    pagePathContains,
     decodedSearch,
     filter,
   };

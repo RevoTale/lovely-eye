@@ -37,6 +37,8 @@ type FilterInput struct {
 	Os []string `json:"os,omitempty"`
 	// Filter by page path
 	Page []string `json:"page,omitempty"`
+	// Filter by a case-insensitive literal substring of the page path
+	PagePathContains *string `json:"pagePathContains,omitempty"`
 	// Filter by ISO country code
 	Country []string `json:"country,omitempty"`
 	// Filter by event type (page view or predefined)
