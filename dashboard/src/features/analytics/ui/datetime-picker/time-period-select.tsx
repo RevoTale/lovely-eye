@@ -24,7 +24,12 @@ const TimePeriodSelect = forwardRef<HTMLButtonElement, PeriodSelectorProps>(
 
     return (
       <div className='flex h-10 items-center'>
-        <Select defaultValue={period} onValueChange={(value: Period) => handleValueChange(value)}>
+        <Select
+          defaultValue={period}
+          onValueChange={(value) => {
+            if (value !== null) handleValueChange(value);
+          }}
+        >
           <SelectTrigger
             ref={ref}
             className='w-[65px] focus:bg-accent focus:text-accent-foreground'

@@ -82,13 +82,6 @@ export function isValidTimeInput(value: string): boolean {
   return hour >= HOUR_MIN && hour <= HOUR_MAX && minute >= MINUTE_MIN && minute <= MINUTE_MAX;
 }
 
-export function parseDateInput(value: string): Date | undefined {
-  if (!isValidDateInput(value)) return undefined;
-  const parsed = new Date(`${value}T${ZERO_TIME_FULL}`);
-  if (Number.isNaN(parsed.getTime())) return undefined;
-  return parsed;
-}
-
 export function normalizeTimeInput(value: string, fallback: string): string {
   if (value === EMPTY_STRING) return fallback;
   const trimmed = value.trim();

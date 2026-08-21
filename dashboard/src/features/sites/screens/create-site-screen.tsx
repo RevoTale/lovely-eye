@@ -11,7 +11,8 @@ import {
   SitesDocument,
 } from '@/shared/api/generated/graphql';
 import { readFragment } from '@/shared/api/read-fragment';
-import { Button } from '@/shared/ui/button';
+import { cn } from '@/shared/lib/utils';
+import { Button, buttonVariants } from '@/shared/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -33,12 +34,10 @@ export function CreateSiteScreen(): React.ReactNode {
 
   return (
     <div className='mx-auto w-full max-w-3xl space-y-6'>
-      <Button variant='outline' size='sm' asChild>
-        <Link to='/sites'>
-          <ArrowLeft className='size-4' />
-          Back to Sites
-        </Link>
-      </Button>
+      <Link to='/sites' className={buttonVariants({ variant: 'outline', size: 'sm' })}>
+        <ArrowLeft className='size-4' />
+        Back to Sites
+      </Link>
       <div>
         <h1 className='text-3xl font-bold tracking-tight'>Add New Site</h1>
         <p className='mt-1 text-muted-foreground'>Create a site and connect all of its domains.</p>
@@ -75,15 +74,17 @@ export function CreateSiteScreen(): React.ReactNode {
                 <Save className='size-4' />
                 {loading ? 'Creating...' : 'Create Site'}
               </Button>
-              <Button
-                type='button'
-                variant='outline'
-                className='w-full sm:w-auto'
-                disabled={loading}
-                asChild
+              <Link
+                to='/sites'
+                aria-disabled={loading}
+                className={cn(
+                  buttonVariants({ variant: 'outline' }),
+                  'w-full sm:w-auto',
+                  loading && 'pointer-events-none opacity-50'
+                )}
               >
-                <Link to='/sites'>Cancel</Link>
-              </Button>
+                Cancel
+              </Link>
             </div>
           </CardContent>
         </Card>

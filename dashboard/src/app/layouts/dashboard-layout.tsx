@@ -10,6 +10,7 @@ import { Button } from '@/shared/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -75,28 +76,32 @@ export const DashboardLayout = (): ReactElement => {
             <Separator orientation='vertical' className='h-5 mx-1.5 sm:h-6 sm:mx-2' />
 
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant='ghost'
-                  className='relative h-9 w-9 rounded-full'
-                  aria-label='Open user menu'
-                >
-                  <Avatar className='h-9 w-9'>
-                    <AvatarFallback className='bg-primary/10 text-primary font-semibold'>
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant='ghost'
+                    className='relative h-9 w-9 rounded-full'
+                    aria-label='Open user menu'
+                  />
+                }
+              >
+                <Avatar className='h-9 w-9'>
+                  <AvatarFallback className='bg-primary/10 text-primary font-semibold'>
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className='w-56' align='end' forceMount>
-                <DropdownMenuLabel className='font-normal'>
-                  <div className='flex flex-col space-y-1'>
-                    <p className='text-sm font-medium leading-none'>{user?.username}</p>
-                    <p className='text-xs leading-none text-muted-foreground capitalize'>
-                      {user?.role}
-                    </p>
-                  </div>
-                </DropdownMenuLabel>
+              <DropdownMenuContent className='w-56' align='end'>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className='font-normal'>
+                    <div className='flex flex-col space-y-1'>
+                      <p className='text-sm font-medium leading-none'>{user?.username}</p>
+                      <p className='text-xs leading-none text-muted-foreground capitalize'>
+                        {user?.role}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}

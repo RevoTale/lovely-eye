@@ -35,10 +35,6 @@ func MustNewResolver(trustedCIDRs []string) *Resolver {
 	return resolver
 }
 
-func GetClientIP(xForwardedFor, xRealIP, remoteAddr string) string {
-	return MustNewResolver(nil).GetClientIP(xForwardedFor, xRealIP, remoteAddr)
-}
-
 func (r *Resolver) GetClientIP(xForwardedFor, xRealIP, remoteAddr string) string {
 	remoteHost := hostFromRemoteAddr(remoteAddr)
 	remoteIP, remoteOK := parseIP(remoteHost)

@@ -17,7 +17,7 @@ export const buildBlockedIPEntries = (values: string[]): BlockedIPEntry[] =>
 export const blockedIPValues = (entries: BlockedIPEntry[]): string[] =>
   getNormalizedBlockedIPs(entries.map(({ value }) => value));
 
-export const isValidIP = (value: string): boolean => {
+const isValidIP = (value: string): boolean => {
   if (value === EMPTY_STRING) return false;
   if (value.includes(':')) {
     return /^(?:[0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}$/iv.test(value);

@@ -52,16 +52,14 @@ LABEL org.opencontainers.image.title="Lovely Eye" \
 
 WORKDIR /app
 COPY --from=builder /app/server .
-COPY --from=builder /app/static ./static
-COPY --from=builder /app/static/dist/tracker.js ./static/tracker.js
+COPY --from=builder /app/static/dist/tracker.js ./static/dist/tracker.js
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/load-example-data .
 COPY --from=dashboard-builder /app/dist ./dashboard
 # Create data directory for SQLite and set ownership/permissions for non-root user
 RUN mkdir -p /app/data /data && \
     chown -R 10001:10001 /app/data /data && \
-    chmod -R 755 /app/static && \
-    chmod 644 /app/static/*
+    chmod 644 /app/static/dist/tracker.js
 # Run as non-root (UID 10001)
 USER 10001:10001
 

@@ -280,7 +280,7 @@ accepted decisions and ADRs
 
 ### Task 4.2 — Rebuild the canonical shadcn foundation
 
-**Acceptance criteria:** Current new-york/Radix components are generated into `shared/ui`; unified `radix-ui`, `react-day-picker`, and `tw-animate-css` replace legacy packages; Tailwind v4 tokens/config follow current docs; adopted components use `data-slot` and retain product theming/accessibility.
+**Acceptance criteria:** Current Base Vega/Base UI components are generated into `shared/ui`; `@base-ui/react`, `react-day-picker`, and `tw-animate-css` provide the adopted component foundation; Tailwind v4 tokens/config follow current docs; adopted components use `data-slot` and retain product theming/accessibility.
 
 **Verification:** shadcn diff/source review, component browser smoke, visual/layout checks, build, and dependency audit pass.
 

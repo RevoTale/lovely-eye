@@ -138,7 +138,6 @@ func buildHTTPHandler(
 
 	dashboardCfg := dashboard.Config{
 		BasePath:      basePath,
-		APIUrl:        basePath + "/api",
 		GraphQLUrl:    basePath + "/graphql",
 		DashboardPath: cfg.Server.DashboardPath,
 	}

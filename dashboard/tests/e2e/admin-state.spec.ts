@@ -89,10 +89,10 @@ test('site switching and URL-owned analytics state survive history and refresh',
   await expect(page).toHaveURL(/preset=30d/u);
   await page.goBack();
   await expect(page).toHaveURL(/preset=7d/u);
-  await expect(page.getByRole('tab', { name: '7d' })).toHaveAttribute('data-state', 'active');
+  await expect(page.getByRole('tab', { name: '7d' })).toHaveAttribute('aria-selected', 'true');
   await page.goForward();
   await expect(page).toHaveURL(/preset=30d/u);
   await page.reload();
   await expect(page).toHaveURL(`${betaURL.replace(/\?.*$/u, '')}?preset=30d`);
-  await expect(page.getByRole('tab', { name: '30d' })).toHaveAttribute('data-state', 'active');
+  await expect(page.getByRole('tab', { name: '30d' })).toHaveAttribute('aria-selected', 'true');
 });

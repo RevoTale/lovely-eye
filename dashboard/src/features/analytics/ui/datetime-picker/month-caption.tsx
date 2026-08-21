@@ -18,6 +18,7 @@ const MonthCaption: FunctionComponent<DateTimeMonthCaptionProps> = ({
     <Select
       defaultValue={calendarMonth.date.getMonth().toString()}
       onValueChange={(value) => {
+        if (value === null) return;
         const newDate = new Date(calendarMonth.date);
         newDate.setMonth(Number.parseInt(value, 10));
         onSelectDate(newDate);
@@ -37,6 +38,7 @@ const MonthCaption: FunctionComponent<DateTimeMonthCaptionProps> = ({
     <Select
       defaultValue={calendarMonth.date.getFullYear().toString()}
       onValueChange={(value) => {
+        if (value === null) return;
         const newDate = new Date(calendarMonth.date);
         newDate.setFullYear(Number.parseInt(value, 10));
         onSelectDate(newDate);

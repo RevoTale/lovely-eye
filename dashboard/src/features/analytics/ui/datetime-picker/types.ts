@@ -6,7 +6,7 @@ type CalendarComponentProps = ComponentProps<typeof CalendarComponent>;
 
 export type Period = 'AM' | 'PM';
 export type TimePickerType = 'minutes' | 'seconds' | 'hours' | '12hours';
-export type Granularity = 'day' | 'hour' | 'minute' | 'second';
+type Granularity = 'day' | 'hour' | 'minute' | 'second';
 
 export interface TimePickerProps {
   date?: Date | null;

@@ -21,7 +21,7 @@ import {
 import { readFragment } from '@/shared/api/read-fragment';
 
 type AuthUser = AuthUserDetailsFieldsFragment;
-export type AuthMode = 'register-only' | 'login-only' | 'login-and-register';
+type AuthMode = 'register-only' | 'login-only' | 'login-and-register';
 
 const AUTH_STATUS_ERROR_MESSAGE =
   'Unable to load authentication status. Refresh the page and try again.';

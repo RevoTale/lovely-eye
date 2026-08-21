@@ -51,7 +51,9 @@ const EventDefinitionFieldRow: FunctionComponent<EventDefinitionFieldRowProps> =
         <Select
           value={field.type}
           onValueChange={(value) => {
-            if (isEventFieldType(value)) updateField(setDraftFields, index, { type: value });
+            if (value !== null && isEventFieldType(value)) {
+              updateField(setDraftFields, index, { type: value });
+            }
           }}
         >
           <SelectTrigger id={typeId} className='w-full'>

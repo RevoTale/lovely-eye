@@ -24,7 +24,6 @@ bun run build     # production build
 Static export to `dist/`, served by Go backend. Go server dynamically generates `config.js` per request:
 
 - `BASE_PATH` - dashboard URL path
-- `API_URL` - backend API URL
 - `GRAPHQL_URL` - GraphQL endpoint
 
 The same build must work without rebuilding at `/`, `/lovely-eye`, or any nested runtime path. Vite assets stay relative, while the Go server and TanStack Router apply `BASE_PATH` at runtime. Do not hardcode or manually prepend a deployment path in application routes.

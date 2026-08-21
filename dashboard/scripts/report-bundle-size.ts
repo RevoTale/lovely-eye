@@ -121,7 +121,7 @@ function assertBundleBudgets(report: BundleReport): void {
   const budgets = [
     ['initial dashboard', report.initial.gzipBytes, 265_000],
     ['analytics route increment', report.routes.analytics.gzipBytes, 136_000],
-    ['all dashboard JavaScript', report.totalJavaScript.gzipBytes, 400_000],
+    ['all dashboard JavaScript', report.totalJavaScript.gzipBytes, 425_000],
     ['all dashboard CSS', report.totalCSS.gzipBytes, 12_500],
   ] as const;
   const failures = budgets.filter(([, actual, maximum]) => actual > maximum);

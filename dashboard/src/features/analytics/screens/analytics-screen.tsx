@@ -49,5 +49,3 @@ export const AnalyticsScreen: FunctionComponent = () => {
     </div>
   );
 };
-
-export default AnalyticsScreen;

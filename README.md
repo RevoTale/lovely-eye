@@ -17,7 +17,7 @@ Self-hosted web analytics with a Go backend and a React dashboard. Lovely Eye tr
 
 ## Architecture And Stack
 
-- Dashboard: React + strict TypeScript, Vite/SWC, Tailwind CSS v4, shadcn/ui with unified Radix,
+- Dashboard: React + strict TypeScript, Vite/SWC, Tailwind CSS v4, shadcn/ui with Base UI,
   TanStack Router, Apollo GraphQL, Zod, and Recharts.
 - Server: Go `net/http`, gqlgen, Bun ORM, SQLite or PostgreSQL, JWT/bcrypt authentication, and
   country-only MaxMind-compatible GeoIP.
