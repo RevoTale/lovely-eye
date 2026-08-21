@@ -90,7 +90,7 @@ accepted decisions and ADRs
 
 ### Task 1.3 — Add frontend unit and browser harnesses
 
-**Acceptance criteria:** Bun runs pure unit tests; Playwright runs the real dashboard against the application; test configuration works locally and in CI without a second JavaScript test runner.
+**Acceptance criteria:** Node's built-in runner runs pure unit tests; Playwright runs the real dashboard against the application; test configuration works locally and in CI without a second JavaScript test runner.
 
 **Verification:** One unit smoke test and one browser smoke test pass in the Dev Container and CI configuration validates.
 

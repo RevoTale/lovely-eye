@@ -19,7 +19,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-bun run build -- --outDir "$test_root/dashboard" --emptyOutDir
+pnpm run build --outDir "$test_root/dashboard" --emptyOutDir
 
 cd ../server
 go build -o "$test_root/lovely-eye-server" ./cmd/server

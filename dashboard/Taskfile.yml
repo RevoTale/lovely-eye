@@ -4,22 +4,22 @@ tasks:
   check:
     desc: Run all non-mutating dashboard quality checks
     cmds:
-      - bun run check
+      - pnpm run check
 
   lint:
     desc: Run the full dashboard Biome check
     cmds:
-      - bun run lint
+      - pnpm run lint
 
   test:
     desc: Run dashboard Biome and TypeScript checks
     cmds:
-      - bun run test
+      - pnpm run test
 
   generate:
     desc: Generate dashboard GraphQL artifacts
     cmds:
-      - bun run codegen
+      - pnpm run codegen
 
   build-check:
     desc: Build the dashboard without changing the workspace
@@ -27,4 +27,4 @@ tasks:
       - |
         output_dir="$(mktemp -d)"
         trap 'rm -rf "$output_dir"' EXIT
-        bun run build -- --outDir "$output_dir" --emptyOutDir
+        pnpm run build --outDir "$output_dir" --emptyOutDir

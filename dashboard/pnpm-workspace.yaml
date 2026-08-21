@@ -1,0 +1,9 @@
+allowBuilds:
+  '@swc/core': true
+  esbuild: true
+
+# graphql-config has not widened its peer declaration yet; Lovely Eye exercises its only consumer
+# through deterministic GraphQL Codegen generation and freshness checks on GraphQL 17.
+peerDependencyRules:
+  allowedVersions:
+    graphql: '17'

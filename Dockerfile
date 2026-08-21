@@ -1,15 +1,16 @@
 # Stage 1: Build the React dashboard
-FROM oven/bun:1.3.14-alpine AS dashboard-builder
+FROM node:26.7.0-alpine AS dashboard-builder
 
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY ./dashboard/package.json ./dashboard/bun.lock ./
-RUN bun install --frozen-lockfile
+# Install the pinned package manager, then restore the frozen dependency graph.
+RUN npm install --global pnpm@11.22.0
+COPY ./dashboard/package.json ./dashboard/pnpm-lock.yaml ./dashboard/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Copy dashboard source and build
 COPY ./dashboard .
-RUN bun run build
+RUN pnpm run build
 
 # Stage 2: Build the Go server
 FROM golang:1.26.6-alpine AS builder

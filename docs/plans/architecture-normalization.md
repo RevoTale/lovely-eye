@@ -4,7 +4,7 @@
 
 - Status: Implementation complete — awaiting maintainer review
 - Implementation approval: Granted on 2026-08-06 for the accepted phase plan and dependency set
-- Last updated: 2026-08-17
+- Last updated: 2026-08-21
 - Owner: Project maintainer
 - Purpose: Living source of truth for the full frontend and backend normalization update
 
@@ -69,12 +69,14 @@ Confidence: 100% — explicitly confirmed by the user on 2026-08-06. Target arch
 - One dashboard artifact must work at `/`, one-level subpaths, and nested runtime subpaths without rebuilding.
 - Database migrations must preserve all existing analytics, configuration, and user data; deleting data or requiring reimport is not allowed.
 - Application routes must not manually prepend `BASE_PATH`.
-- Project tooling uses Bun; do not introduce Node/npm workflows.
+- Project tooling uses pinned Node.js and pnpm; do not introduce Bun, npm, Yarn, or parallel
+  package-manager/test-runner workflows.
 - Go remains the backend language and React with TypeScript remains the dashboard foundation unless a later explicit decision supersedes this.
 - No Git commit is created without an explicit user request.
 - Generated files are not hand-edited.
 
-See [ADR-0001](../decisions/0001-runtime-base-path.md) for the accepted runtime base-path decision.
+See [ADR-0001](../decisions/0001-runtime-base-path.md) for the accepted runtime base-path decision
+and [ADR-0006](../decisions/0006-node-pnpm-toolchain.md) for the accepted frontend toolchain.
 
 ## Remaining architecture and delivery decisions
 
@@ -211,7 +213,7 @@ Dependency decision baseline: 2026-08-06; current approved disposition last upda
 | shadcn foundation | Keep pinned `shadcn`, `@base-ui/react`, `react-day-picker`, and `tw-animate-css`; keep `class-variance-authority`, `clsx`, `tailwind-merge`, and `lucide-react` | Unified `radix-ui`, individual `@radix-ui/react-*`, `@daypicker/react`, `tailwindcss-animate` | Use the current shadcn Vite/Base Vega source. Base UI primitives remain private to `shared/ui`, and only product-adopted component surfaces are retained. |
 | Product UI/data | `date-fns`, `recharts`, `zod` | — | Each owns a used product capability: dates, charts, and runtime boundary validation. |
 | Code quality and generation | `@biomejs/biome`, `@graphql-codegen/cli`, `@graphql-codegen/client-preset`, TypeScript and React/Node type packages | — | These enforce the accepted strictness and deterministic generation policies. |
-| Frontend tests | Bun's built-in test runner for pure units; add `@playwright/test` for browser contracts | Do not add Vitest initially | One unit runner plus real-browser coverage satisfies the risk-based policy with less tooling overlap. |
+| Frontend tests | Node's built-in `node:test` runner with `tsx` for TypeScript path aliases; `@playwright/test` for browser contracts | Bun and Vitest | One standard runtime, one unit runner, and real-browser coverage satisfy the policy without overlapping frameworks. |
 
 Registry versions at the 2026-08-21 refresh:
 
@@ -241,12 +243,11 @@ its obsolete partial-fragment overload without requiring an application compatib
 fresh lockfile regeneration resolves both the direct `^6.1.3` requirement and the CLI's `^6.1.0`
 requirement to one `6.1.3` package without an override.
 
-The full Bun audit exposed newly patched build-tool edges. The frozen lockfile now resolves their
-patched versions through the upstream-compatible ranges without project-level overrides. One
-dev-only `micromatch -> picomatch@2.3.1` advisory remains documented in
-[`docs/security.md`](../security.md): Bun 1.3.14 does not apply its documented scoped override forms,
-a direct pin does not replace the nested edge, and a global override would incorrectly force v2 on
-v4 consumers. Production dependencies remain clean.
+The 2026-08-21 Node/pnpm migration regenerated the complete frontend graph without package-version
+overrides. Both the production and development pnpm audits are clean. GraphQL Codegen's nested
+`graphql-config` has not yet widened its peer declaration for GraphQL 17; pnpm records a narrow
+allowed-version rule rather than changing the resolved package graph, and deterministic generation
+plus generated-artifact freshness remain its compatibility proof.
 
 ### Go
 
@@ -576,6 +577,7 @@ Add dated entries only after verification.
 | 2026-08-17 | Transitive dependency override cleanup | Audited every direct dashboard package and each top-level override; removed all nine overrides after regenerating a coherent lockfile | Passed; parent ranges retain patched Babel and other transitive versions, `js-yaml` returns from the forced incompatible v5 override to supported `4.3.1`, a fresh install resolves one client preset `6.1.3`, development audit findings are unchanged, production audit is clean, shadcn reports no updates, generation is current, and full `task check` exits zero. |
 | 2026-08-17 | Release Please action normalization | Replaced the stale `gvillo` fork with the official `googleapis/release-please-action@v5.0.0`, granted the documented issue-label permission, and serialized release-branch updates per target ref | Passed; official v5 metadata accepts the existing manifest inputs, actionlint `1.7.12` exits zero, and `git diff --check` is clean. Repository rules must still allow the release token to force-update the generated `release-please--branches--*` branch. |
 | 2026-08-21 | Latest dependency and Base UI migration | Rechecked every direct frontend and Go module against current registries and official migration guidance; upgraded all outdated runtime, test, build, and tool dependencies; regenerated every adopted shadcn component from the Base Vega registry; replaced `radix-ui` with `@base-ui/react`; migrated `asChild` composition to `render` or semantic links; removed unused dropdown component surface; and replaced Radix-specific E2E assertions with ARIA state | Passed; `bun outdated` is empty, Radix is absent from source/manifest/lockfile, Go runtime/test/tool upgrades pass module verification, strict checks and generated freshness are green, all 11 primary browser flows pass, and `/`, `/lovely-eye`, `/tools/lovely-eye`, plus same-origin isolation remain green. Fresh guarded measurements: initial JavaScript 185,086 B gzip, analytics increment 101,483 B, all JavaScript 416,354 B, CSS 12,425 B, server 27,009,933 B, migrate 19,161,382 B, Chromium login 1,365 ms, dashboard 912 ms, and 8 GraphQL operations. Base UI increased total JavaScript 5.7% while reducing the initial boundary; the documented total-JavaScript ceiling is therefore 425,000 B, while all other transfer limits remain unchanged. |
+| 2026-08-21 | Node.js and pnpm toolchain migration | Replaced Bun package management, script/test execution, Docker build stage, Dev Container feature, CI bootstrap, lockfile, Taskfiles, and maintainer commands with pinned Node.js `26.7.0` and pnpm `11.22.0`; kept `node:test` with the documented `tsx` alias loader; added default-deny pnpm build permissions; recorded ADR-0006 | Passed; direct dependencies are current, frozen install and peer checks are warning-free, full `task check`, actionlint, generation freshness, production and development audits, 11 primary browser flows, the `/`, `/lovely-eye`, `/tools/lovely-eye` matrix, same-origin isolation, and the production Docker build are green. The final image contains no Bun, Node.js, npm, or pnpm binary. Guarded measurements remain within limits: initial JavaScript 182,206 B gzip, analytics increment 100,915 B, all JavaScript 409,563 B, CSS 12,044 B, server 27,010,261 B, migrate 19,161,382 B, Chromium login 1,356 ms, dashboard 835 ms, and 8 GraphQL operations. |
 | 2026-08-21 | Post-migration dead-code cleanup | Audited frontend entrypoints, dependency usage, generated boundaries, shared UI exports, Go reachability, tracker artifacts, and runtime configuration; removed unused shadcn component surfaces, helpers, exports, two unreachable Go functions, a duplicate screen export, the unused `API_URL` runtime field, and the duplicate tracker artifact; declared the generated code's previously hoisted typed-document contract; the production image now copies only the generated tracker instead of its build sources | Frozen install, full static/unit/Go/generation/build gates, 11 browser flows, the three-path runtime matrix, auth isolation, and a clean production Docker build pass. Go's official dead-code analyzer and `go mod tidy -diff` report no remaining application candidates. Build-only `lightningcss`, maintenance-only `shadcn`, the bundle-report entrypoint, and generated route exports remain intentionally retained. |
 
 ## Interview history

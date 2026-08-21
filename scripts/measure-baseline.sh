@@ -9,19 +9,18 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-export PATH="/root/.bun/bin:$PATH"
-
 echo "ENVIRONMENT"
 cd "$repository_root/server"
 go version
 go env GOOS GOARCH
-printf 'bun %s\n' "$(bun --version)"
+printf 'node %s\n' "$(node --version)"
+printf 'pnpm %s\n' "$(pnpm --version)"
 uname -m
 
 echo "BUNDLE_SIZES"
 cd "$repository_root/dashboard"
-bun run build -- --outDir "$measurement_root/dashboard" --emptyOutDir --manifest >/dev/null
-bun run scripts/report-bundle-size.ts "$measurement_root/dashboard" --check
+pnpm run build --outDir "$measurement_root/dashboard" --emptyOutDir --manifest >/dev/null
+pnpm exec tsx scripts/report-bundle-size.ts "$measurement_root/dashboard" --check
 
 echo "GO_BINARY_SIZES"
 cd "$repository_root/server"
@@ -48,4 +47,4 @@ go test -run '^$' -bench '^BenchmarkAnalyticsHandlerCollectPageView$' -benchmem 
 
 echo "BROWSER_BASELINE"
 cd "$repository_root/dashboard"
-TEST_PERFORMANCE=true bunx --bun playwright test tests/e2e/performance-baseline.spec.ts
+TEST_PERFORMANCE=true pnpm exec playwright test tests/e2e/performance-baseline.spec.ts

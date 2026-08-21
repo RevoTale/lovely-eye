@@ -9,14 +9,15 @@ React dashboard for Lovely Eye analytics.
 - Tailwind CSS + shadcn/ui
 - Apollo Client + graphql-codegen
 - TanStack Router
+- Node.js + pnpm tooling
 
 ## Development
 
 ```bash
-bun install
-bun run codegen   # generate GraphQL types
-bun run dev       # start dev server
-bun run build     # production build
+pnpm install
+pnpm run codegen   # generate GraphQL types
+pnpm run dev       # start dev server
+pnpm run build     # production build
 ```
 
 ## Build
@@ -52,8 +53,8 @@ generated files are infrastructure; never hand-edit `app/route-tree.gen.ts` or
 ## Adding Components
 
 ```bash
-bunx shadcn@latest add [component-name]
+pnpm exec shadcn add [component-name]
 ```
 
-Run `bunx shadcn@latest diff` after component updates and then the complete dashboard checks. Prefer
+Run `pnpm exec shadcn diff` after component updates and then the complete dashboard checks. Prefer
 adopted shadcn components for shared UI; keep product behavior in its owning feature.
