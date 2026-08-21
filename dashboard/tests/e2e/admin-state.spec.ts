@@ -20,7 +20,9 @@ test('auth, first load, mutation feedback, and retained refresh state stay coher
   await page.getByLabel('Password').fill('e2e-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await sitesLoad.seen;
-  await expect(page.locator('.animate-pulse').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Signing in...' })).toBeDisabled();
+  await expect(page.locator('.animate-pulse')).toHaveCount(0);
   sitesLoad.release();
   await expect(page.getByRole('heading', { name: 'Add New Site' })).toBeVisible();
 
@@ -44,11 +46,25 @@ test('auth, first load, mutation feedback, and retained refresh state stay coher
 
   const siteURL = page.url();
   const freshPage = await context.newPage();
+  await freshPage.addInitScript(() => {
+    let score = 0;
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        const shift = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number };
+        if (shift.hadRecentInput !== true) score += shift.value ?? 0;
+      }
+    });
+    observer.observe({ type: 'layout-shift', buffered: true });
+    Reflect.set(globalThis, '__lovelyEyeLayoutShiftScore', () => score);
+    Reflect.set(globalThis, '__lovelyEyeLayoutShiftObserver', observer);
+  });
+  await freshPage.emulateMedia({ reducedMotion: 'reduce' });
   const freshOperations = await installGraphQLOperationController(freshPage);
   const firstSiteLoad = freshOperations.blockNext('Site');
   await freshPage.goto(siteURL);
   await firstSiteLoad.seen;
-  await expect(freshPage.locator('.animate-pulse').first()).toBeVisible();
+  await expect(freshPage.getByRole('heading', { name: 'Loading dashboard' })).toBeVisible();
+  await expect(freshPage.locator('.animate-pulse')).toHaveCount(0);
   firstSiteLoad.release();
   const siteHeading = freshPage.getByRole('heading', { name: 'State Contract Site' });
   await expect(siteHeading).toBeVisible();
@@ -63,13 +79,24 @@ test('auth, first load, mutation feedback, and retained refresh state stay coher
   expect(headingDuringRefresh?.y).toBe(headingBeforeRefresh?.y);
   expect(headingDuringRefresh?.height).toBe(headingBeforeRefresh?.height);
   await expect(freshPage.getByText('Refreshing', { exact: true }).first()).toBeVisible();
+  const reducedMotionDuration = await freshPage
+    .locator('.animate-spin')
+    .first()
+    .evaluate((element) => Number.parseFloat(getComputedStyle(element).animationDuration));
+  expect(reducedMotionDuration).toBeLessThanOrEqual(0.01);
   dashboardRefresh.release();
   await expect(freshPage).toHaveURL(/preset=7d/u);
+  const layoutShiftScore = await freshPage.evaluate(() => {
+    const readScore: unknown = Reflect.get(globalThis, '__lovelyEyeLayoutShiftScore');
+    return typeof readScore === 'function' ? (readScore as () => number)() : 0;
+  });
+  expect(layoutShiftScore).toBeLessThan(0.1);
 });
 
 test('site switching and URL-owned analytics state survive history and refresh', async ({
   page,
 }) => {
+  const operations = await installGraphQLOperationController(page);
   await signInAsAdmin(page);
   await createSite(page, 'Switch Alpha', ['alpha.example']);
   const betaURL = await createSite(page, 'Switch Beta', ['beta.example', 'app.beta.example']);
@@ -77,7 +104,12 @@ test('site switching and URL-owned analytics state survive history and refresh',
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'Switch Beta' })).toBeVisible();
   await page.goto('sites');
+  const alphaLoad = operations.blockNext('Site');
   await page.getByRole('link', { name: /Switch Alpha/u }).click();
+  await alphaLoad.seen;
+  await expect(page.getByRole('heading', { name: 'Sites' })).toBeVisible();
+  await expect(page.locator('.animate-pulse')).toHaveCount(0);
+  alphaLoad.release();
   await expect(page.getByRole('heading', { name: 'Switch Alpha' })).toBeVisible();
   await page.getByRole('link', { name: 'Sites' }).click();
   await page.getByRole('link', { name: /Switch Beta/u }).click();

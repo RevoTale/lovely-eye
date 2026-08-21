@@ -8,6 +8,7 @@ import type {
   DashboardQuery,
   DashboardStatsFieldsFragment,
   DeviceStatsFieldsFragment,
+  FilterInput,
   OperatingSystemStatsFieldsFragment,
   PageStatsFieldsFragment,
   ReferrerStatsFieldsFragment,
@@ -36,6 +37,23 @@ interface FilterResult {
   eventPaths: string[];
   decodedSearch: AnalyticsSearch;
   filter: Record<string, string[]>;
+}
+
+export function buildFilterInput(filter: Record<string, string[]>): FilterInput | null {
+  if (Object.keys(filter).length === EMPTY_COUNT) return null;
+  const getFilter = (key: string): string[] | null => filter[key] ?? null;
+  return {
+    referrer: getFilter('referrer'),
+    browser: getFilter('browser'),
+    device: getFilter('device'),
+    os: getFilter('os'),
+    page: getFilter('page'),
+    country: getFilter('country'),
+    eventType: null,
+    eventDefinitionId: getFilter('eventDefinitionId'),
+    eventName: getFilter('eventName'),
+    eventPath: getFilter('eventPath'),
+  };
 }
 
 export function buildFilters(search: AnalyticsSearch): FilterResult {

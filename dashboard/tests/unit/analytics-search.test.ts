@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { resolveAnalyticsDateRange } from '../../src/features/analytics/model/analytics-date-range';
 import {
   addAnalyticsFilter,
   analyticsSearchSchema,
@@ -35,5 +36,25 @@ describe('analytics URL state', () => {
     assert.deepEqual(removeAnalyticsFilter(withFilter, 'browser', 'Firefox').browser, ['Safari']);
     assert.equal(clearAnalyticsFilters(withFilter).browser, undefined);
     assert.equal(clearAnalyticsFilters(withFilter).preset, '7d');
+  });
+
+  it('resolves URL-owned ranges identically for loaders and screens', () => {
+    const reference = new Date('2026-08-21T12:00:00Z');
+    const custom = resolveAnalyticsDateRange(
+      {
+        preset: 'custom',
+        from: '2026-08-01',
+        to: '2026-08-02',
+        fromTime: '10:15',
+        toTime: '11:45',
+      },
+      reference
+    );
+
+    assert.deepEqual(custom, {
+      from: new Date('2026-08-01T10:15:00').toISOString(),
+      to: new Date('2026-08-02T11:45:00').toISOString(),
+    });
+    assert.equal(resolveAnalyticsDateRange({ preset: 'all' }, reference), undefined);
   });
 });

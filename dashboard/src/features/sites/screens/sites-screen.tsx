@@ -14,9 +14,9 @@ const EXTRA_DOMAIN_OFFSET = 1;
 const SKELETON_CARD_COUNT = 3;
 
 export const SitesScreen = (): React.ReactNode => {
-  const { sites, loading, error } = useSites();
+  const { sites, isInitialLoading, error } = useSites();
 
-  if (loading) {
+  if (isInitialLoading) {
     return (
       <div className='space-y-6'>
         <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>

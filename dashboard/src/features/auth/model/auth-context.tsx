@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useRef,
+  useState,
 } from 'react';
 import {
   type AuthUserDetailsFieldsFragment,
@@ -25,6 +26,7 @@ type AuthMode = 'register-only' | 'login-only' | 'login-and-register';
 
 const AUTH_STATUS_ERROR_MESSAGE =
   'Unable to load authentication status. Refresh the page and try again.';
+const AUTH_RESPONSE_ERROR_MESSAGE = 'Authentication completed without a user.';
 
 export interface AuthContextValue {
   user: AuthUser | null;
@@ -50,6 +52,8 @@ export const AuthProvider = ({
   authErrorHandlerRef,
 }: AuthProviderProps): React.ReactNode => {
   const authErrorHandledRef = useRef(false);
+  const [userOverride, setUserOverride] = useState<AuthUser | null | undefined>(undefined);
+  const [retainedAuthMode, setRetainedAuthMode] = useState<AuthMode>('login-only');
   const client = useApolloClient();
 
   const {
@@ -61,6 +65,7 @@ export const AuthProvider = ({
     fetchPolicy: 'network-only',
     errorPolicy: 'all',
   });
+  const registrationStatus = meData?.registrationStatus;
 
   const [loginMutation] = useMutation(LoginDocument);
   const [registerMutation] = useMutation(RegisterDocument);
@@ -71,6 +76,7 @@ export const AuthProvider = ({
       return;
     }
     authErrorHandledRef.current = true;
+    setUserOverride(undefined);
     void client.clearStore();
     void refetch();
   }, [client, refetch]);
@@ -84,46 +90,62 @@ export const AuthProvider = ({
 
   const login = useCallback(
     async (input: LoginInput) => {
-      await loginMutation({ variables: { input } });
+      const result = await loginMutation({ variables: { input } });
+      const userData = result.data?.login.user;
+      if (userData === null || userData === undefined) throw new Error(AUTH_RESPONSE_ERROR_MESSAGE);
+      const nextUser = readFragment(AuthUserDetailsFieldsFragmentDoc, userData);
+      await client.clearStore();
+      setUserOverride(nextUser);
       authErrorHandledRef.current = false;
-      await refetch();
     },
-    [loginMutation, refetch]
+    [client, loginMutation]
   );
 
   const register = useCallback(
     async (input: RegisterInput) => {
-      await registerMutation({ variables: { input } });
+      const result = await registerMutation({ variables: { input } });
+      const userData = result.data?.register.user;
+      if (userData === null || userData === undefined) throw new Error(AUTH_RESPONSE_ERROR_MESSAGE);
+      const nextUser = readFragment(AuthUserDetailsFieldsFragmentDoc, userData);
+      await client.clearStore();
+      setUserOverride(nextUser);
+      if (registrationStatus !== null && registrationStatus !== undefined) {
+        setRetainedAuthMode(getAuthMode(true, registrationStatus.allowRegistration));
+      }
       authErrorHandledRef.current = false;
-      await refetch();
     },
-    [registerMutation, refetch]
+    [client, registerMutation, registrationStatus]
   );
 
   const logout = useCallback(async () => {
     await logoutMutation();
-    await refetch();
-  }, [logoutMutation, refetch]);
+    await client.clearStore();
+    setUserOverride(null);
+  }, [client, logoutMutation]);
 
   const userData = meData?.me;
-  const user =
+  const queriedUser =
     userData !== null && userData !== undefined
       ? readFragment(AuthUserDetailsFieldsFragmentDoc, userData)
       : null;
-  const registrationStatus = meData?.registrationStatus;
-  const authMode =
+  const queriedAuthMode =
     registrationStatus !== null && registrationStatus !== undefined
       ? getAuthMode(registrationStatus.hasUsers, registrationStatus.allowRegistration)
-      : 'login-only';
+      : undefined;
+  useEffect(() => {
+    if (queriedAuthMode !== undefined) setRetainedAuthMode(queriedAuthMode);
+  }, [queriedAuthMode]);
+  const authMode = queriedAuthMode ?? retainedAuthMode;
+  const user = userOverride === undefined ? queriedUser : userOverride;
   const bootstrapError =
-    !meLoading && registrationStatus == null && meError !== undefined
+    userOverride === undefined && !meLoading && registrationStatus == null && meError !== undefined
       ? AUTH_STATUS_ERROR_MESSAGE
       : null;
   const unauthenticatedRoute = getUnauthenticatedRoute(authMode);
 
   const value: AuthContextValue = {
     user,
-    isLoading: meLoading,
+    isLoading: userOverride === undefined && meLoading,
     isAuthenticated: user !== null,
     authMode,
     bootstrapError,
