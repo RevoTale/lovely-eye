@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.0.1](https://github.com/RevoTale/lovely-eye/compare/v2.0.0...v2.0.1) (2026-08-21)
+
+
+### Performance
+
+* **dashboard:** eliminate authenticated loading flicker ([1116dc8](https://github.com/RevoTale/lovely-eye/commit/1116dc87f37f3f8db456114516bd4d2282fd3735))
+
+
+### Architecture
+
+* **stack:** migrate dashboard primitives to Base UI ([453e39e](https://github.com/RevoTale/lovely-eye/commit/453e39e2831b8df6979e08391b7f19b355080d7c))
+
+
+### Build and dependencies
+
+* **toolchain:** replace Bun with Node and pnpm ([3a318bf](https://github.com/RevoTale/lovely-eye/commit/3a318bf5862eab5e6b10c8b12adbf16a6522a0fe))
+
 ## [2.0.0](https://github.com/RevoTale/lovely-eye/compare/v1.7.0...v2.0.0) (2026-08-18)
 
 
