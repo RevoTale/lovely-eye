@@ -4,7 +4,7 @@
     "local>RevoTale/.github:renovate-config"
   ],
   "postUpdateOptions": [
-    "goGenerate"
-  ],
-  "gomodTidy": true
+    "goGenerate",
+    "gomodTidy"
+  ]
 }
