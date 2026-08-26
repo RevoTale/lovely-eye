@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/go:2.1-1.26-trixie
+FROM mcr.microsoft.com/devcontainers/go:2.2-1.26-trixie@sha256:9dd796c5a81000d4e507d7002b36d3eae0e6f5bbc9eaa49afe3e5a424534ed15
 
 # Install Atlas CLI
 RUN curl -sSf https://atlasgo.sh | sh
