@@ -38,6 +38,13 @@ const optionalFilter = z.preprocess((value) => {
   return values.filter((item): item is string => typeof item === 'string' && item !== '');
 }, z.array(z.string()).optional());
 
+const optionalSearchText = z.preprocess((value) => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== 'string') return undefined;
+  const trimmed = raw.trim();
+  return trimmed === '' ? undefined : trimmed;
+}, z.string().optional());
+
 const optionalDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/v)
@@ -68,6 +75,7 @@ export const analyticsSearchSchema = z.object({
   device: optionalFilter,
   os: optionalFilter,
   page: optionalFilter,
+  pagePathContains: optionalSearchText,
   country: optionalFilter,
   eventName: optionalFilter,
   eventPath: optionalFilter,
@@ -116,5 +124,14 @@ export function removeAnalyticsFilter(
 export function clearAnalyticsFilters(search: AnalyticsSearch): AnalyticsSearch {
   const next = { ...search };
   for (const key of FILTER_KEYS) delete next[key];
+  delete next.pagePathContains;
+  return next;
+}
+
+export function setPagePathSearch(search: AnalyticsSearch, value: string): AnalyticsSearch {
+  const next = { ...search };
+  const trimmed = value.trim();
+  if (trimmed === '') delete next.pagePathContains;
+  else next.pagePathContains = trimmed;
   return next;
 }

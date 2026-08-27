@@ -188,6 +188,17 @@ func TestDashboardFiltering(t *testing.T) {
 		require.GreaterOrEqual(t, len(resp.Dashboard.TopReferrers.Items), 2, "should show Google and Twitter referrers")
 	})
 
+	t.Run("filter by page path substring", func(t *testing.T) {
+		filter := &operations.FilterInput{PagePathContains: "/prod"}
+
+		resp, err := operations.Dashboard(ctx, client, siteID, nil, filter, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, defaultPaging, nil, defaultPaging)
+		require.NoError(t, err)
+
+		require.Equal(t, 2, resp.Dashboard.PageViews)
+		require.Len(t, resp.Dashboard.TopPages.Items, 1)
+		require.Equal(t, "/products", resp.Dashboard.TopPages.Items[0].Path)
+	})
+
 	t.Run("filter by multiple criteria - referrer and device", func(t *testing.T) {
 		facebookReferrer := "https://facebook.com"
 		mobileDevice := "mobile"

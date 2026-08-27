@@ -37,6 +37,7 @@ export const buildChartVariables = (
           device: filter.device ?? null,
           os: filter.os ?? null,
           page: filter.page ?? null,
+          pagePathContains: filter.pagePathContains ?? null,
           country: filter.country ?? null,
           eventType: filter.eventType ?? null,
           eventDefinitionId: filter.eventDefinitionId ?? null,

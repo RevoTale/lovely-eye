@@ -4,6 +4,7 @@ import type { DashboardLoadState } from '@/features/analytics/model/dashboard-lo
 import BoardCard from '@/features/analytics/ui/board-card';
 import { FilterLink } from '@/features/analytics/ui/filter-link';
 import { ListEmptyState } from '@/features/analytics/ui/list-empty-state';
+import PagePathSearch from '@/features/analytics/ui/page-path-search';
 import type { PageStatsFieldsFragment } from '@/shared/api/generated/graphql';
 import { SKELETON_KEYS } from '@/shared/lib/skeleton';
 import { Badge } from '@/shared/ui/badge';
@@ -17,6 +18,8 @@ interface TopPagesCardProps {
   pageSize: number;
   siteId: string;
   onPageChange: (page: number) => void;
+  pathSearch: string;
+  onPathSearch: (value: string) => void;
   state?: DashboardLoadState;
 }
 
@@ -31,6 +34,8 @@ const TopPagesCard: FunctionComponent<TopPagesCardProps> = ({
   pageSize,
   siteId,
   onPageChange,
+  pathSearch,
+  onPathSearch,
   state = 'ready',
 }) => {
   const maxViews =
@@ -57,6 +62,7 @@ const TopPagesCard: FunctionComponent<TopPagesCardProps> = ({
         </div>
       }
     >
+      <PagePathSearch value={pathSearch} onSearch={onPathSearch} />
       <div className='space-y-3'>
         {pages.length > EMPTY_COUNT ? (
           pages.map((pageStat) => (

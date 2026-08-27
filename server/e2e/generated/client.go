@@ -551,6 +551,8 @@ type FilterInput struct {
 	Os []string `json:"os"`
 	// Filter by page path
 	Page []string `json:"page"`
+	// Filter by a case-insensitive literal substring of the page path
+	PagePathContains string `json:"pagePathContains"`
 	// Filter by ISO country code
 	Country []string `json:"country"`
 	// Filter by event type (page view or predefined)
@@ -577,6 +579,9 @@ func (v *FilterInput) GetOs() []string { return v.Os }
 
 // GetPage returns FilterInput.Page, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetPage() []string { return v.Page }
+
+// GetPagePathContains returns FilterInput.PagePathContains, and is useful for accessing the field via an interface.
+func (v *FilterInput) GetPagePathContains() string { return v.PagePathContains }
 
 // GetCountry returns FilterInput.Country, and is useful for accessing the field via an interface.
 func (v *FilterInput) GetCountry() []string { return v.Country }

@@ -17,6 +17,8 @@ interface AnalyticsTrafficBreakdownSectionProps {
   topPagesPage: number;
   topPagesPageSize: number;
   onTopPagesPageChange: (page: number) => void;
+  pagePathContains: string;
+  onPagePathSearch: (value: string) => void;
   referrers: ReferrerStatsFieldsFragment[];
   referrersTotal: number;
   referrersPage: number;
@@ -44,6 +46,8 @@ const AnalyticsTrafficBreakdownSection: FunctionComponent<AnalyticsTrafficBreakd
         siteId={props.siteId}
         state={props.dashboardState}
         onPageChange={props.onTopPagesPageChange}
+        pathSearch={props.pagePathContains}
+        onPathSearch={props.onPagePathSearch}
       />
       <ReferrersCard
         referrers={props.referrers}

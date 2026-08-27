@@ -46,6 +46,11 @@ func applyEnumFilter[T ~uint8](q *bun.SelectQuery, rawValues []string, parse fun
 	return q.Where(clause, bun.List(uint8FilterValues(translated)))
 }
 
+func literalContainsPattern(value string) string {
+	escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(value)
+	return "%" + strings.ToLower(escaped) + "%"
+}
+
 func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQuery {
 	if len(filter.Referrer) > 0 {
 
@@ -56,6 +61,9 @@ func applySessionFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.Select
 	q = applyEnumFilter(q, filter.OS, ParseClientOSFilters, "s.client_id IN (SELECT id FROM clients WHERE os IN (?))")
 	if len(filter.Page) > 0 {
 		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NULL AND path IN (?))", bun.List(filter.Page))
+	}
+	if filter.PagePathContains != "" {
+		q = q.Where("s.id IN (SELECT DISTINCT session_id FROM events WHERE definition_id IS NULL AND LOWER(path) LIKE ? ESCAPE '\\')", literalContainsPattern(filter.PagePathContains))
 	}
 	if len(filter.Country) > 0 {
 
@@ -92,6 +100,9 @@ func applyEventFilters(q *bun.SelectQuery, filter AnalyticsFilter) *bun.SelectQu
 	}
 	if len(filter.Page) > 0 {
 		q = q.Where("e.path IN (?)", bun.List(filter.Page))
+	}
+	if filter.PagePathContains != "" {
+		q = q.Where("LOWER(e.path) LIKE ? ESCAPE '\\'", literalContainsPattern(filter.PagePathContains))
 	}
 	if len(filter.Referrer) > 0 || len(filter.Browser) > 0 || len(filter.Device) > 0 || len(filter.OS) > 0 || len(filter.Country) > 0 || len(filter.EventTypes) > 0 || len(filter.EventName) > 0 || len(filter.EventPath) > 0 || len(filter.EventDefinitionIDs) > 0 {
 

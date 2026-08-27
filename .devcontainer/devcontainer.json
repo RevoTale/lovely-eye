@@ -9,13 +9,13 @@
       "moby": false
     },
     "ghcr.io/devcontainers/features/node:2": {
-      "version": "26.7.0",
+      "version": "26.8.1",
       "pnpmVersion": "11.22.0",
       "npmVersion": "none"
     },
     "ghcr.io/devcontainers-extra/features/go-task:1": {},
     "ghcr.io/devcontainers/features/go:1": {
-      "version": "1.26.6"
+      "version": "1.27.0"
     }
   },
   "forwardPorts": [],

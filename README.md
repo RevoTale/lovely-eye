@@ -69,7 +69,7 @@ volumes:
 docker compose up -d
 ```
 
-Open `http://localhost:8080/dashboard`.
+Open `http://localhost:8080/`.
 
 ### Docker Compose (PostgreSQL)
 
@@ -117,7 +117,7 @@ docker compose up -d
 
 ### From Source
 
-Requires Go 1.26+.
+Requires Go 1.27+.
 
 ```bash
 cd server

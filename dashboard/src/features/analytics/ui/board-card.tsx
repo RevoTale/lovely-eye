@@ -71,6 +71,7 @@ const BoardCard: FunctionComponent<BoardCardProps> = ({
                   pageSize={pagination.pageSize}
                   total={pagination.total}
                   onPageChange={pagination.onPageChange}
+                  state={state}
                 />
               ) : null}
             </div>

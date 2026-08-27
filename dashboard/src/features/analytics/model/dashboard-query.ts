@@ -101,6 +101,7 @@ export const buildEventCountsVariables = (
     browser: filter?.browser ?? null,
     device: filter?.device ?? null,
     page: filter?.page ?? null,
+    pagePathContains: filter?.pagePathContains ?? null,
     country: filter?.country ?? null,
     os: filter?.os ?? null,
     eventType: [PREDEFINED_EVENT_TYPE],

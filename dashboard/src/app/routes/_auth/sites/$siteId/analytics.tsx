@@ -12,7 +12,8 @@ export const Route = createFileRoute('/_auth/sites/$siteId/analytics')({
     if (context.apolloClient === null) throw new Error('Apollo client is unavailable.');
     const search = analyticsSearchSchema.parse(location.search);
     const dateRange = resolveAnalyticsDateRange(search, new Date());
-    const filter = buildFilterInput(buildFilters(search).filter);
+    const { filter: filters, pagePathContains } = buildFilters(search);
+    const filter = buildFilterInput(filters, pagePathContains);
     const [siteResult, dashboardResult] = await Promise.allSettled([
       context.apolloClient.query({
         query: SiteDocument,
