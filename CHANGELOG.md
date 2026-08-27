@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.1.0](https://github.com/RevoTale/lovely-eye/compare/v2.0.2...v2.1.0) (2026-08-27)
+
+
+### Features
+
+* **analytics:** add subpath search and distinct chart series ([eb0fdbe](https://github.com/RevoTale/lovely-eye/commit/eb0fdbe9c9239285e5805f04562a09eb669ee5a8))
+
+
+### Fixes
+
+* **analytics:** stabilize dashboard interactions ([a973ec8](https://github.com/RevoTale/lovely-eye/commit/a973ec88c53ef6e4518596eed09a959613e82c62))
+
+
+### Maintenance
+
+* **config:** migrate Renovate config ([4a65103](https://github.com/RevoTale/lovely-eye/commit/4a6510355b33cac72ca707d9d46aec6eb880f3dd))
+
 ## [2.0.2](https://github.com/RevoTale/lovely-eye/compare/v2.0.1...v2.0.2) (2026-08-27)
 
 
