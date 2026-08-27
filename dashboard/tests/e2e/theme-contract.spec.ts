@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { signInAsAdmin } from './helpers/admin';
+import { createSite, signInAsAdmin } from './helpers/admin';
 
 const readThemeTokens = async (page: Page): Promise<Record<string, string>> =>
   page.evaluate(() => {
@@ -56,4 +56,82 @@ test('Zen Inspired semantic tokens switch between light and dark without externa
       '--chart-3': '#34d399',
       '--destructive-foreground': '#fff',
     });
+});
+
+test('analytics chart labels and progress indicators use subdued dark-theme colors', async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await signInAsAdmin(page);
+  const analyticsURL = await createSite(page, 'Dark Analytics Theme Site', [
+    'dark-analytics-theme.example',
+  ]);
+  const settingsURL = analyticsURL.replace(/\/analytics(?:\?.*)?$/u, '/settings');
+
+  await page.goto(settingsURL);
+  const siteKey = await page.getByRole('textbox', { name: 'Site Key', exact: true }).inputValue();
+  const collectResponse = await page.request.post(
+    `${new URL(settingsURL).origin}/api/collect?site_key=${encodeURIComponent(siteKey)}`,
+    {
+      data: JSON.stringify({ path: '/dark-theme' }),
+      headers: {
+        'Content-Type': 'text/plain;charset=UTF-8',
+        Origin: 'https://dark-analytics-theme.example',
+      },
+    }
+  );
+  expect(collectResponse.ok()).toBe(true);
+
+  await page.route('**/graphql', async (route) => {
+    const payload: unknown = route.request().postDataJSON();
+    if (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'operationName' in payload &&
+      payload.operationName === 'ChartData'
+    ) {
+      await route.fulfill({
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            dashboard: {
+              __typename: 'DashboardStats',
+              dailyStats: [
+                {
+                  __typename: 'DailyStats',
+                  date: '2026-08-26',
+                  visitors: 1,
+                  pageViews: 1,
+                  sessions: 1,
+                },
+                {
+                  __typename: 'DailyStats',
+                  date: '2026-08-27',
+                  visitors: 1,
+                  pageViews: 1,
+                  sessions: 1,
+                },
+              ],
+            },
+          },
+        }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.goto(analyticsURL);
+  const xAxisLabel = page.getByText('Aug 26', { exact: true });
+  await expect(xAxisLabel).toBeVisible();
+  await expect(page.locator('[data-slot="progress-indicator"]').first()).toBeVisible();
+
+  const xAxisLabelFill = await xAxisLabel.evaluate((element) => getComputedStyle(element).fill);
+  const progressColor = await page
+    .locator('[data-slot="progress-indicator"]')
+    .first()
+    .evaluate((element) => getComputedStyle(element).backgroundColor);
+
+  expect(xAxisLabelFill).toBe('rgb(142, 138, 131)');
+  expect(progressColor).toBe('rgb(116, 134, 158)');
 });

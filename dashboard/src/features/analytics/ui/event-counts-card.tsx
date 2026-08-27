@@ -88,6 +88,7 @@ const EventCountsCard: FunctionComponent<EventCountsCardProps> = ({
                 pageSize={pageSize}
                 total={total}
                 onPageChange={onPageChange}
+                state={state}
               />
             </div>
           ) : null}

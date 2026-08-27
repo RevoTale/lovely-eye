@@ -69,7 +69,7 @@ volumes:
 docker compose up -d
 ```
 
-Open `http://localhost:8080/dashboard`.
+Open `http://localhost:8080/`.
 
 ### Docker Compose (PostgreSQL)
 

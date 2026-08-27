@@ -27,6 +27,7 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-progress-indicator: var(--progress-indicator);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -81,6 +82,7 @@
   --border: #d2cbbb;
   --input: #d2cbbb;
   --ring: #2e2e2e;
+  --progress-indicator: #65758a;
   --chart-1: #c2410c;
   --chart-2: #1d4ed8;
   --chart-3: #047857;
@@ -131,6 +133,7 @@
   --border: #2c2c2c;
   --input: #2c2c2c;
   --ring: #d1cfc0;
+  --progress-indicator: #74869e;
   --chart-1: #fb923c;
   --chart-2: #60a5fa;
   --chart-3: #34d399;

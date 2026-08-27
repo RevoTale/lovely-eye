@@ -157,6 +157,7 @@ export function useDashboardPageState(): AnalyticsPageState {
       }),
     setPage: (key, page) =>
       void navigate({
+        resetScroll: false,
         to: '/sites/$siteId/analytics',
         params: { siteId },
         search: (prev) => setAnalyticsPage(prev, key, page),

@@ -161,7 +161,90 @@ test('top pages path search is explicit, URL-owned, and removable', async ({ pag
   const activeFilter = page.getByRole('link', { name: /Page contains: \/blog/u });
   await expect(activeFilter).toBeVisible();
 
+  const dashboardRequest = page.waitForRequest((request) => {
+    if (!request.url().endsWith('/graphql')) return false;
+    const payload: unknown = request.postDataJSON();
+    return (
+      typeof payload === 'object' &&
+      payload !== null &&
+      'operationName' in payload &&
+      payload.operationName === 'Dashboard'
+    );
+  });
+  await page.reload();
+  const dashboardPayload: unknown = (await dashboardRequest).postDataJSON();
+  expect(dashboardPayload).toMatchObject({
+    variables: { filter: { pagePathContains: '/blog' } },
+  });
+
   await activeFilter.click();
   await expect(page).not.toHaveURL(/pagePathContains/u);
   await expect(pathInput).toHaveValue('');
+});
+
+test('card pagination preserves the viewport position', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await signInAsAdmin(page);
+  const analyticsURL = await createSite(page, 'Pagination Scroll Site', [
+    'pagination-scroll.example',
+  ]);
+  const settingsURL = analyticsURL.replace(/\/analytics(?:\?.*)?$/u, '/settings');
+
+  await page.goto(settingsURL);
+  const siteKey = await page.getByRole('textbox', { name: 'Site Key', exact: true }).inputValue();
+  for (let index = 0; index < 6; index += 1) {
+    const collectResponse = await page.request.post(
+      `${new URL(settingsURL).origin}/api/collect?site_key=${encodeURIComponent(siteKey)}`,
+      {
+        data: JSON.stringify({ path: `/pagination-${index}` }),
+        headers: {
+          'Content-Type': 'text/plain;charset=UTF-8',
+          Origin: 'https://pagination-scroll.example',
+        },
+      }
+    );
+    expect(collectResponse.ok()).toBe(true);
+  }
+
+  await page.goto(analyticsURL);
+  const recentEventsCard = page
+    .locator('[data-slot="card"]')
+    .filter({ hasText: 'Recent Events' })
+    .first();
+  await expect(recentEventsCard.getByText('Page 1 of 2', { exact: true })).toBeVisible();
+  const nextPageButton = recentEventsCard.getByRole('button', { name: 'Next' });
+  const initialCardBox = await recentEventsCard.boundingBox();
+  expect(initialCardBox).not.toBeNull();
+  await page.evaluate(
+    (scrollDelta) => window.scrollBy(0, scrollDelta),
+    (initialCardBox?.y ?? 0) - 100
+  );
+  const visibleStartCardBox = await recentEventsCard.boundingBox();
+  expect(visibleStartCardBox?.y).toBeCloseTo(100, 0);
+
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+  await nextPageButton.click();
+  await expect(page).toHaveURL(/eventsPage=2/u);
+  await expect(recentEventsCard.getByText('Page 2 of 2', { exact: true })).toBeVisible();
+  const scrollAfter = await page.evaluate(() => window.scrollY);
+
+  expect(Math.abs(scrollAfter - scrollBefore)).toBeLessThanOrEqual(1);
+
+  await recentEventsCard.getByRole('button', { name: 'Prev' }).click();
+  await expect(recentEventsCard.getByText('Page 1 of 2', { exact: true })).toBeVisible();
+  const cardBox = await recentEventsCard.boundingBox();
+  expect(cardBox).not.toBeNull();
+  await page.evaluate((scrollDelta) => window.scrollBy(0, scrollDelta), (cardBox?.y ?? 0) + 100);
+  const positionedCardBox = await recentEventsCard.boundingBox();
+  expect(positionedCardBox?.y).toBeCloseTo(-100, 0);
+  expect((positionedCardBox?.y ?? 0) + (positionedCardBox?.height ?? 0)).toBeGreaterThan(0);
+
+  await nextPageButton.click();
+  await expect(recentEventsCard.getByText('Page 2 of 2', { exact: true })).toBeVisible();
+  await expect
+    .poll(async () => (await recentEventsCard.boundingBox())?.height ?? Number.POSITIVE_INFINITY)
+    .toBeLessThan(500);
+  const repositionedCardBox = await recentEventsCard.boundingBox();
+
+  expect(repositionedCardBox?.y).toBeCloseTo(0, 0);
 });
