@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.2](https://github.com/RevoTale/lovely-eye/compare/v2.0.1...v2.0.2) (2026-08-27)
+
+
+### Maintenance
+
+* **deps:** update golang docker tag to v1.27.0 ([a13f916](https://github.com/RevoTale/lovely-eye/commit/a13f9165699d83d36a62ed26e9e89f8f90077cc7))
+* **deps:** update golang docker tag to v1.27.0 ([ebd3541](https://github.com/RevoTale/lovely-eye/commit/ebd3541059dff15c64a124512df7bf02ed997b35))
+* **deps:** update node.js to v26.8.1 ([af27c07](https://github.com/RevoTale/lovely-eye/commit/af27c079133ba17d43c605aa55366dfd6696f904))
+* **deps:** update node.js to v26.8.1 ([3ae3416](https://github.com/RevoTale/lovely-eye/commit/3ae34169a83952c696978d43308bed6f61bf2a4b))
+
 ## [2.0.1](https://github.com/RevoTale/lovely-eye/compare/v2.0.0...v2.0.1) (2026-08-21)
 
 
