@@ -22,6 +22,7 @@ type Filter struct {
 	Device             []string
 	OS                 []string
 	Page               []string
+	PagePathContains   string
 	Country            []string
 	EventTypes         []EventType
 	EventName          []string

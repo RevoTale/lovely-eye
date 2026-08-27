@@ -1,6 +1,6 @@
 module github.com/lovely-eye/static
 
-go 1.26.6
+go 1.27.0
 
 require github.com/evanw/esbuild v0.28.2
 

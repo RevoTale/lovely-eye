@@ -185,6 +185,62 @@ func TestPagedBreakdownsReturnExactWindowTotals(t *testing.T) {
 	testPagedBreakdownsReturnExactWindowTotals(t, db)
 }
 
+func TestTopPagesFilterMatchesLiteralPathSubstring(t *testing.T) {
+	db := setupTestDB(t)
+	repository := New(db)
+	ctx := context.Background()
+	site := createTestSite(t, db)
+	now := time.Now().UTC()
+
+	paths := []string{
+		"/blog",
+		"/blog/first-post",
+		"/shop/blog-mug",
+		"/pricing",
+		"/sale%items",
+		"/sale_items",
+		`/sale\items`,
+		"/Docs/Start",
+	}
+	for index, path := range paths {
+		clientID := createTestClient(t, db, site.ID, "path-search-"+path, "desktop", "chrome", "linux")
+		timestamp := now.Add(-time.Duration(index+1) * time.Minute)
+		sessionID := insertSessionWithPath(t, db, site.ID, clientID, path, timestamp, 60, 1)
+		insertPageViewEvent(t, db, sessionID, path, timestamp)
+	}
+
+	query := AnalyticsQuery{
+		SiteID: site.ID,
+		From:   now.Add(-time.Hour),
+		To:     now,
+		Limit:  10,
+		Filter: AnalyticsFilter{PagePathContains: "/blog"},
+	}
+	pages, total, err := repository.GetTopPagesWithFilterPaged(ctx, query)
+	require.NoError(t, err)
+	require.Equal(t, 3, total)
+	require.ElementsMatch(t, []string{"/blog", "/blog/first-post", "/shop/blog-mug"}, []string{pages[0].Path, pages[1].Path, pages[2].Path})
+
+	for _, test := range []struct {
+		name   string
+		search string
+		path   string
+	}{
+		{name: "percent", search: "%", path: "/sale%items"},
+		{name: "underscore", search: "_", path: "/sale_items"},
+		{name: "escape character", search: `\`, path: `/sale\items`},
+		{name: "case insensitive", search: "/docs", path: "/Docs/Start"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			query.Filter.PagePathContains = test.search
+			matchedPages, matchedTotal, err := repository.GetTopPagesWithFilterPaged(ctx, query)
+			require.NoError(t, err)
+			require.Equal(t, 1, matchedTotal)
+			require.Equal(t, test.path, matchedPages[0].Path)
+		})
+	}
+}
+
 func testPagedBreakdownsReturnExactWindowTotals(t *testing.T, db *bun.DB) {
 	t.Helper()
 	repository := New(db)

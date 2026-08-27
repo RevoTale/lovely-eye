@@ -7,9 +7,18 @@ export const Route = createFileRoute('/_auth/')({
   loader: async ({ context }) => {
     if (context.apolloClient === null) throw new Error('Apollo client is unavailable.');
     const sites = await loadSites(context.apolloClient);
-    if (sites.length === 0) throw redirect({ to: '/sites/new', replace: true });
+    if (sites.length === 0) {
+      throw redirect({ to: '/sites/new', replace: true, viewTransition: true });
+    }
     const siteId = selectInitialSiteId(sites, getRememberedSiteId());
-    if (siteId === null) throw redirect({ to: '/sites', replace: true });
-    throw redirect({ to: '/sites/$siteId/analytics', params: { siteId }, replace: true });
+    if (siteId === null) {
+      throw redirect({ to: '/sites', replace: true, viewTransition: true });
+    }
+    throw redirect({
+      to: '/sites/$siteId/analytics',
+      params: { siteId },
+      replace: true,
+      viewTransition: true,
+    });
   },
 });

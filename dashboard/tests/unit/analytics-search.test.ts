@@ -16,6 +16,7 @@ describe('analytics URL state', () => {
       eventsPage: '2.9',
       referrer: 'example.com',
       browser: ['Firefox', 'Safari'],
+      pagePathContains: '  /blog  ',
       preset: 'invalid',
       from: 'not-a-date',
     });
@@ -23,6 +24,7 @@ describe('analytics URL state', () => {
     assert.equal(parsed.eventsPage, 2);
     assert.deepEqual(parsed.referrer, ['example.com']);
     assert.deepEqual(parsed.browser, ['Firefox', 'Safari']);
+    assert.equal(parsed.pagePathContains, '/blog');
     assert.equal(parsed.preset, undefined);
     assert.equal(parsed.from, undefined);
   });

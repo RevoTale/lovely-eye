@@ -26,7 +26,7 @@ const OverviewChartXAxisTick: FunctionComponent<OverviewChartXAxisTickProps> = (
         y={0}
         dy={12}
         textAnchor='middle'
-        fill='hsl(var(--muted-foreground))'
+        fill='var(--muted-foreground)'
         className='text-[11px]'
       >
         {lines.map((line, index) => (

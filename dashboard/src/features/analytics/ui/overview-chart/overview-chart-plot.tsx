@@ -103,6 +103,7 @@ const OverviewChartPlot: FunctionComponent<OverviewChartPlotProps> = ({ bucket, 
             stroke={series.stroke}
             fill={`url(#overview-${series.key})`}
             strokeWidth={series.strokeWidth}
+            strokeDasharray={series.strokeDasharray}
             fillOpacity={1}
             dot={false}
             activeDot={{
