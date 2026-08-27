@@ -23,7 +23,7 @@ jobs:
       release_created: ${{ steps.release.outputs.release_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
-      - uses: googleapis/release-please-action@v5.0.0
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         id: release
         with:
           config-file: release-please-config.json
@@ -39,10 +39,10 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Build and push Docker image
         id: push
-        uses: revotale/docker-multi-arch-release-action@v1.4.0
+        uses: revotale/docker-multi-arch-release-action@139a43ddaa10e2a91bbdb8f44d4af4e9bcaa5993 # v1.4.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}

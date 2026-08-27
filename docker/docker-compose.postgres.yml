@@ -37,7 +37,7 @@ services:
       - lovely-eye-net
 
   lovely-eye-db:
-    image: postgres:18.6-alpine
+    image: postgres:18.6-alpine@sha256:d3e1620b530c944afa6e887d22eb899824da68e19c52024bf98f5220c88a65b2
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-lovely}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-lovely}
