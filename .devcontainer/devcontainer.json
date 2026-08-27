@@ -9,7 +9,7 @@
       "moby": false
     },
     "ghcr.io/devcontainers/features/node:2": {
-      "version": "26.7.0",
+      "version": "26.8.1",
       "pnpmVersion": "11.22.0",
       "npmVersion": "none"
     },
