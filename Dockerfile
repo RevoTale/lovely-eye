@@ -1,5 +1,5 @@
 # Stage 1: Build the React dashboard
-FROM node:26.7.0-alpine AS dashboard-builder
+FROM node:26.7.0-alpine@sha256:aadf416b2cdce311a8811ba3f0608a61b77dbf997500e2eafe781b51f6a0b019 AS dashboard-builder
 
 WORKDIR /app
 
@@ -43,7 +43,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o load-example-data ./cmd/load-example-data
 
 # Stage 3: Final minimal image
-FROM alpine:3.24
+FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
 
 LABEL org.opencontainers.image.title="Lovely Eye" \
       org.opencontainers.image.description="Lightweight self-hosted web analytics" \
