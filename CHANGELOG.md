@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.2.0](https://github.com/RevoTale/lovely-eye/compare/v2.1.0...v2.2.0) (2026-08-28)
+
+
+### Features
+
+* **deps:** trigger a CI amd pin dependencies ([9558f75](https://github.com/RevoTale/lovely-eye/commit/9558f757c202bd9447b3e631a8a7f6c422d9af55))
+
+
+### Maintenance
+
+* **deps:** pin dependencies ([f3216a9](https://github.com/RevoTale/lovely-eye/commit/f3216a9e2d65ff43de3c5da5b6a5371d3f81b68e))
+
 ## [2.1.0](https://github.com/RevoTale/lovely-eye/compare/v2.0.2...v2.1.0) (2026-08-27)
 
 
