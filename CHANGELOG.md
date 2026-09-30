@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.2.1](https://github.com/RevoTale/lovely-eye/compare/v2.2.0...v2.2.1) (2026-09-10)
+
+
+### Maintenance
+
+* **deps:** update dependency shadcn to v4.19.0 ([4a30043](https://github.com/RevoTale/lovely-eye/commit/4a300436890f05b121f0a708a1bfb1f32bc7813c))
+* **deps:** update dependency shadcn to v4.19.0 ([90f197f](https://github.com/RevoTale/lovely-eye/commit/90f197f9fb6ab53453911da979365cdeabcc3a2e))
+* **deps:** update dependency shadcn to v4.20.1 ([ce55fc0](https://github.com/RevoTale/lovely-eye/commit/ce55fc0b12003fc5f781de5b2e720cd98ca17860))
+* **deps:** update dependency shadcn to v4.20.1 ([214a70d](https://github.com/RevoTale/lovely-eye/commit/214a70d451528872a7b729135a8af41e89732f70))
+* **deps:** update pnpm to v11.24.0 ([3dda48d](https://github.com/RevoTale/lovely-eye/commit/3dda48ddeece009e1abdb50df93d7ff0f39a76e2))
+* **deps:** update pnpm to v11.24.0 ([27367b6](https://github.com/RevoTale/lovely-eye/commit/27367b67a2abf6fdf650ce3df4ee7b1f91e61a52))
+* **deps:** update pnpm/setup action to v2.1.0 ([584fb64](https://github.com/RevoTale/lovely-eye/commit/584fb6478157a9d5e96c1ed1f905b940eea3a808))
+* **deps:** update pnpm/setup action to v2.1.0 ([f823eb9](https://github.com/RevoTale/lovely-eye/commit/f823eb9c7893afce130286e6e584657dbb3ae449))
+* **deps:** update tanstack-router monorepo ([7a41c0e](https://github.com/RevoTale/lovely-eye/commit/7a41c0e309e604dd2d02dbae6c6cacde568f6a47))
+* **deps:** update tanstack-router monorepo ([d068d66](https://github.com/RevoTale/lovely-eye/commit/d068d6653f0343fb74355ce672d7c9627906b1b0))
+
 ## [2.2.0](https://github.com/RevoTale/lovely-eye/compare/v2.1.0...v2.2.0) (2026-08-28)
 
 
