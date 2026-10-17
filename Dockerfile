@@ -1,5 +1,5 @@
 # Stage 1: Build the React dashboard
-FROM node:26.7.0-alpine@sha256:aadf416b2cdce311a8811ba3f0608a61b77dbf997500e2eafe781b51f6a0b019 AS dashboard-builder
+FROM node:26.11.1-alpine@sha256:143494b1da2945f061539253adc65e4f1569ddf07da2d384c022c791a9d90a4a AS dashboard-builder
 
 WORKDIR /app
 
