@@ -43,7 +43,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -o load-example-data ./cmd/load-example-data
 
 # Stage 3: Final minimal image
-FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 
 LABEL org.opencontainers.image.title="Lovely Eye" \
       org.opencontainers.image.description="Lightweight self-hosted web analytics" \
